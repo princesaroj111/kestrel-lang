@@ -219,10 +219,10 @@ certificate:
 
 # https://schema.ocsf.io/1.1.0/objects/user
 user:
-    full_name: user-account:display_name
-    name: user-account:account_login
-    type: user-account:account_type
-    uid: user-account:user_id
+    domain: user.domain
+    full_name: user.full_name
+    name: user.name
+    uid: user.id
 
 
 # https://schema.ocsf.io/1.1.0/classes/network_activity
