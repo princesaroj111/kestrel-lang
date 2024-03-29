@@ -1,5 +1,6 @@
 """Kestrel Data Model Map value transformers"""
 
+from datetime import datetime, timezone
 from typing import Callable
 
 from pandas import Series
@@ -13,6 +14,17 @@ def transformer(func: Callable) -> Callable:
     """A decorator for registering a transformer"""
     _transformers[func.__name__] = func
     return func
+
+
+@transformer
+def to_epoch_ms(value: str) -> int:
+    """Convert a time value to milliseconds since the epoch"""
+    if "." in value:
+        time_pattern = "%Y-%m-%dT%H:%M:%S.%fZ"
+    else:
+        time_pattern = "%Y-%m-%dT%H:%M:%SZ"
+    dt = datetime.strptime(value, time_pattern).replace(tzinfo=timezone.utc)
+    return int(dt.timestamp() * 1000)
 
 
 @transformer

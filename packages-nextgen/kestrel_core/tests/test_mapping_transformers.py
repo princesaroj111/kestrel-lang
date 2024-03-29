@@ -19,6 +19,10 @@ from kestrel.mapping.transformers import (
         ("to_int", "0x4d2", 1234),
         ("to_str", "1234", "1234"),
         ("to_str", 1234, "1234"),
+        ("to_epoch_ms", "2024-03-29T12:57:56.926Z", 1711717076926),
+        ("to_epoch_ms", "2024-03-29T12:57:56.92Z", 1711717076920),
+        ("to_epoch_ms", "2024-03-29T12:57:56.9Z", 1711717076900),
+        ("to_epoch_ms", "2024-03-29T12:57:56Z", 1711717076000),
     ]
 )
 def test_run_transformer(transform, value, expected):
