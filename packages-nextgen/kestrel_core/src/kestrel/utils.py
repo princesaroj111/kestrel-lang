@@ -5,10 +5,11 @@ import os
 from pathlib import Path
 from pkgutil import get_data
 from typeguard import typechecked
-from typing import Union, Mapping
+from typing import Optional, Mapping, Iterable
 
 
-def load_data_file(package_name, file_name):
+@typechecked
+def load_data_file(package_name: str, file_name: str) -> str:
     try:
         # resources.files() is introduced in Python 3.9
         content = resources.files(package_name).joinpath(file_name).read_text()
@@ -20,7 +21,8 @@ def load_data_file(package_name, file_name):
     return content
 
 
-def list_folder_files(package_name, folder_name, prefix=None, suffix=None):
+@typechecked
+def list_folder_files(package_name:str , folder_name:str , prefix:Optional[str]=None, suffix:Optional[str]=None) -> Iterable[str]:
     try:
         file_paths = resources.files(package_name).joinpath(folder_name).iterdir()
     except AttributeError:
@@ -57,7 +59,7 @@ def unescape_quoted_string(s: str) -> str:
 
 
 @typechecked
-def update_nested_dict(dict_old: Mapping, dict_new: Union[Mapping, None]):
+def update_nested_dict(dict_old: Mapping, dict_new: Optional[Mapping]) -> Mapping:
     if dict_new:
         for k, v in dict_new.items():
             if isinstance(v, collections.abc.Mapping) and k in dict_old:
