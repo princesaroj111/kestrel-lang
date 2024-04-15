@@ -22,7 +22,15 @@ def load_data_file(package_name: str, file_name: str) -> str:
 
 
 @typechecked
-def list_folder_files(package_name:str , folder_name:str , prefix:Optional[str]=None, suffix:Optional[str]=None) -> Iterable[str]:
+def list_folder_files(
+    package_name: str,
+    folder_name: str,
+    prefix: Optional[str] = None,
+    extension: Optional[str] = None,
+) -> Iterable[str]:
+    # preprocesss extension to add dot it not there
+    if extension and extension[0] != ".":
+        extension = "." + extension
     try:
         file_paths = resources.files(package_name).joinpath(folder_name).iterdir()
     except AttributeError:
@@ -43,7 +51,7 @@ def list_folder_files(package_name:str , folder_name:str , prefix:Optional[str]=
         for f in file_paths
         if (
             f.is_file()
-            and (f.name.endswith(suffix) if suffix else True)
+            and (f.name.endswith(extension) if extension else True)
             and (f.name.startswith(prefix) if prefix else True)
         )
     )

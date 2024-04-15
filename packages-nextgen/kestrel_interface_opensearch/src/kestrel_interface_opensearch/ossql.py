@@ -195,8 +195,7 @@ class OpenSearchTranslator:
             self.from_ocsf_map, self.entity, projection
         )
         proj = [
-            f"`{k}` AS `{v}`"
-            if k != v else f"`{k}`"
+            f"`{k}` AS `{v}`" if k != v else f"`{k}`"
             for k, v in name_pairs
             if k in self.schema  # Ignore mapped attrs the index doesn't have
         ]

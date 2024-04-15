@@ -24,7 +24,9 @@ def load_default_config() -> Mapping:
 
 
 @typechecked
-def load_user_config(config_path_env_var: str, config_path_default: Union[str, Path]) -> Mapping:
+def load_user_config(
+    config_path_env_var: str, config_path_default: Union[str, Path]
+) -> Mapping:
     config_path_default = config_path_default.absolute().as_posix()
     config_path = os.getenv(config_path_env_var, config_path_default)
     config_path = os.path.expanduser(config_path)
