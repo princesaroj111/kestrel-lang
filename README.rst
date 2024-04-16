@@ -2,31 +2,11 @@
    :width: 460
    :alt: Kestrel Threat Hunting Language
 
-.. image:: https://readthedocs.org/projects/kestrel/badge/?version=latest
-        :target: https://kestrel.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
-
-.. image:: https://img.shields.io/pypi/v/kestrel-jupyter
-        :target: https://pypi.python.org/pypi/kestrel-jupyter
-        :alt: Latest Version
-
-.. image:: https://img.shields.io/pypi/dm/kestrel-core
-        :target: https://pypistats.org/packages/kestrel-core
-        :alt: PyPI Downloads
-
-.. image:: https://codecov.io/gh/opencybersecurityalliance/kestrel-lang/branch/develop/graph/badge.svg?token=HM4ax10IW3
-        :target: https://codecov.io/gh/opencybersecurityalliance/kestrel-lang
-        :alt: Code Coverage
-
-.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-        :target: https://github.com/psf/black
-        :alt: Code Style: Black
-
 |
 
-**[News]** Kestrel session at `Black Hat USA 2023`_
+|readthedocs| |pypi| |downloads| |codecoverage| |black|
 
---------
+|
 
 Kestrel is a threat hunting language aiming to make cyber threat hunting *fast*
 by providing a layer of abstraction to build reusable, composable, and
@@ -215,3 +195,24 @@ Connecting With The Community
 .. _contributing guideline: CONTRIBUTING.rst
 .. _governance documentation: GOVERNANCE.rst
 .. _Apache License 2.0: LICENSE.md
+
+
+.. |readthedocs| image:: https://readthedocs.org/projects/kestrel/badge/?version=latest
+        :target: https://kestrel.readthedocs.io/en/latest/?badge=latest
+        :alt: Documentation Status
+
+.. |pypi| image:: https://img.shields.io/pypi/v/kestrel-jupyter
+        :target: https://pypi.python.org/pypi/kestrel-jupyter
+        :alt: Latest Version
+
+.. |downloads| image:: https://img.shields.io/pypi/dm/kestrel-core
+        :target: https://pypistats.org/packages/kestrel-core
+        :alt: PyPI Downloads
+
+.. |codecoverage| image:: https://codecov.io/gh/opencybersecurityalliance/kestrel-lang/branch/develop/graph/badge.svg?token=HM4ax10IW3
+        :target: https://codecov.io/gh/opencybersecurityalliance/kestrel-lang
+        :alt: Code Coverage
+
+.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+        :target: https://github.com/psf/black
+        :alt: Code Style: Black
