@@ -1,0 +1,9 @@
+connections:
+    my_events:
+        url: sqlite:////home/pcoccoli/events.db
+tables:
+    events:
+        connection: my_events
+        timestamp: "@timestamp"
+        timestamp_format: "%Y-%m-%d %H:%M:%S.%fZ"
+        data_model_mapping: "my_events_mapping.yaml"
