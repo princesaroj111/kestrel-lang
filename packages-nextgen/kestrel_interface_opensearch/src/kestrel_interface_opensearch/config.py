@@ -10,7 +10,7 @@ from kestrel.config.utils import (
     load_user_config,
 )
 from kestrel.exceptions import InterfaceNotConfigured
-from kestrel.mapping.data_model import load_mapping
+from kestrel.mapping.data_model import load_default_mapping
 
 
 PROFILE_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "opensearch.yaml"
@@ -49,7 +49,7 @@ class Index(DataClassJSONMixin):
                 self.data_model_map = yaml.safe_load(fp)
         else:
             # Default to the built-in ECS mapping
-            self.data_model_map = load_mapping("ecs")
+            self.data_model_map = load_default_mapping("ecs")
 
 
 @dataclass

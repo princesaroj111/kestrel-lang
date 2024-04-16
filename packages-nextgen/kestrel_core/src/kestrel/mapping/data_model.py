@@ -196,14 +196,14 @@ def translate_comparison_to_ocsf(
 
 
 @typechecked
-def load_mapping(
+def load_default_mapping(
     data_model_name: str,
     mapping_pkg: str = "kestrel.mapping",
     submodule: str = "entityattribute",
 ):
     result = {}
     entityattr_mapping_files = list_folder_files(
-        mapping_pkg, submodule, prefix=data_model_name, suffix=".yaml"
+        mapping_pkg, submodule, prefix=data_model_name, extension="yaml"
     )
     for f in entityattr_mapping_files:
         with open(f, "r") as fp:

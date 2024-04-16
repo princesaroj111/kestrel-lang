@@ -3,7 +3,7 @@ import pytest
 import pandas as pd
 
 from kestrel.mapping.data_model import (
-    load_mapping,
+    load_default_mapping,
     reverse_mapping,
     translate_comparison_to_native,
     translate_comparison_to_ocsf,
@@ -96,7 +96,7 @@ STIX_MAPPING = {
 # This mapping is used in 2 places:
 # - frontend comparison from ECS to OCSF
 # - backend comparison from OCSF to ECS (datasource)
-ECS_MAPPING = load_mapping("ecs")
+ECS_MAPPING = load_default_mapping("ecs")
 
 
 def test_reverse_mapping_ipv4():
@@ -195,6 +195,6 @@ def test_translate_projection_to_native(dmm, entity, field, expected_result):
 def test_translate_dataframe():  #TODO: more testing here
     df = pd.DataFrame({"file.path": [r"C:\Windows\System32\cmd.exe", r"C:\TMP"],
                        "pid": [1, 2]})
-    dmm = load_mapping("ecs")
+    dmm = load_default_mapping("ecs")
     df = translate_dataframe(df, dmm["process"])
     #TODO:assert df["file.name"].iloc[0] == "cmd.exe"
