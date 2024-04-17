@@ -12,8 +12,8 @@ from kestrel.exceptions import DataSourceError
 _logger = logging.getLogger(__name__)
 
 
-XPATH_PYPI_PKG_HOME = "/html/body/main/div[4]/div/div/div[1]/div[2]/ul/li[1]/a/@href"
-XPATH_PYPI_PKG_SOURCE = "/html/body/main/div[4]/div/div/div[1]/div[2]/ul/li[2]/a/@href"
+XPATH_PYPI_PKG_HOME = [f"/html/body/main/div[4]/div/div/div[1]/div[{i}]/ul/li[1]/a/@href" for i in range(5)]
+XPATH_PYPI_PKG_SOURCE = [f"/html/body/main/div[4]/div/div/div[1]/div[{i}]/ul/li[2]/a/@href" for i in range(5)]
 STIX_SHIFTER_HOMEPAGE = "https://github.com/opencybersecurityalliance/stix-shifter"
 
 
@@ -39,8 +39,8 @@ def verify_package_origin(connector_name, stixshifter_version, requests_verify=T
         )
 
     try:
-        p_homepage = pypi_etree.xpath(XPATH_PYPI_PKG_HOME)[0]
-        p_source = pypi_etree.xpath(XPATH_PYPI_PKG_SOURCE)[0]
+        p_homepage = [urls for urls in [pypi_etree.xpath(xpath) for xpath in XPATH_PYPI_PKG_HOME] if urls][0][0]
+        p_source = [urls for urls in [pypi_etree.xpath(xpath) for xpath in XPATH_PYPI_PKG_SOURCE] if urls][0][0]
     except:
         raise DataSourceError(
             f'STIX-shifter connector for "{connector_name}" is not installed '
