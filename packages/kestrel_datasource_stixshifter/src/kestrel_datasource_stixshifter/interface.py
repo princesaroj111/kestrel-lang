@@ -28,7 +28,7 @@ will load profiles from 3 places (the later will override the former):
                     port: 9200
                     indices: host101
                     options:  # use any of this section when needed
-                        verify_cert: false # allow invalid/expired/self-signed certificate
+                        verify_cert: false  # allow invalid/expired/self-signed certificate
                         retrieval_batch_size: 10000  # set to 10000 to match default Elasticsearch page size; Kestrel default across connectors: 2000
                         single_batch_timeout: 120  # increase it if hit 60 seconds (Kestrel default) timeout error for each batch of retrieval
                         cool_down_after_transmission: 2  # seconds to cool down between data source API calls, required by some API such as sentinelone; Kestrel default: 0
