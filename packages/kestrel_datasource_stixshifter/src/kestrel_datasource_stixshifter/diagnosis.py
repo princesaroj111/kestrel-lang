@@ -11,6 +11,7 @@ from kestrel_datasource_stixshifter.config import (
 from kestrel_datasource_stixshifter.worker import STOP_SIGN
 from kestrel_datasource_stixshifter.query import translate_query
 from kestrel_datasource_stixshifter.worker.transmitter import Transmitter
+from kestrel_datasource_stixshifter.worker.utils import disable_cert_verification_on_transmission
 from stix_shifter.stix_transmission import stix_transmission
 
 
@@ -26,6 +27,7 @@ class Diagnosis:
             self.retrieval_batch_size,
             self.cool_down_after_transmission,
             self.allow_dev_connector,
+            self.verify_cert,
         ) = get_datasource_from_profiles(datasource_name, self.profiles)
         self.if_fast_translation = (
             self.connector_name in self.kestrel_options["fast_translate"]
@@ -71,6 +73,9 @@ class Diagnosis:
             self.connection_dict,
             self.configuration_dict,
         )
+
+        if not self.verify_cert:
+            disable_cert_verification_on_transmission(transmission)
 
         result = transmission.ping()
 
@@ -125,6 +130,7 @@ class Diagnosis:
                     self.configuration_dict,
                     self.retrieval_batch_size,
                     self.cool_down_after_transmission,
+                    self.verify_cert,
                     query,
                     result_queue,
                     max_batch_cnt * self.retrieval_batch_size,
