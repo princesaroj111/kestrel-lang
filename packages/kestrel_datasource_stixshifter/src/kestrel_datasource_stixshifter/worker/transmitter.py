@@ -6,7 +6,11 @@ from typeguard import typechecked
 
 from stix_shifter.stix_transmission import stix_transmission
 from kestrel_datasource_stixshifter.worker import STOP_SIGN
-from kestrel_datasource_stixshifter.worker.utils import TransmissionResult, WorkerLog, disable_cert_verification_on_transmission
+from kestrel_datasource_stixshifter.worker.utils import (
+    TransmissionResult,
+    WorkerLog,
+    disable_cert_verification_on_transmission,
+)
 
 
 @typechecked

@@ -11,7 +11,9 @@ from kestrel_datasource_stixshifter.config import (
 from kestrel_datasource_stixshifter.worker import STOP_SIGN
 from kestrel_datasource_stixshifter.query import translate_query
 from kestrel_datasource_stixshifter.worker.transmitter import Transmitter
-from kestrel_datasource_stixshifter.worker.utils import disable_cert_verification_on_transmission
+from kestrel_datasource_stixshifter.worker.utils import (
+    disable_cert_verification_on_transmission,
+)
 from stix_shifter.stix_transmission import stix_transmission
 
 
