@@ -30,9 +30,9 @@ jobs:
         shell: bash
         working-directory: ./packages/kestrel_core
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Python Tools
@@ -59,9 +59,9 @@ jobs:
         shell: bash
         working-directory: ./packages/kestrel_datasource_stixshifter
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Python Tools
@@ -85,9 +85,9 @@ jobs:
         shell: bash
         working-directory: ./packages/kestrel_analytics_python
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Python Tools
@@ -114,9 +114,9 @@ jobs:
         shell: bash
         working-directory: ./packages/kestrel_jupyter
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Python Tools
