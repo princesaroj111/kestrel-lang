@@ -1,9 +1,21 @@
+# SQLAlchemy configuration is broken into 2 sections: connections and
+# datasources.  The connections section has one named entry per
+# SqlAlchemy instance; those connection names are referenced from the
+# datasources.
 connections:
     my_events:
-        url: sqlite:////home/pcoccoli/events.db
-tables:
-    events:
-        connection: my_events
+        url: sqlite:////home/pcoccoli/events.db  # SQLAlchemy connection string
+
+# A single database can have many tables.  For each table that will be
+# available as a Kestrel datasource, create a named entry here that
+# references a connection name from above.  You can also specify some
+# metadata about the tables, such as the column name to be used as the
+# timestamp, the format of that timestamp, and (optionally) a filename
+# containing a kestrel data model mapping, in YAML format.
+datasources:
+    events:  # This is also the data source name you'll use in your hunts
+        connection: my_events # references the connection info above
+        table: my_events  # actual SQL table name
         timestamp: "@timestamp"
         timestamp_format: "%Y-%m-%d %H:%M:%S.%fZ"
         data_model_mapping: "my_events_mapping.yaml"

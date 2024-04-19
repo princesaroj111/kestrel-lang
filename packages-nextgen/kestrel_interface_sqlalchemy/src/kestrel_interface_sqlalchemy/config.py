@@ -25,8 +25,9 @@ class Connection(DataClassJSONMixin):
 
 
 @dataclass
-class Table(DataClassJSONMixin):
+class DataSource(DataClassJSONMixin):
     connection: str
+    table: str
     timestamp: str
     timestamp_format: str
     data_model_mapping: Optional[str] = None  # Filename for mapping
@@ -44,11 +45,11 @@ class Table(DataClassJSONMixin):
 @dataclass
 class Config(DataClassJSONMixin):
     connections: Dict[str, Connection]
-    tables: Dict[str, Table]
+    datasources: Dict[str, DataSource]
 
     def __post_init__(self):
         self.connections = {k: Connection(**v) for k, v in self.connections.items()}
-        self.tables = {k: Table(**v) for k, v in self.tables.items()}
+        self.datasources = {k: DataSource(**v) for k, v in self.datasources.items()}
 
 
 def load_config():

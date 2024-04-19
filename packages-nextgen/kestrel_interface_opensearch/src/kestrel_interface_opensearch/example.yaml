@@ -1,6 +1,7 @@
 # OpenSearch configuration is broken into 2 sections: connections and
-# indexes.  The connections section has one named entry per OpenSearch
-# instance; those connection names are referenced from the indexes.
+# datasources.  The connections section has one named entry per
+# OpenSearch instance; those connection names are referenced from the
+# datasources.
 connections:
     localhost:  # this is the connection "name"
         url: https://localhost:9200

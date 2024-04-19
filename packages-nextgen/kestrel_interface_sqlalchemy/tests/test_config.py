@@ -19,9 +19,10 @@ def test_load_config(tmp_path):
                 "url": "presto://jdoe@example.com:8889/hive",
             }
         },
-        "tables": {
+        "datasources": {
             "cloud_table": {
                 "connection": "some-data-lake",
+                "table": "cloud_table",
                 "timestamp": "eventTime",
                 "timestamp_format": "%Y-%m-%d %H:%M:%S.%f",
                 "data_model_mapping": str(tmp_path / "mapping.yaml")
@@ -39,4 +40,5 @@ def test_load_config(tmp_path):
     conn: Connection = read_config.connections["localhost"]
     assert conn.url == config["connections"]["localhost"]["url"]
     assert read_config.connections["localhost"].url == config["connections"]["localhost"]["url"]
-    assert read_config.tables["cloud_table"].timestamp == config["tables"]["cloud_table"]["timestamp"]
+    assert read_config.datasources["cloud_table"].timestamp == config["datasources"]["cloud_table"]["timestamp"]
+    assert read_config.datasources["cloud_table"].table == config["datasources"]["cloud_table"]["table"]
