@@ -22,6 +22,7 @@ RETRIEVAL_BATCH_SIZE = 2000
 SINGLE_BATCH_TIMEOUT = 60
 COOL_DOWN_AFTER_TRANSMISSION = 0
 ALLOW_DEV_CONNECTOR = False
+VERIFY_CERT = True
 FAST_TRANSLATE_CONNECTORS = []  # Suggested: ["qradar", "elastic_ecs"]
 
 
@@ -175,6 +176,14 @@ def get_datasource_from_profiles(profile_name, profiles):
             profile_name,
         )
 
+        verify_cert = _extract_param_from_connection_config(
+            "verify_cert",
+            bool,
+            VERIFY_CERT,
+            connection,
+            profile_name,
+        )
+
     return (
         connector_name,
         connection,
@@ -182,6 +191,7 @@ def get_datasource_from_profiles(profile_name, profiles):
         retrieval_batch_size,
         cool_down_after_transmission,
         allow_dev_connector,
+        verify_cert,
     )
 
 
