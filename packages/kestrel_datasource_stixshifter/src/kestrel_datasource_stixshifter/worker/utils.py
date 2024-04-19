@@ -39,12 +39,11 @@ def disable_cert_verification_on_transmission(trans: StixTransmission):
 
     # currently all the following attributes point to the same object
     # iterate through them in case stix-shifter code changes in the future
-    for eps in [
-        "_BaseEntryPoint__ping_connector",
-        "_BaseEntryPoint__query_connector",
-        "_BaseEntryPoint__results_connector",
-        "_BaseEntryPoint__status_connector",
+    for attr in [
+        x
+        for x in dir(ot)
+        if x.startswith("_BaseEntryPoint__") and x.endswith("_connector")
     ]:
-        ep = getattr(ot, eps)
-        ep.api_client.client.ssl_context.check_hostname = False
-        ep.api_client.client.ssl_context.verify_mode = ssl.CERT_NONE
+        c = getattr(ot, attr)
+        c.api_client.client.ssl_context.check_hostname = False
+        c.api_client.client.ssl_context.verify_mode = ssl.CERT_NONE
