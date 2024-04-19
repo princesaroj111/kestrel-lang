@@ -36,8 +36,9 @@ class Connection(DataClassJSONMixin):
 
 
 @dataclass
-class Index(DataClassJSONMixin):
+class DataSource(DataClassJSONMixin):
     connection: str
+    index_pattern: str
     timestamp: str
     timestamp_format: str
     data_model_mapping: Optional[str] = None  # Filename for mapping
@@ -55,11 +56,11 @@ class Index(DataClassJSONMixin):
 @dataclass
 class Config(DataClassJSONMixin):
     connections: Dict[str, Connection]
-    indexes: Dict[str, Index]
+    datasources: Dict[str, DataSource]
 
     def __post_init__(self):
         self.connections = {k: Connection(**v) for k, v in self.connections.items()}
-        self.indexes = {k: Index(**v) for k, v in self.indexes.items()}
+        self.datasources = {k: DataSource(**v) for k, v in self.datasources.items()}
 
 
 def load_config():

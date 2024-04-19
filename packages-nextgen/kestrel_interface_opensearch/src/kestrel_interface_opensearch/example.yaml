@@ -4,6 +4,7 @@
 connections:
     localhost:  # this is the connection "name"
         url: https://localhost:9200
+        verify_certs: false  # For trusted, self-signed certs only!
         auth:
             username: admin
             password: admin
@@ -13,26 +14,30 @@ connections:
             username: hunter
             password: password
 
-# An OpenSearch instance can have many indexes.  For each index that
-# will be available as a Kestrel datasource, create a named entry here
-# that references a connection name from above.  You can also specify
-# some metadata about the index, such as the field name to be used as
-# the timestamp, the format of that timestamp, and (optionally) a
-# filename containing a kestrel data model mapping, in YAML format.
-# If no mapping is specified, that index will default to Kestrel's
-# built-in Elastic Common Schema (ECS) data model mapping.
-indexes:
-    winlogbeat-mordor:  # index name in the "localhost" instance
-        connection: localhost
+# An OpenSearch instance can have many indexes.  For each index
+# pattern that will be available as a Kestrel datasource, create a
+# named entry here that references a connection name from above.  You
+# can also specify some metadata about the indexes matched by the
+# index pattern, such as the field name to be used as the timestamp,
+# the format of that timestamp, and (optionally) a filename containing
+# a kestrel data model mapping, in YAML format.  If no mapping is
+# specified, that index will default to Kestrel's built-in Elastic
+# Common Schema (ECS) data model mapping.
+datasources:
+    winlogbeat-mordor:  # this is the name you would use in your hunt
+        connection: localhost  # this is the "localhost" connection above
+        index_pattern: winlogbeat-mordor
         timestamp: "@timestamp"
         timestamp_format: "%Y-%m-%dT%H:%M:%S.%fZ"
         data_model_mapping: "custom_mapping.yaml"
-    some-index:  # index name in the "my_opensearch" instance
+    sysmon-events:
         connection: my_opensearch
+        index_pattern: sysmon-*  # Search ALL indexes matching this pattern
         timestamp: "@timestamp"
         timestamp_format: "%Y-%m-%dT%H:%M:%S.%fZ"
-    another-index:  # index name in the "my_opensearch" instance
+    firewall-events:
         connection: my_opensearch
+        index_pattern: firewall-*
         timestamp: "EventTime"
         timestamp_format: "%Y-%m-%d %H:%M:%S.%fZ"
         data_model_mapping: "another_custom_mapping.yaml"

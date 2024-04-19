@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, Mapping, Optional
+from typing import Iterable, Mapping, Optional, Tuple
 from uuid import UUID
 
 from opensearchpy import OpenSearch
@@ -86,7 +86,7 @@ class OpenSearchInterface(AbstractInterface):
         self.config = load_config()
         self.schemas: dict = {}  # Schema per table (index)
         self.conns: dict = {}  # Map of conn name -> connection
-        for info in self.config.indexes.values():
+        for info in self.config.datasources.values():
             name = info.connection
             if name not in self.conns:
                 conn = self.config.connections[name]
@@ -117,11 +117,13 @@ class OpenSearchInterface(AbstractInterface):
         if not instructions_to_evaluate:
             instructions_to_evaluate = graph.get_sink_nodes()
         for instruction in instructions_to_evaluate:
-            translator = self._evaluate_instruction_in_graph(graph, instruction)
+            translator, datasource = self._evaluate_instruction_in_graph(
+                graph, instruction
+            )
             # TODO: may catch error in case evaluation starts from incomplete SQL
             sql = translator.result()
             _logger.debug("SQL query generated: %s", sql)
-            ds = self.config.indexes[translator.table]  # table == datasource
+            ds = self.config.datasources[datasource]
             conn = self.config.connections[ds.connection]
             client = OpenSearch(
                 [conn.url],
@@ -154,12 +156,13 @@ class OpenSearchInterface(AbstractInterface):
         self,
         graph: IRGraphEvaluable,
         instruction: Instruction,
-    ) -> OpenSearchTranslator:
+    ) -> Tuple[OpenSearchTranslator, str]:
         _logger.debug("instruction: %s", str(instruction))
         translator = None
+        datasource = None
         if isinstance(instruction, TransformingInstruction):
             trunk, _r2n = graph.get_trunk_n_branches(instruction)
-            translator = self._evaluate_instruction_in_graph(graph, trunk)
+            translator, datasource = self._evaluate_instruction_in_graph(graph, trunk)
 
             if isinstance(instruction, SolePredecessorTransformingInstruction):
                 if isinstance(instruction, Return):
@@ -177,35 +180,39 @@ class OpenSearchInterface(AbstractInterface):
 
         elif isinstance(instruction, SourceInstruction):
             if isinstance(instruction, DataSource):
-                ds = self.config.indexes[instruction.datasource]
+                datasource = instruction.datasource
+                ds = self.config.datasources[instruction.datasource]
                 schema = self.get_schema(instruction.datasource)
                 translator = OpenSearchTranslator(
                     ds.timestamp_format,
                     ds.timestamp,
-                    instruction.datasource,
+                    ds.index_pattern,
                     ds.data_model_map,
                     schema,
                 )
             else:
                 raise NotImplementedError(f"Unhandled instruction type: {instruction}")
 
-        return translator
+        return translator, datasource
 
-    def _get_client_for_index(self, index: str) -> OpenSearch:
-        conn = self.config.indexes[index].connection
+    def _get_client_for_datasource(self, datasource: str) -> OpenSearch:
+        ds = self.config.datasources[datasource]
+        conn = ds.connection
         _logger.debug(
-            "Fetching schema for %s from %s", index, self.config.connections[conn].url
+            "Fetching schema for %s from %s",
+            datasource,
+            self.config.connections[conn].url,
         )
-        return self.conns[conn]
+        return self.conns[conn], ds.index_pattern
 
-    def get_schema(self, index: str) -> dict:
-        client = self._get_client_for_index(index)
+    def get_schema(self, datasource: str) -> dict:
+        client, index = self._get_client_for_datasource(datasource)
         if index not in self.schemas:
             df = read_sql(f"DESCRIBE TABLES LIKE {index}", client)
-            self.schemas[index] = (
+            self.schemas[datasource] = (
                 df[["TYPE_NAME", "COLUMN_NAME"]]
                 .set_index("COLUMN_NAME")
                 .T.to_dict("records")[0]
             )
-            _logger.debug("%s schema:\n%s", index, self.schemas[index])
-        return self.schemas[index]
+            _logger.debug("%s schema:\n%s", datasource, self.schemas[datasource])
+        return self.schemas[datasource]
