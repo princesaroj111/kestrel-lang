@@ -127,9 +127,13 @@ environment variable ``KESTREL_STIXSHIFTER_DEBUG`` with any value.
 
 """
 
+import multiprocessing
 from kestrel.datasource import AbstractDataSourceInterface
 from kestrel_datasource_stixshifter.config import load_profiles
 from kestrel_datasource_stixshifter.query import query_datasource
+
+
+multiprocessing.set_start_method("spawn", force=True)
 
 
 class StixShifterInterface(AbstractDataSourceInterface):
