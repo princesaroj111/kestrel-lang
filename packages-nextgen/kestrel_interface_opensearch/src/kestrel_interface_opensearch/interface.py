@@ -5,8 +5,9 @@ from uuid import UUID
 from opensearchpy import OpenSearch
 from pandas import DataFrame, Series, concat
 
+from kestrel.display import GraphletExplanation
 from kestrel.exceptions import DataSourceError
-from kestrel.interface.datasource.base import AbstractDataSourceInterface
+from kestrel.interface import AbstractInterface
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     DataSource,
@@ -18,9 +19,10 @@ from kestrel.ir.instructions import (
     TransformingInstruction,
     SolePredecessorTransformingInstruction,
 )
+from kestrel.mapping.data_model import translate_dataframe
 
-from kestrel_datasource_opensearch.config import load_config
-from kestrel_datasource_opensearch.ossql import OpenSearchTranslator
+from kestrel_interface_opensearch.config import load_config
+from kestrel_interface_opensearch.ossql import OpenSearchTranslator
 
 
 _logger = logging.getLogger(__name__)
@@ -32,11 +34,12 @@ def _jdbc2df(schema: dict, datarows: dict) -> DataFrame:
     return DataFrame(datarows, columns=columns)
 
 
-def read_sql(sql: str, conn: OpenSearch) -> DataFrame:
+def read_sql(sql: str, conn: OpenSearch, dmm: Optional[dict] = None) -> DataFrame:
     """Execute `sql` and return the results as a DataFrame, a la pandas.read_sql"""
     # https://opensearch.org/docs/latest/search-plugins/sql/sql-ppl-api/#query-api
     body = {
-        "fetch_size": 10000,  # Should we make this configurable?
+        # Temporarily comment out fetch_size due to https://github.com/opensearch-project/sql/issues/2579
+        # FIXME: "fetch_size": 10000,  # Should we make this configurable?
         "query": sql,
     }
     query_resp = conn.http.post("/_plugins/_sql?format=jdbc", body=body)
@@ -56,7 +59,12 @@ def read_sql(sql: str, conn: OpenSearch) -> DataFrame:
     dfs = []
     done = False
     while not done:
-        dfs.append(_jdbc2df(schema, query_resp["datarows"]))
+        df = _jdbc2df(schema, query_resp["datarows"])
+        if dmm is not None:
+            # Need to use Data Model Map to do results translation
+            dfs.append(translate_dataframe(df, dmm))
+        else:
+            dfs.append(df)
         cursor = query_resp.get("cursor")
         if not cursor:
             break
@@ -68,7 +76,7 @@ def read_sql(sql: str, conn: OpenSearch) -> DataFrame:
     return concat(dfs)
 
 
-class OpenSearchInterface(AbstractDataSourceInterface):
+class OpenSearchInterface(AbstractInterface):
     def __init__(
         self,
         serialized_cache_catalog: Optional[str] = None,
@@ -89,9 +97,9 @@ class OpenSearchInterface(AbstractDataSourceInterface):
                 )
                 self.conns[name] = client
 
-    @property
-    def name(self):
-        return "opensearch"
+    @staticmethod
+    def schemes() -> Iterable[str]:
+        return ["opensearch"]
 
     def store(
         self,
@@ -111,7 +119,8 @@ class OpenSearchInterface(AbstractDataSourceInterface):
         for instruction in instructions_to_evaluate:
             translator = self._evaluate_instruction_in_graph(graph, instruction)
             # TODO: may catch error in case evaluation starts from incomplete SQL
-            _logger.debug("SQL query generated: %s", translator.result())
+            sql = translator.result()
+            _logger.debug("SQL query generated: %s", sql)
             ds = self.config.indexes[translator.table]  # table == datasource
             conn = self.config.connections[ds.connection]
             client = OpenSearch(
@@ -119,8 +128,26 @@ class OpenSearchInterface(AbstractDataSourceInterface):
                 http_auth=(conn.auth.username, conn.auth.password),
                 verify_certs=conn.verify_certs,
             )
-            mapping[instruction.id] = read_sql(translator.result(), client)
+            mapping[instruction.id] = read_sql(
+                sql, client, translator.from_ocsf_map[translator.entity]
+            )
             client.close()
+        return mapping
+
+    def explain_graph(
+        self,
+        graph: IRGraphEvaluable,
+        instructions_to_explain: Optional[Iterable[Instruction]] = None,
+    ) -> Mapping[UUID, GraphletExplanation]:
+        mapping = {}
+        if not instructions_to_explain:
+            instructions_to_explain = graph.get_sink_nodes()
+        for instruction in instructions_to_explain:
+            translator = self._evaluate_instruction_in_graph(graph, instruction)
+            dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
+            graph_dict = dep_graph.to_dict()
+            query_stmt = translator.result()
+            mapping[instruction.id] = GraphletExplanation(graph_dict, query_stmt)
         return mapping
 
     def _evaluate_instruction_in_graph(
@@ -175,7 +202,10 @@ class OpenSearchInterface(AbstractDataSourceInterface):
         client = self._get_client_for_index(index)
         if index not in self.schemas:
             df = read_sql(f"DESCRIBE TABLES LIKE {index}", client)
-            self.schemas[index] = Series(
-                df["TYPE_NAME"], index=df["COLUMN_NAME"]
-            ).to_dict()
+            self.schemas[index] = (
+                df[["TYPE_NAME", "COLUMN_NAME"]]
+                .set_index("COLUMN_NAME")
+                .T.to_dict("records")[0]
+            )
+            _logger.debug("%s schema:\n%s", index, self.schemas[index])
         return self.schemas[index]

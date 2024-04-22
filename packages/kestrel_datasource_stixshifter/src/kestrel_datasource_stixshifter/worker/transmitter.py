@@ -6,7 +6,11 @@ from typeguard import typechecked
 
 from stix_shifter.stix_transmission import stix_transmission
 from kestrel_datasource_stixshifter.worker import STOP_SIGN
-from kestrel_datasource_stixshifter.worker.utils import TransmissionResult, WorkerLog
+from kestrel_datasource_stixshifter.worker.utils import (
+    TransmissionResult,
+    WorkerLog,
+    disable_cert_verification_on_transmission,
+)
 
 
 @typechecked
@@ -19,6 +23,7 @@ class TransmitterPool(Process):
         retrieval_batch_size: int,
         number_of_translators: int,
         cool_down_after_transmission: int,
+        verify_cert: bool,
         queries: list,
         output_queue: Queue,
         limit: Optional[int],
@@ -31,6 +36,7 @@ class TransmitterPool(Process):
         self.retrieval_batch_size = retrieval_batch_size
         self.number_of_translators = number_of_translators
         self.cool_down_after_transmission = cool_down_after_transmission
+        self.verify_cert = verify_cert
         self.queries = queries
         self.queue = output_queue
         self.limit = limit
@@ -43,6 +49,7 @@ class TransmitterPool(Process):
                 self.configuration_dict,
                 self.retrieval_batch_size,
                 self.cool_down_after_transmission,
+                self.verify_cert,
                 query,
                 self.queue,
                 self.limit,
@@ -65,6 +72,7 @@ class Transmitter(Process):
         configuration_dict: dict,
         retrieval_batch_size: int,
         cool_down_after_transmission: int,
+        verify_cert: bool,
         query: str,
         output_queue: Queue,
         limit: Optional[int],
@@ -76,6 +84,7 @@ class Transmitter(Process):
         self.configuration_dict = configuration_dict
         self.retrieval_batch_size = retrieval_batch_size
         self.cool_down_after_transmission = cool_down_after_transmission
+        self.verify_cert = verify_cert
         self.query = query
         self.queue = output_queue
         self.limit = limit
@@ -87,6 +96,11 @@ class Transmitter(Process):
             self.connection_dict,
             self.configuration_dict,
         )
+
+        # hack stix-shifter v7 to support "disable certificate verification"
+        if not self.verify_cert:
+            disable_cert_verification_on_transmission(self.transmission)
+
         search_meta_result = self.transmission.query(self.query)
 
         if search_meta_result["success"]:

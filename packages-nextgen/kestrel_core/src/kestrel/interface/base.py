@@ -9,6 +9,7 @@ from typing import (
     Iterable,
 )
 
+from kestrel.display import GraphletExplanation
 from kestrel.ir.instructions import Instruction
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.exceptions import (
@@ -16,11 +17,11 @@ from kestrel.exceptions import (
 )
 
 
-MODULE_PREFIX = "kestrel_datasource_"
+MODULE_PREFIX = "kestrel_interface_"
 
 
-class AbstractDataSourceInterface(ABC):
-    """Abstract class for datasource interface
+class AbstractInterface(ABC):
+    """Abstract class for datasource/analytics interface
 
     Concepts:
 
@@ -43,7 +44,6 @@ class AbstractDataSourceInterface(ABC):
         session_id: Optional[UUID] = None,
     ):
         self.session_id = session_id
-        self.datasources: Mapping[str, str] = {}
         self.cache_catalog: MutableMapping[UUID, str] = {}
 
         if serialized_cache_catalog:
@@ -52,12 +52,14 @@ class AbstractDataSourceInterface(ABC):
             except:
                 raise InvalidSerializedDatasourceInterfaceCacheCatalog()
 
-    @property
+    # Python 3.13 will drop chain of @classmethod and @property
+    # use @staticmethod instead (cannot make it a property)
+    @staticmethod
     @abstractmethod
-    def name(self) -> str:
-        """The name of the interface
+    def schemes() -> Iterable[str]:
+        """The schemes to specify the interface
 
-        The name should be defined as ``("_"|LETTER) ("_"|LETTER|DIGIT)*``
+        Each scheme should be defined as ``("_"|LETTER) ("_"|LETTER|DIGIT)*``
         """
         ...
 
@@ -97,13 +99,33 @@ class AbstractDataSourceInterface(ABC):
 
         Parameters:
 
-            graph: The IRGraph with zero or one interface
+            graph: The evaluate IRGraph
 
             instructions_to_evaluate: instructions to evaluate and return; by default, it will be all Return instructions in the graph
 
         Returns:
 
             DataFrames for each instruction in instructions_to_evaluate.
+        """
+        ...
+
+    @abstractmethod
+    def explain_graph(
+        self,
+        graph: IRGraphEvaluable,
+        instructions_to_explain: Optional[Iterable[Instruction]] = None,
+    ) -> Mapping[UUID, GraphletExplanation]:
+        """Explain how to evaluate the IRGraph
+
+        Parameters:
+
+            graph: The evaluable IRGraph
+
+            instructions_to_explain: instructions to explain and return; by default, it will be all Return instructions in the graph
+
+        Returns:
+
+            GraphletExplanation (a Kestrel Display object) for each instruction in instructions_to_explain.
         """
         ...
 

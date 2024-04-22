@@ -9,6 +9,22 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+1.8.3 (2024-04-22)
+==================
+
+Added
+-----
+
+- Support of disabling certificate verification of stix-shifter v7 with config option `verify_cert`
+- Documentation on how to use the `verify_cert` option in the stix-shifter interface
+- Python 3.12 support (multiprocessing library behavior steering to avoid a CPU-blocking issue)
+- More generic HTML parsing of PyPI for stix-shfiter connector verification
+
+Changed
+-------
+
+- stix-shifter upgraded to v7 (v7.0.6), the first version abandoning invalid certificate support
+
 1.8.2 (2024-02-20)
 ==================
 

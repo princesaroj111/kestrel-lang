@@ -1,5 +1,6 @@
 import json
 import pytest
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from kestrel.frontend.parser import parse_kestrel
@@ -16,6 +17,8 @@ from kestrel.ir.instructions import (
     Reference,
     Sort,
     Variable,
+    Explain,
+    Return,
 )
 
 
@@ -108,10 +111,10 @@ def test_parser_mapping_single_comparison_to_multiple_values():
     stmt = "x = GET ipv4-addr FROM if://ds WHERE value = '192.168.22.3'"
     parse_filter = get_parsed_filter_exp(stmt)
     comps = parse_filter.comps
-    assert isinstance(comps, list) and len(comps) == 3
+    assert isinstance(comps, list) and len(comps) == 4
     fields = [x.field for x in comps]
     assert ("dst_endpoint.ip" in fields and "src_endpoint.ip" in fields and
-            "device.ip" in fields)
+            "device.ip" in fields and "endpoint.ip" in fields)
 
 
 def test_parser_mapping_multiple_comparison_to_multiple_values():
@@ -121,12 +124,9 @@ def test_parser_mapping_multiple_comparison_to_multiple_values():
     field1 = parse_filter.lhs.field
     assert field1 == 'file.name'
     field2 = parse_filter.rhs.lhs.field
-    assert field2 == 'process.name'
-    comps3 = parse_filter.rhs.rhs.comps
-    assert isinstance(comps3, list) and len(comps3) == 2
-    fields3 = [x.field for x in comps3]
-    assert ("actor.process.name" in fields3 and
-            "process.parent_process.name" in fields3)
+    assert field2 == 'name'  # 'process.name'
+    field3 = parse_filter.rhs.rhs.field
+    assert field3 == "parent_process.name"
 
 
 def test_parser_new_json():
@@ -265,3 +265,26 @@ DISP proclist ATTR name, pid LIMIT 2 OFFSET 3
     assert (proj, limit) in graph.edges
     assert (limit, offset) in graph.edges
     assert (offset, ret) in graph.edges
+
+
+def test_parser_explain_alone():
+    stmt = "EXPLAIN abc"
+    graph = parse_kestrel(stmt)
+    assert len(graph) == 3
+    assert len(graph.edges) == 2
+    assert Counter(map(type, graph.nodes())) == Counter([Reference, Explain, Return])
+
+
+def test_parser_explain_dereferred():
+    stmt = """
+proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
+                       , {"name": "explorer.exe", "pid": 99}
+                       , {"name": "firefox.exe", "pid": 201}
+                       , {"name": "chrome.exe", "pid": 205}
+                       ]
+EXPLAIN proclist
+"""
+    graph = parse_kestrel(stmt)
+    assert len(graph) == 4
+    assert len(graph.edges) == 3
+    assert Counter(map(type, graph.nodes())) == Counter([Construct, Variable, Explain, Return])

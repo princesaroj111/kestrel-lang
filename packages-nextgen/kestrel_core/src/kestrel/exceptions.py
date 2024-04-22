@@ -74,6 +74,10 @@ class DuplicatedReferenceInFilter(KestrelError):
     pass
 
 
+class MissingReferenceInFilter(KestrelError):
+    pass
+
+
 class InvalidSerializedDatasourceInterfaceCacheCatalog(KestrelError):
     pass
 
@@ -90,23 +94,19 @@ class InterfaceNotFound(KestrelError):
     pass
 
 
-class InterfaceNameCollision(KestrelError):
-    pass
-
-
 class IRGraphMissingNode(KestrelError):
     pass
 
 
-class DataSourceInterfaceNotFound(KestrelError):
+class InterfaceNotConfigured(KestrelError):
     pass
 
 
-class InvalidDataSourceInterfaceImplementation(KestrelError):
+class InvalidInterfaceImplementation(KestrelError):
     pass
 
 
-class ConflictingDataSourceInterfaceScheme(KestrelError):
+class ConflictingInterfaceScheme(KestrelError):
     pass
 
 

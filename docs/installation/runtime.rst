@@ -8,7 +8,11 @@ please use Python inside Windows Subsystem for Linux (WSL).
 General Requirements
 ====================
 
-Python 3.8 is required. Follow the `Python installation guide`_ to install or upgrade Python.
+Python 3 is required.
+
+* End-of-life Python versions are not supported. Check `Python releases`_.
+
+* Follow the `Python installation guide`_ to install or upgrade Python.
 
 OS-specific Requirements
 ========================
@@ -190,6 +194,7 @@ What's to Do Next
 - :doc:`../language/index`
 
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
+.. _Python releases: https://devguide.python.org/versions/
 .. _Python virtual environment: https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/
 .. _Xcode: https://developer.apple.com/xcode/
 .. _kestrel-lang: http://github.com/opencybersecurityalliance/kestrel-lang
