@@ -54,4 +54,4 @@ kestrel_jupyter_setup = "kestrel_jupyter_kernel.setup:run"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"*" = ["*.js"]
+"*" = ["*.js", "*.png"]
