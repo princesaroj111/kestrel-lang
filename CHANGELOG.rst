@@ -9,6 +9,14 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+1.8.4 (2024-04-23)
+==================
+
+Added
+-----
+
+- Error handling of `kestrel_jupyter_setup` for JupyterLab
+
 1.8.3 (2024-04-22)
 ==================
 
