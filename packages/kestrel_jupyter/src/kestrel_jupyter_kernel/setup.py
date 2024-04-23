@@ -41,10 +41,18 @@ def install_kernelspec():
 def run():
     print("Setup Kestrel Jupyter Kernel")
     print("  Install new Jupyter kernel ...", end=" ")
-    install_kernelspec()
-    print("done")
+    try:
+        install_kernelspec()
+    except:
+        print("failed to install Kestrel Jupyter kernel")
+    else:
+        print("done")
 
     # generate and install kestrel codemirrmor mode
     print("  Compute and install syntax highlighting ...", end=" ")
-    update_codemirror_mode()
-    print("done")
+    try:
+        update_codemirror_mode()
+    except:
+        print("failed to setup syntax highlighting; known issue with JupyterLab")
+    else:
+        print("done")
