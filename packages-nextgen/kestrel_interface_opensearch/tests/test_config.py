@@ -29,9 +29,10 @@ def test_load_config(tmp_path):
                 }
             }
         },
-        "indexes": {
-            "some_index": {
+        "datasources": {
+            "some_ds": {
                 "connection": "some-cloud-thing",
+                "index_pattern": "logs-*",
                 "timestamp": "@timestamp",
                 "timestamp_format": "%Y-%m-%d %H:%M:%S.%f",
                 "data_model_mapping": str(tmp_path / "mapping.yaml")
@@ -49,4 +50,4 @@ def test_load_config(tmp_path):
     conn: Connection = read_config.connections["localhost"]
     assert conn.url == config["connections"]["localhost"]["url"]
     assert read_config.connections["localhost"].url == config["connections"]["localhost"]["url"]
-    assert read_config.indexes["some_index"].timestamp == config["indexes"]["some_index"]["timestamp"]
+    assert read_config.datasources["some_ds"].index_pattern == config["datasources"]["some_ds"]["index_pattern"]

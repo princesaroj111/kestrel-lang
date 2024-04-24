@@ -163,7 +163,7 @@ class SQLAlchemyInterface(AbstractInterface):
         self.schemas: dict = {}  # Schema per table (index)
         self.engines: dict = {}  # Map of conn name -> engine
         self.conns: dict = {}  # Map of conn name -> connection
-        for info in self.config.tables.values():
+        for info in self.config.datasources.values():
             name = info.connection
             conn_info = self.config.connections[name]
             if name not in self.engines:
@@ -201,7 +201,7 @@ class SQLAlchemyInterface(AbstractInterface):
             tables = translator.query.selectable.get_final_froms()
             table = tables[0].name  # TODO: what if there's more than 1?
             # Get the data source's SQLAlchemy connection object
-            conn = self.conns[self.config.tables[table].connection]
+            conn = self.conns[self.config.datasources[table].connection]
             df = read_sql(sql, conn)
             dmm = translator.dmm[
                 translator.entity_type
@@ -252,14 +252,14 @@ class SQLAlchemyInterface(AbstractInterface):
 
         elif isinstance(instruction, SourceInstruction):
             if isinstance(instruction, DataSource):
-                ds = self.config.tables[instruction.datasource]
+                ds = self.config.datasources[instruction.datasource]
                 connection = ds.connection
                 dialect = self.engines[connection].dialect
                 translator = SQLAlchemyTranslator(
                     dialect,
                     lambda dt: dt.strftime(ds.timestamp_format),
                     ds.timestamp,
-                    sqlalchemy.table(instruction.datasource),
+                    sqlalchemy.table(ds.table),
                     ds.data_model_map,
                 )
             else:
