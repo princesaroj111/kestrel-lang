@@ -9,6 +9,11 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+Fixed
+-----
+
+- Repeated queries when stix-shifter pagination is off
+
 1.8.4 (2024-04-23)
 ==================
 
