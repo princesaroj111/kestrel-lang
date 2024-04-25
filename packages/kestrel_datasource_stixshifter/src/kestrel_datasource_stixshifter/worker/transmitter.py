@@ -192,7 +192,12 @@ class Transmitter(Process):
                     )
 
                     # prepare for next round retrieval
-                    result_retrieval_offset += len(result_batch["data"])
+                    result_len = len(result_batch["data"])
+                    result_retrieval_offset += result_len
+
+                    if result_len < batch_size:
+                        has_remaining_results = False
+
                     if "metadata" in result_batch:
                         metadata = result_batch["metadata"]
                     else:
