@@ -195,6 +195,8 @@ class Transmitter(Process):
                     result_retrieval_offset += len(result_batch["data"])
                     if "metadata" in result_batch:
                         metadata = result_batch["metadata"]
+                    else:
+                        has_remaining_results = False
 
                     if self.limit:
                         if result_retrieval_offset >= self.limit:
