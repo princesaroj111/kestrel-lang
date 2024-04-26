@@ -9,6 +9,16 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+Added
+-----
+
+- cli/diag: add start/stop/last options
+
+Changed
+-------
+
+- cli/diag: change default timeframe to last 5 minutes
+
 Fixed
 -----
 
