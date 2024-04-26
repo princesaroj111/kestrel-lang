@@ -1,10 +1,9 @@
-import pytest
 from pandas import DataFrame
 from uuid import uuid4
 
 from kestrel.cache import InMemoryCache
 from kestrel.cache.inmemory import InMemoryCacheVirtual
-from kestrel.ir.graph import IRGraph, IRGraphEvaluable
+from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.frontend.parser import parse_kestrel
 
 

@@ -3,7 +3,7 @@ from typing import Iterable, Mapping, Optional, Tuple
 from uuid import UUID
 
 from opensearchpy import OpenSearch
-from pandas import DataFrame, Series, concat
+from pandas import DataFrame, concat
 
 from kestrel.display import GraphletExplanation
 from kestrel.exceptions import DataSourceError

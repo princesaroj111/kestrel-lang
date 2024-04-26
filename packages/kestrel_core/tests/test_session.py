@@ -7,7 +7,6 @@ from uuid import uuid4
 from kestrel.display import GraphExplanation
 from kestrel.ir.instructions import Construct
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
-from kestrel.frontend.parser import parse_kestrel
 from kestrel.cache import SqliteCache
 
 

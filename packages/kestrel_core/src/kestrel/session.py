@@ -1,6 +1,6 @@
 import logging
 from contextlib import AbstractContextManager
-from uuid import UUID, uuid4
+from uuid import uuid4
 from typing import Iterable
 from typeguard import typechecked
 
@@ -8,9 +8,9 @@ from kestrel.display import Display, GraphExplanation
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import Instruction, Explain
 from kestrel.frontend.parser import parse_kestrel
-from kestrel.cache import AbstractCache, SqliteCache
+from kestrel.cache import SqliteCache
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
-from kestrel.interface import AbstractInterface, InterfaceManager
+from kestrel.interface import InterfaceManager
 from kestrel.exceptions import InstructionNotFound
 
 

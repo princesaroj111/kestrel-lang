@@ -1,4 +1,3 @@
-import pytest
 import networkx.utils
 from collections import Counter
 from pandas import DataFrame
@@ -16,7 +15,6 @@ from kestrel.ir.instructions import (
     TransformingInstruction,
     CACHE_INTERFACE_IDENTIFIER,
 )
-from kestrel.ir.filter import StrComparison, StrCompOp
 from kestrel.ir.graph import IRGraph, IRGraphSimpleQuery
 from kestrel.frontend.parser import parse_kestrel
 from kestrel.cache import InMemoryCache

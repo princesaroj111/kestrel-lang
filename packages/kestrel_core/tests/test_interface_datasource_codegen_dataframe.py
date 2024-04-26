@@ -9,9 +9,8 @@ from kestrel.interface.codegen.dataframe import (
 from kestrel.ir.instructions import (
     Construct,
     Variable,
-    Filter,
     Limit,
-    ProjectAttrs,
+    ProjectAttrs
 )
 
 from kestrel.frontend.parser import parse_kestrel

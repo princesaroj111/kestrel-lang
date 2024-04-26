@@ -1,10 +1,8 @@
-import json
 import pytest
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from kestrel.frontend.parser import parse_kestrel
-from kestrel.ir.graph import IRGraph
 from kestrel.ir.filter import ReferenceValue
 from kestrel.ir.instructions import (
     Construct,

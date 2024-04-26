@@ -4,9 +4,7 @@ from dateutil import parser
 from kestrel_interface_opensearch.ossql import OpenSearchTranslator
 from kestrel.exceptions import UnsupportedOperatorError
 from kestrel.ir.filter import (
-    BoolExp,
     ExpOp,
-    FComparison,
     IntComparison,
     ListOp,
     ListComparison,
@@ -14,17 +12,15 @@ from kestrel.ir.filter import (
     NumCompOp,
     StrCompOp,
     StrComparison,
-    TimeRange,
+    TimeRange
 )
 from kestrel.ir.instructions import (
-    DataSource,
     Filter,
     Limit,
     Offset,
     ProjectAttrs,
     ProjectEntity,
-    Sort,
-    SortDirection,
+    Sort
 )
 
 import pytest

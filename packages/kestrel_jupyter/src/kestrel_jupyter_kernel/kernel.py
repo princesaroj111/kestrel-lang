@@ -1,6 +1,5 @@
 from ipykernel.kernelbase import Kernel
 import logging
-import networkx as nx
 
 from kestrel.session import Session
 from kestrel_jupyter_kernel.display import to_html_blocks

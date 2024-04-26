@@ -3,9 +3,7 @@ from dateutil import parser
 
 from kestrel.interface.codegen.sql import SqlTranslator
 from kestrel.ir.filter import (
-    BoolExp,
     ExpOp,
-    FComparison,
     IntComparison,
     ListOp,
     ListComparison,
@@ -13,16 +11,14 @@ from kestrel.ir.filter import (
     NumCompOp,
     StrCompOp,
     StrComparison,
-    TimeRange,
+    TimeRange
 )
 from kestrel.ir.instructions import (
-    DataSource,
     Filter,
     Limit,
     Offset,
     ProjectAttrs,
-    ProjectEntity,
-    Sort,
+    Sort
 )
 
 # Use sqlite3 for testing
