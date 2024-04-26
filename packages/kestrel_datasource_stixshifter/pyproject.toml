@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kestrel_datasource_stixshifter"
-version = "1.8.1"
+version = "1.8.2"
 description = "Kestrel STIX-shifter Datasource Interface"
 readme = "README.rst"
 requires-python = ">=3.8"
@@ -28,11 +28,11 @@ classifiers = [
 
 dependencies = [
     "kestrel_core>=1.8.1",
-    "lxml>=4.9.3",
+    "lxml==4.9.4", # Python 3.8 on mac error >5.0.0; stackoverflow #75442675
     "requests>=2.31.0",
-    "nest-asyncio>=1.5.8",
-    "stix-shifter==6.2.2",
-    "stix-shifter-utils==6.2.2",
+    "nest-asyncio>=1.6.0",
+    "stix-shifter==7.0.6",
+    "stix-shifter-utils==7.0.6",
 ]
 
 [project.optional-dependencies]
