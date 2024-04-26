@@ -1,1 +1,0 @@
-from kestrel_datasource_stixbundle.interface import StixBundleInterface
