@@ -5,12 +5,12 @@ on:
     branches:
       - develop
     paths:
-      - 'packages-nextgen/**'
+      - 'packages/**'
   pull_request:
     branches:
       - develop
     paths:
-      - 'packages-nextgen/**'
+      - 'packages/**'
     types:
       - opened
       - reopened
@@ -26,7 +26,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./packages-nextgen/kestrel_core
+        working-directory: ./packages/kestrel_core
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -49,7 +49,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./packages-nextgen/kestrel_interface_opensearch
+        working-directory: ./packages/kestrel_interface_opensearch
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -59,7 +59,7 @@ jobs:
       - name: Install Python Tools
         run: pip install --upgrade pip setuptools wheel pytest
       - name: Install kestrel_core
-        working-directory: ./packages-nextgen/kestrel_core
+        working-directory: ./packages/kestrel_core
         run: pip install .
       - name: Install kestrel_interface_opensearch
         run: pip install .
