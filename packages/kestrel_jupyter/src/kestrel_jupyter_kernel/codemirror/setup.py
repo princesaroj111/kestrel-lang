@@ -47,7 +47,7 @@ def _get_codemirror_file_paths():
 
 
 def _instantiate_codemirror_mode_src():
-    keywords = json.dumps(kestrel.get_keywords())
+    keywords = json.dumps(kestrel.frontend.parser.get_keywords())
     codemirror_src = pkgutil.get_data(__name__, "kestrel_template.js").decode("utf-8")
     codemirror_src = codemirror_src.replace("<<<KEYWORDS>>>", keywords)
     return codemirror_src

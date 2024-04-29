@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kestrel_jupyter"
-version = "1.8.4"
+version = "2.0.0"
 description = "Kestrel Jupyter Kernel"
 readme = "README.rst"
 requires-python = ">=3.8"
@@ -26,15 +26,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "kestrel_core==1.8.2",
-    "kestrel_datasource_stixbundle==1.8.0",
-    "kestrel_datasource_stixshifter==1.8.2",
-    "kestrel_analytics_python==1.8.0",
-    "kestrel_analytics_docker==1.8.1",
+    "kestrel_core==2.0.0",
     "jupyterlab-server",
     "jupyterlab",
     "jupyter_client",
     "nbclassic",
+    "sqlparse==0.4.4",
+    "pygments==2.17.2",
+    "matplotlib==3.8.3",
 ]
 
 [project.optional-dependencies]
@@ -54,4 +53,4 @@ kestrel_jupyter_setup = "kestrel_jupyter_kernel.setup:run"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"*" = ["*.js", "*.png"]
+"*" = ["*.js"]

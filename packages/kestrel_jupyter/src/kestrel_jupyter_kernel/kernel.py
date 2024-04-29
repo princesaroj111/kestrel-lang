@@ -1,8 +1,8 @@
 from ipykernel.kernelbase import Kernel
 import logging
 
-from kestrel.codegen.display import DisplayWarning
 from kestrel.session import Session
+from kestrel_jupyter_kernel.display import to_html_blocks
 
 
 _logger = logging.getLogger(__name__)
@@ -10,9 +10,9 @@ _logger = logging.getLogger(__name__)
 
 class KestrelKernel(Kernel):
     implementation = "kestrel"
-    implementation_version = "1.0"
+    implementation_version = "2.0"
     language = "kestrel"
-    language_version = "1.0"
+    language_version = "2.0"
     # https://jupyter-client.readthedocs.io/en/stable/messaging.html#msging-kernel-info
     language_info = {"name": "kestrel", "file_extension": ".hf"}
     banner = "Kestrel"
@@ -33,29 +33,17 @@ class KestrelKernel(Kernel):
     def do_execute(
         self, code, silent, store_history=True, user_expressions=None, allow_stdin=False
     ):
-        errmsg = None
-
         if not silent:
             try:
-                outputs = self.kestrel_session.execute(code)
-                warning = "\n".join(
-                    [
-                        "[WARNING] " + x.to_string()
-                        for x in outputs
-                        if isinstance(x, DisplayWarning)
-                    ]
-                )
-                self.send_response(
-                    self.iopub_socket, "stream", {"name": "stderr", "text": warning}
-                )
-                output_html = "\n".join(
-                    [x.to_html() for x in outputs if not isinstance(x, DisplayWarning)]
-                )
-                self.send_response(
-                    self.iopub_socket,
-                    "display_data",
-                    {"data": {"text/html": output_html}, "metadata": {}},
-                )
+                for result in self.kestrel_session.execute_to_generate(code):
+                    for html in to_html_blocks(result):
+                        self.send_response(
+                            self.iopub_socket,
+                            "display_data",
+                            {"data": {"text/html": html}, "metadata": {}},
+                        )
+                    # how to clear output (if needed in the future):
+                    # self.send_response(self.iopub_socket, "clear_output")
 
             except Exception as e:
                 _logger.error("Exception occurred", exc_info=True)

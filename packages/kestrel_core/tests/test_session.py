@@ -1,329 +1,185 @@
-import json
-import os
 import pytest
-import pathlib
-import shutil
-import tempfile
-import pandas as pd
+import os
+from kestrel import Session
+from pandas import DataFrame
+from uuid import uuid4
 
-from kestrel.session import Session
-
-
-def get_df(session, var_name):
-    return pd.DataFrame.from_records(session.get_variable(var_name))
-
-
-def execute(session, script):
-    result = session.execute(script)
-    if isinstance(result, str):
-        assert not result.startswith("[ERROR]")
+from kestrel.display import GraphExplanation
+from kestrel.ir.instructions import Construct
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.cache import SqliteCache
 
 
-@pytest.fixture
-def fake_bundle_file():
-    cwd = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(cwd, "../../../test-data/test_bundle.json")
-
-
-@pytest.fixture
-def fake_bundle_2():
-    cwd = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(cwd, "../../../test-data/test_bundle_2.json")
-
-
-@pytest.fixture
-def fake_bundle_3():
-    cwd = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(cwd, "../../../test-data/test_bundle_3.json")
-
-
-@pytest.fixture
-def cbcloud_powershell_bundle():
-    cwd = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(cwd, "../../../test-data/powershell_search_stix_result.json")
-
-
-def test_session_1(fake_bundle_file):
-    with Session(debug_mode=True) as session:
-        execute(
-            session,
-            f"""conns = get network-traffic
-            from file://{fake_bundle_file}
-            where dst_port < 10000""",
-        )
-        conns = get_df(session, "conns")
-        assert len(conns.index) == 100
-        execute(session, "sort conns by dst_port asc")
-        s = get_df(session, "_")
-        assert len(s.index) == 100
-        assert s.iloc[0]["dst_port"] == 22
-        execute(session, "group conns by dst_port")
-        s = get_df(session, "_")
-        assert len(s.index) == 5
-        port_3128 = s[(s["dst_port"] == 3128)]
-        assert len(port_3128.index) == 1
-
-        conns_sym = session.symtable["conns"]
-        conns_dict = dict(conns_sym)
-        assert conns_dict["type"] == conns_sym.type
-        assert conns_dict["entity_table"] == conns_sym.entity_table
-
-
-def test_session_timeframe(fake_bundle_file):
-    with Session(debug_mode=True) as session:
-        session = Session()
-        script = f"""conns = get network-traffic
-                     from file://{fake_bundle_file}
-                     where [network-traffic:dst_port = 22] START t'2020-06-30T19:25:00.000Z' STOP t'2020-06-30T19:26:00.000Z'"""
-        execute(session, script)
-        conns = get_df(session, "conns")
-        assert len(conns.index) == 7
-
-
-@pytest.mark.parametrize(
-    "sco_type, prop, op, value, count",
-    [
-        ("ipv4-addr", "value", "=", "'192.168.121.121'", 1),
-        ("network-traffic", "src_ref.value", "=", "'192.168.121.121'", 1),
-        ("network-traffic", "dst_port", "=", 22, 29),
-        ("user-account", "account_login", "=", "'henry'", 1),
-        ("user-account", "account_login", "LIKE", "'hen%'", 1),
-        ("user-account", "account_login", "=", "'zane'", 0),
-    ],
-)
-def test_session_simple(fake_bundle_file, sco_type, prop, op, value, count):
-    with Session(debug_mode=True) as session:
-        script = f"""result = get {sco_type} from file://{fake_bundle_file} where [{sco_type}:{prop} {op} {value}]"""
-        execute(session, script)
-        result = get_df(session, "result")
-        assert len(result.index) == count
-
-
-@pytest.mark.parametrize(
-    "sco_type, pattern, count",
-    [
-        (
-            "network-traffic",
-            "[network-traffic:dst_ref.value = '10.0.0.91' AND network-traffic:dst_port = 22]",
-            3,
-        ),
-        (
-            "network-traffic",
-            "[network-traffic:dst_ref.value = '10.0.0.91' OR network-traffic:dst_port = 22]",
-            35,
-        ),
-    ],
-)
-def test_session_complex(fake_bundle_file, sco_type, pattern, count):
-    with Session(debug_mode=True) as session:
-        script = f"""result = get {sco_type} from file://{fake_bundle_file} where {pattern}"""
-        execute(session, script)
-        result = get_df(session, "result")
-        assert len(result.index) == count
-
-
-def test_generated_pattern(fake_bundle_file, fake_bundle_2):
-    with Session(debug_mode=True) as session:
-        script = f"""conns_a = get network-traffic
-             from file://{fake_bundle_file}
-         where [network-traffic:dst_ref.value = '10.0.0.134']"""
-        execute(session, script)
-        conns_a = get_df(session, "conns_a")
-        script = f"""conns_b = get network-traffic
-             from file://{fake_bundle_2}
-         where [network-traffic:dst_port = conns_a.dst_port]"""
-        execute(session, script)
-        conns_b = get_df(session, "conns_b")
-        conns_b.to_csv("conns_b.csv")
-        # time range failed it
-        assert len(conns_b.index) == 0
-        assert os.path.exists("conns_b.csv")
-        os.remove("conns_b.csv")
-
-
-def test_generated_pattern_match(fake_bundle_file, fake_bundle_3):
-    with Session(debug_mode=True) as session:
-        script = f"""conns_a = get network-traffic
-             from file://{fake_bundle_file}
-         where [network-traffic:dst_ref.value = '10.0.0.134']"""
-        execute(session, script)
-        conns_a = get_df(session, "conns_a")
-        script = f"""conns_b = get network-traffic
-             from file://{fake_bundle_3}
-         where [network-traffic:dst_port = conns_a.dst_port]"""
-        execute(session, script)
-        conns_b = get_df(session, "conns_b")
-        conns_b.to_csv("conns_b.csv")
-        # time range not tested since it is only generated for udi data sources
-        assert len(conns_b.index) == 3
-        # assert len(conns_b.index) == 2  # 2/3 matches due to time range
-        assert os.path.exists("conns_b.csv")
-        os.remove("conns_b.csv")
-
-
-def test_disp_column_order(fake_bundle_file, caplog):
-    with Session(debug_mode=True) as session:
-        execute(
-            session,
-            f"""conns = get network-traffic
-            from file://{fake_bundle_file}
-            where [network-traffic:dst_port < 10000]""",
-        )
-        # SCO type in attr names should be optional
-        recs = session.execute(f"disp conns attr src_port, dst_port")[0]
-        conns = recs.dataframe
-        print(conns.head())
-        cols = conns.columns.to_list()
-        assert cols.index("src_port") < cols.index("dst_port")
-
-def test_get_set_variable(fake_bundle_file):
-    with Session() as session:
-        # Create a normal var
-        script = f"x = get ipv4-addr from file://{fake_bundle_file} where [ipv4-addr:value = '192.168.121.121']"
-        execute(session, script)
-        var_list = session.get_variable_names()
-        assert "x" in var_list
-        var_x = session.get_variable("x")
-        assert len(var_x) == 1
-        val = var_x[0]
-        assert val["type"] == "ipv4-addr"
-        assert val["value"] == "192.168.121.121"
-
-        # Now create a new var using Session API
-        names = ["alice", "bob", "carol"]
-        session.create_variable("y", names, object_type="user-account")
-        var_list = session.get_variable_names()
-        assert "x" in var_list
-        assert "y" in var_list
-        var_y = session.get_variable("y")
-        assert len(var_y) == 3
-        print(var_y)
-        val = var_y[0]
-        assert val["type"] == "user-account"
-        # Maybe this should be 'account_login'?
-        assert (
-            val["user_id"] in names
-        )  # Order is not preserved, so it could be any of these
-
-
-def test_session_runtime_dir():
-    # standard session
-    with Session(debug_mode=False) as session:
-        runtime_directory = session.runtime_directory
-        runtime_master_dirctory = session._get_runtime_directory_master()
-
-        assert os.path.exists(session.runtime_directory)
-
-        # if not executed in a clean env; it has previous debug dirs
-        if runtime_master_dirctory.exists():
-            d = pathlib.Path(session.runtime_directory).resolve()
-            d_master = runtime_master_dirctory.resolve()
-            assert d != d_master
-
-    assert not os.path.exists(session.runtime_directory)
-
-    # debug session
-    with Session(debug_mode=True) as session:
-        runtime_directory = session.runtime_directory
-        runtime_master_dirctory = session._get_runtime_directory_master()
-
-        assert os.path.exists(runtime_directory)
-
-    assert os.path.exists(runtime_directory)
-
-    if runtime_master_dirctory.exists():
-        d = pathlib.Path(runtime_directory).resolve()
-        d_master = runtime_master_dirctory.resolve()
-        assert d == d_master
-
-    # predefined runtime_dir session managed by session
-    d = pathlib.Path(tempfile.gettempdir()) / "kestrel-runtime-test"
-    d = d.resolve()
-    if os.path.exists(d):
-        shutil.rmtree(d)
-    with Session(runtime_dir=d) as session:
-        session = Session()
-        assert os.path.exists(d)
-    assert not os.path.exists(d)
-
-    # predefined runtime_dir session not managed by session
-    d = pathlib.Path(tempfile.gettempdir()) / "kestrel-runtime-test"
-    d = d.resolve()
-    pathlib.Path(d).mkdir(parents=True, exist_ok=True)
-    with Session(runtime_dir=d) as session:
-        assert os.path.exists(d)
-    assert os.path.exists(d)
-
-
-def test_session_debug_from_env():
-    os.environ["KESTREL_DEBUG"] = "something"
-    with Session() as session:
-        assert session.debug_mode == True
-
-
-def test_sha256_attr_name(cbcloud_powershell_bundle):
-    # Make sure we can handle single quotes in attr names
-    with Session() as session:
-        script = (
-            "x = get process"
-            f" from file://{cbcloud_powershell_bundle}"
-            " where [process:name = 'powershell.exe']"
-        )
-        execute(session, script)
-        out = session.execute("DISP x ATTR binary_ref.hashes.'SHA-256'")
-        df = out[0].dataframe
-        assert (
-            df["binary_ref.hashes.'SHA-256'"][0]
-            == "de96a6e69944335375dc1ac238336066889d9ffc7d73628ef4fe1b1b160ab32c"
-        )
-
-
-def test_disp_after_group(fake_bundle_file):
-    with Session(debug_mode=True) as session:
-        session.execute(
-            f"""
-conns = get network-traffic from file://{fake_bundle_file}
-    where [network-traffic:dst_port < 10000]
-grouped = group conns by src_ref.value, dst_ref.value with count(src_ref.value) as count
+def test_execute_in_cache():
+    hf = """
+proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
+                       , {"name": "explorer.exe", "pid": 99}
+                       , {"name": "firefox.exe", "pid": 201}
+                       , {"name": "chrome.exe", "pid": 205}
+                       ]
+browsers = proclist WHERE name != "cmd.exe"
+DISP browsers
+cmd = proclist WHERE name = "cmd.exe"
+DISP cmd ATTR pid
 """
-        )
-        out = session.execute("DISP grouped ATTR src_ref.value, dst_ref.value, count")
-        df = out[0].dataframe
-        assert list(df.columns) == ["src_ref.value", "dst_ref.value", "count"]
-
-
-def test_where_deref_network_traffic(fake_bundle_file):
-    '''#290: expression does not work on attribute with reference'''
-    with Session(debug_mode=True) as session:
-        execute(
-            session,
-            f"""conns = get network-traffic
-            from file://{fake_bundle_file}
-            where [network-traffic:dst_port < 10000]""",
-        )
-        conns = get_df(session, "conns")
-        assert len(conns.index) == 100
-        execute(session, "c2 = conns where src_ref.value = '192.168.212.97'")
-        c2 = session.get_variable("c2")
-        assert len(c2) == 1
-        assert c2[0]["dst_port"] == 22
-
-        execute(session, "c2 = conns where src_ref.value = '192.168.121.121' and dst_ref.value = '10.0.0.134'")
-        c2 = session.get_variable("c2")
-        assert len(c2) == 1
-        assert c2[0]["dst_port"] == 3128
-
-
-def test_where_deref_process(cbcloud_powershell_bundle):
-    '''#290: expression does not work on attribute with reference'''
+    b1 = DataFrame([ {"name": "explorer.exe", "pid": 99}
+                   , {"name": "firefox.exe", "pid": 201}
+                   , {"name": "chrome.exe", "pid": 205}
+                   ])
+    b2 = DataFrame([ {"pid": 123} ])
     with Session() as session:
-        script = (
-            "x = get process"
-            f" from file://{cbcloud_powershell_bundle}"
-            " where [process:name = 'powershell.exe']"
-        )
-        execute(session, script)
-        execute(session, "y = x where parent_ref.pid = 1544")
-        y = session.get_variable("y")
-        assert len(y) == 1
-        assert y[0]["parent_ref.x_unique_id"] == "MYORGIDX-02629f16-00000608-00000000-1d71d10a09cc7c4"
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
+        assert b2.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+def test_double_deref_in_cache():
+    # When the Filter node is dereferred twice
+    # The node should be deepcopied each time to avoid issue
+    hf = """
+proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
+                       , {"name": "explorer.exe", "pid": 99}
+                       , {"name": "firefox.exe", "pid": 201}
+                       , {"name": "chrome.exe", "pid": 205}
+                       ]
+px = proclist WHERE name != "cmd.exe" AND pid = 205
+chrome = proclist WHERE pid IN px.pid
+DISP chrome
+DISP chrome
+"""
+    df = DataFrame([ {"name": "chrome.exe", "pid": 205} ])
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert df.equals(next(res))
+        assert df.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+def test_explain_in_cache():
+    hf = """
+proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
+                       , {"name": "explorer.exe", "pid": 99}
+                       , {"name": "firefox.exe", "pid": 201}
+                       , {"name": "chrome.exe", "pid": 205}
+                       ]
+browsers = proclist WHERE name != "cmd.exe"
+chrome = browsers WHERE pid = 205
+EXPLAIN chrome
+"""
+    with Session() as session:
+        ress = session.execute_to_generate(hf)
+        res = next(ress)
+        assert isinstance(res, GraphExplanation)
+        assert len(res.graphlets) == 1
+        ge = res.graphlets[0]
+        assert ge.graph == session.irgraph.to_dict()
+        construct = session.irgraph.get_nodes_by_type(Construct)[0]
+        assert ge.query.language == "SQL"
+        stmt = ge.query.statement.replace('"', '')
+        assert stmt == f'SELECT * \nFROM (SELECT * \nFROM (SELECT * \nFROM (SELECT * \nFROM {construct.id.hex}v) AS proclist \nWHERE name != \'cmd.exe\') AS browsers \nWHERE pid = 205) AS chrome'
+        with pytest.raises(StopIteration):
+            next(ress)
+
+
+def test_multi_interface_explain():
+
+    class DataLake(SqliteCache):
+        @staticmethod
+        def schemes():
+            return ["datalake"]
+
+    class Gateway(SqliteCache):
+        @staticmethod
+        def schemes():
+            return ["gateway"]
+
+    extra_db = []
+    with Session() as session:
+        stmt1 = """
+procs = NEW process [ {"name": "cmd.exe", "pid": 123}
+                    , {"name": "explorer.exe", "pid": 99}
+                    , {"name": "firefox.exe", "pid": 201}
+                    , {"name": "chrome.exe", "pid": 205}
+                    ]
+DISP procs
+"""
+        session.execute(stmt1)
+        session.interface_manager[CACHE_INTERFACE_IDENTIFIER].__class__ = DataLake
+        session.irgraph.get_nodes_by_type_and_attributes(Construct, {"interface": CACHE_INTERFACE_IDENTIFIER})[0].interface = "datalake"
+
+        new_cache = SqliteCache(session_id = uuid4())
+        extra_db.append(new_cache.db_path)
+        session.interface_manager.interfaces.append(new_cache)
+        stmt2 = """
+nt = NEW network [ {"pid": 123, "source": "192.168.1.1", "destination": "1.1.1.1"}
+                 , {"pid": 205, "source": "192.168.1.1", "destination": "1.1.1.2"}
+                 ]
+DISP nt
+"""
+        session.execute(stmt2)
+        session.interface_manager[CACHE_INTERFACE_IDENTIFIER].__class__ = Gateway
+        session.irgraph.get_nodes_by_type_and_attributes(Construct, {"interface": CACHE_INTERFACE_IDENTIFIER})[0].interface = "gateway"
+
+        new_cache = SqliteCache(session_id = uuid4())
+        extra_db.append(new_cache.db_path)
+        session.interface_manager.interfaces.append(new_cache)
+        stmt3 = """
+domain = NEW domain [ {"ip": "1.1.1.1", "domain": "cloudflare.com"}
+                    , {"ip": "1.1.1.2", "domain": "xyz.cloudflare.com"}
+                    ]
+DISP domain
+"""
+        session.execute(stmt3)
+
+        stmt = """
+p2 = procs WHERE name IN ("firefox.exe", "chrome.exe")
+ntx = nt WHERE pid IN p2.pid
+d2 = domain WHERE ip IN ntx.destination
+EXPLAIN d2
+DISP d2
+"""
+        ress = session.execute_to_generate(stmt)
+        disp = next(ress)
+        df_res = next(ress)
+
+        with pytest.raises(StopIteration):
+            next(ress)
+
+        assert isinstance(disp, GraphExplanation)
+        assert len(disp.graphlets) == 4
+
+        assert len(disp.graphlets[0].graph["nodes"]) == 5
+        query = disp.graphlets[0].query.statement.replace('"', '')
+        procs = session.irgraph.get_variable("procs")
+        c1 = next(session.irgraph.predecessors(procs))
+        assert query == f"SELECT pid \nFROM (SELECT * \nFROM (SELECT * \nFROM {c1.id.hex}) AS procs \nWHERE name IN ('firefox.exe', 'chrome.exe')) AS p2"
+
+        assert len(disp.graphlets[1].graph["nodes"]) == 2
+        query = disp.graphlets[1].query.statement.replace('"', '')
+        nt = session.irgraph.get_variable("nt")
+        c2 = next(session.irgraph.predecessors(nt))
+        assert query == f"SELECT * \nFROM (SELECT * \nFROM {c2.id.hex}) AS nt"
+
+        # the current session.execute_to_generate() logic does not store
+        # in cache if evaluated by cache; the behavior may change in the future
+        assert len(disp.graphlets[2].graph["nodes"]) == 2
+        query = disp.graphlets[2].query.statement.replace('"', '')
+        domain = session.irgraph.get_variable("domain")
+        c3 = next(session.irgraph.predecessors(domain))
+        assert query == f"SELECT * \nFROM (SELECT * \nFROM {c3.id.hex}) AS domain"
+
+        assert len(disp.graphlets[3].graph["nodes"]) == 12
+        print(disp.graphlets[3].graph["nodes"])
+        query = disp.graphlets[3].query.statement.replace('"', '')
+        p2 = session.irgraph.get_variable("p2")
+        p2pa = next(session.irgraph.successors(p2))
+        assert query == f"SELECT * \nFROM (SELECT * \nFROM (SELECT * \nFROM {c3.id.hex}) AS domain \nWHERE ip IN (SELECT destination \nFROM (SELECT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT * \nFROM {p2pa.id.hex}v)) AS ntx)) AS d2"
+
+        df_ref = DataFrame([{"ip": "1.1.1.2", "domain": "xyz.cloudflare.com"}])
+        assert df_ref.equals(df_res)
+
+    for db_file in extra_db:
+        os.remove(db_file)

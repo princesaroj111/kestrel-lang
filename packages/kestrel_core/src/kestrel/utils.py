@@ -1,14 +1,65 @@
-import pathlib
-import os
-import uuid
 import collections.abc
+from importlib import resources
+from kestrel.__future__ import is_python_older_than_minor_version
+import os
+from pathlib import Path
+from pkgutil import get_data
 from typeguard import typechecked
-from typing import Union, Iterable, Mapping
-import logging
+from typing import Optional, Mapping, Iterable
 
 
 @typechecked
-def unescape_quoted_string(s: str):
+def load_data_file(package_name: str, file_name: str) -> str:
+    try:
+        # resources.files() is introduced in Python 3.9
+        content = resources.files(package_name).joinpath(file_name).read_text()
+    except AttributeError:
+        # Python 3.8; deprecation warning forward
+        if is_python_older_than_minor_version(9):
+            content = get_data(package_name, file_name).decode("utf-8")
+
+    return content
+
+
+@typechecked
+def list_folder_files(
+    package_name: str,
+    folder_name: str,
+    prefix: Optional[str] = None,
+    extension: Optional[str] = None,
+) -> Iterable[str]:
+    # preprocesss extension to add dot it not there
+    if extension and extension[0] != ".":
+        extension = "." + extension
+    try:
+        file_paths = resources.files(package_name).joinpath(folder_name).iterdir()
+    except AttributeError:
+        if is_python_older_than_minor_version(9):
+            import pkg_resources
+
+            file_names = pkg_resources.resource_listdir(package_name, folder_name)
+            file_paths = [
+                Path(
+                    pkg_resources.resource_filename(
+                        package_name, os.path.join(folder_name, filename)
+                    )
+                )
+                for filename in file_names
+            ]
+    file_list = (
+        f
+        for f in file_paths
+        if (
+            f.is_file()
+            and (f.name.endswith(extension) if extension else True)
+            and (f.name.startswith(prefix) if prefix else True)
+        )
+    )
+    return file_list
+
+
+@typechecked
+def unescape_quoted_string(s: str) -> str:
     if s.startswith("r"):
         return s[2:-1]
     else:
@@ -16,28 +67,7 @@ def unescape_quoted_string(s: str):
 
 
 @typechecked
-def lowered_str_list(xs: Iterable):
-    return [x.lower() for x in xs if isinstance(x, str)]
-
-
-@typechecked
-def mask_value_in_nested_dict(d: Mapping, sensitive_branch: str):
-    # sensitive_branch is the key of the branch to be masked out
-    # if sensitive_branch == '*', then mask all values in the branch
-    # if not, locate the sensitive branch and masks all values in that branch
-    if d:
-        for k, v in d.items():
-            if k == sensitive_branch:
-                sensitive_branch = "*"
-            if isinstance(v, collections.abc.Mapping):
-                d[k] = mask_value_in_nested_dict(v, sensitive_branch)
-            elif isinstance(v, str) and sensitive_branch == "*":
-                d[k] = "********"
-    return d
-
-
-@typechecked
-def update_nested_dict(dict_old: Mapping, dict_new: Union[Mapping, None]):
+def update_nested_dict(dict_old: Mapping, dict_new: Optional[Mapping]) -> Mapping:
     if dict_new:
         for k, v in dict_new.items():
             if isinstance(v, collections.abc.Mapping) and k in dict_old:
@@ -45,91 +75,3 @@ def update_nested_dict(dict_old: Mapping, dict_new: Union[Mapping, None]):
             else:
                 dict_old[k] = v
     return dict_old
-
-
-@typechecked
-def remove_empty_dicts(ds: Iterable[Mapping]):
-    # remove dict with all values as None in list({string:string})
-    # this is the results from SQL query
-    return [d for d in ds if set(d.values()) != {None}]
-
-
-@typechecked
-def dedup_dicts(ds: Iterable[Mapping]):
-    # deduplicate list({string:string})
-    # this is the results from SQL query
-    return [dict(s) for s in set(frozenset(d.items()) for d in ds)]
-
-
-@typechecked
-def dedup_ordered_dicts(ds: Iterable[Mapping]):
-    # deduplicate list({string:string})
-    # maintain the order if seen
-    res = []
-    seen = set()
-    for d in ds:
-        s = str(d)
-        if s not in seen:
-            res.append(d)
-        seen.add(s)
-    return res
-
-
-def subgroup_list(xs, gsize):
-    return [xs[i : i + gsize] for i in range(0, len(xs), gsize)]
-
-
-def mkdtemp():
-    # create a temporary directory and return it (named after a random uuid)
-    ps = None
-    while not ps or pathlib.Path(ps).exists():
-        ps = str(uuid.uuid4())
-    p = pathlib.Path(ps)
-    p.mkdir(parents=True, exist_ok=True)
-    return p
-
-
-def add_logging_handler(handler, if_debug):
-    fmt = "%(asctime)s %(levelname)s %(name)s %(message)s"
-    datefmt = "%H:%M:%S"
-    formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
-
-    handler.setFormatter(formatter)
-
-    root_logger = logging.getLogger()
-    current_logging_level = root_logger.getEffectiveLevel()
-    root_logger.addHandler(handler)
-    root_logger.setLevel(logging.DEBUG if if_debug else logging.INFO)
-
-    return handler, current_logging_level
-
-
-def clear_logging_handlers():
-    root_logger = logging.getLogger()
-    for h in root_logger.handlers[:]:
-        root_logger.removeHandler(h)
-        h.close()
-
-
-def resolve_path_in_kestrel_env_var():
-    for key in os.environ:
-        if key.startswith("KESTREL") or key.startswith("kestrel"):
-            path = os.environ[key]
-            if os.path.exists(path):
-                os.environ[key] = resolve_path(path)
-
-
-def resolve_path(path):
-    return os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
-
-
-class set_current_working_directory:
-    def __init__(self, new_cwd):
-        self.tmp_cwd = new_cwd
-
-    def __enter__(self):
-        self.cwd = os.getcwd()
-        os.chdir(self.tmp_cwd)
-
-    def __exit__(self, exception_type, exception_value, traceback):
-        os.chdir(self.cwd)
