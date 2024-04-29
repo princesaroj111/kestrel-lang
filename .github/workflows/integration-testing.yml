@@ -2,17 +2,13 @@ name: Integration Testing With stix-shifter and Live Data Sources
 on:
   push:
     branches:
-      - develop
-      - develop_*
-      - release
+      - develop_v1
     paths:
       - 'packages/*/src/**'
       - 'pyproject.toml'
   pull_request:
     branches:
-      - develop
-      - develop_*
-      - release
+      - develop_v1
     paths:
       - 'packages/*/src/**'
       - 'pyproject.toml'
