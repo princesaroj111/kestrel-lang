@@ -60,6 +60,7 @@ class SQLAlchemyTranslator(SqlTranslator):
         self.dmm = dmm
         self.proj = None
         self.entity_type = None
+        self.filt = None
 
     @typechecked
     def _render_comp(self, comp: FComparison):
@@ -73,8 +74,8 @@ class SQLAlchemyTranslator(SqlTranslator):
             self.dmm, ocsf_field, comp.op, comp.value
         )
         translated_comps = []
-        for comp in comps:
-            field, op, value = comp
+        for i in comps:
+            field, op, value = i
             col: ColumnClause = column(field)
             if op == StrCompOp.NMATCHES:
                 tmp = ~comp2func[op](col, value)
@@ -107,7 +108,7 @@ class SQLAlchemyTranslator(SqlTranslator):
     @typechecked
     def _add_filter(self) -> Optional[str]:
         if not self.filt:
-            return None
+            return
         filt = self.filt
         if filt.timerange.start:
             # Convert the timerange to the appropriate pair of comparisons
