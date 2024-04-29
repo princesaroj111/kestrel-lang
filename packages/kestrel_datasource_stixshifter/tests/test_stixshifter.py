@@ -79,6 +79,7 @@ profiles:
                 cool_down_after_transmission: 5
                 allow_dev_connector: True
                 verify_cert: false
+                subquery_time_window: 600
                 dialects:
                     - beats
         config:
@@ -107,7 +108,7 @@ newvar = NEW [ {"type": "process", "name": "cmd.exe", "pid": "123"}
 
         ss_config = s.config["datasources"]["kestrel_datasource_stixshifter"]
         ss_profiles = ss_config["profiles"]
-        connector_name, connection, configuration, retrieval_batch_size, cool_down_after_transmission, allow_dev_connector, verify_cert = get_datasource_from_profiles("host101", ss_profiles)
+        connector_name, connection, configuration, retrieval_batch_size, cool_down_after_transmission, allow_dev_connector, verify_cert, subquery_time_window = get_datasource_from_profiles("host101", ss_profiles)
         assert connector_name == "elastic_ecs"
         assert configuration["auth"]["id"] == "profileA"
         assert configuration["auth"]["api_key"] == "qwer"
@@ -116,6 +117,7 @@ newvar = NEW [ {"type": "process", "name": "cmd.exe", "pid": "123"}
         assert retrieval_batch_size == 2000
         assert cool_down_after_transmission == 0
         assert verify_cert == True
+        assert subquery_time_window == 0
 
         with open(profile_file, "w") as pf:
             pf.write(profileB)
@@ -124,7 +126,7 @@ newvar = NEW [ {"type": "process", "name": "cmd.exe", "pid": "123"}
 
         # need to refresh the pointers since the dict is updated
         ss_profiles = ss_config["profiles"]
-        connector_name, connection, configuration, retrieval_batch_size, cool_down_after_transmission, allow_dev_connector, verify_cert = get_datasource_from_profiles("host101", ss_profiles)
+        connector_name, connection, configuration, retrieval_batch_size, cool_down_after_transmission, allow_dev_connector, verify_cert, subquery_time_window = get_datasource_from_profiles("host101", ss_profiles)
         assert connector_name == "elastic_ecs"
         assert configuration["auth"]["id"] == "profileB"
         assert configuration["auth"]["api_key"] == "xxxxxx"
@@ -134,5 +136,6 @@ newvar = NEW [ {"type": "process", "name": "cmd.exe", "pid": "123"}
         assert cool_down_after_transmission == 5
         assert allow_dev_connector == True
         assert verify_cert == False
+        assert subquery_time_window == 600
 
     del os.environ["KESTREL_STIXSHIFTER_CONFIG"]
