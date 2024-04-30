@@ -3,14 +3,12 @@ name: Unused imports check
 on:
   push:
     branches:
-      - develop
-      - develop_*
+      - develop_v1
     paths:
       - 'packages/*/src/**'
   pull_request:
     branches:
-      - develop
-      - develop_*
+      - develop_v1
     paths:
       - 'packages/*/src/**'
     types:
