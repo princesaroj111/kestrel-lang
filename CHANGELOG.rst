@@ -9,11 +9,14 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+1.8.5 (2024-05-01)
+==================
+
 Added
 -----
 
 - cli/diag: add start/stop/last options
-- stix-shifter interface can split query into subquery if the source cannot process large-time-window query
+- subquery generation support in stix-shifter interface based on specified time window
 - configuration doc on `subquery_time_window`
 
 Changed
