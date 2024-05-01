@@ -31,6 +31,10 @@ def test_cli(stixshifter_profile_lab101):
 #### Kestrel specific config
 retrieval batch size: 2000
 cool down after transmission: 0
+allow unverified connector: False
+verify SSL or not: True
+split query into subquery: False
+subquery with time window (in seconds): 0
 enable fast translation: False
 
 #### Config to be passed to stix-shifter
@@ -98,6 +102,10 @@ def test_cli_ecs(stixshifter_profile_ecs):
 #### Kestrel specific config
 retrieval batch size: 2000
 cool down after transmission: 0
+allow unverified connector: False
+verify SSL or not: True
+split query into subquery: False
+subquery with time window (in seconds): 0
 enable fast translation: False
 
 #### Config to be passed to stix-shifter

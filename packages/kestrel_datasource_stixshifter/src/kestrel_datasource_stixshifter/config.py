@@ -20,6 +20,7 @@ STIXSHIFTER_DEBUG_ENV_VAR = "KESTREL_STIXSHIFTER_DEBUG"  # debug mode for stix-s
 ENV_VAR_PREFIX = "STIXSHIFTER_"
 RETRIEVAL_BATCH_SIZE = 2000
 SINGLE_BATCH_TIMEOUT = 60
+SUBQUERY_TIME_WINDOW_IN_SECONDS = 0  # if >0, then segment START/STOP into this Windows Size to file multiple subqueries
 COOL_DOWN_AFTER_TRANSMISSION = 0
 ALLOW_DEV_CONNECTOR = False
 VERIFY_CERT = True
@@ -184,6 +185,14 @@ def get_datasource_from_profiles(profile_name, profiles):
             profile_name,
         )
 
+        subquery_time_window = _extract_param_from_connection_config(
+            "subquery_time_window",
+            int,
+            SUBQUERY_TIME_WINDOW_IN_SECONDS,
+            connection,
+            profile_name,
+        )
+
     return (
         connector_name,
         connection,
@@ -192,6 +201,7 @@ def get_datasource_from_profiles(profile_name, profiles):
         cool_down_after_transmission,
         allow_dev_connector,
         verify_cert,
+        subquery_time_window,
     )
 
 

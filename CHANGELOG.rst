@@ -13,6 +13,8 @@ Added
 -----
 
 - cli/diag: add start/stop/last options
+- stix-shifter interface can split query into subquery if the source cannot process large-time-window query
+- configuration doc on `subquery_time_window`
 
 Changed
 -------
