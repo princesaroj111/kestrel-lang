@@ -4,13 +4,11 @@ on:
   push:
     branches:
       - develop
-      - develop_*
     paths:
       - 'packages/*/src/**'
   pull_request:
     branches:
       - develop
-      - develop_*
     paths:
       - 'packages/*/src/**'
     types:
