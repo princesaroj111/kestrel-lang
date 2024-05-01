@@ -11,6 +11,7 @@ from kestrel.utils import mkdtemp
 from kestrel.exceptions import DataSourceError, DataSourceManagerInternalError
 from kestrel_datasource_stixshifter.connector import setup_connector_module
 from kestrel_datasource_stixshifter import multiproc
+from kestrel_datasource_stixshifter.subquery import split_subquery_by_time_window
 from kestrel_datasource_stixshifter.config import (
     get_datasource_from_profiles,
     load_options,
@@ -63,16 +64,16 @@ def query_datasource(uri, pattern, session_id, config, store, limit=None):
     _logger.debug(f"prepare query with ID: {query_id}")
 
     num_records = 0
-    profile_limit = limit
+    limit_per_profile = limit
 
     for profile in profiles:
         if limit:
             if num_records >= limit:
                 break
             if num_records > 0:
-                profile_limit = limit - num_records
+                limit_per_profile = limit - num_records
         _logger.debug(f"entering stix-shifter data source: {profile}")
-        _logger.debug(f"profile = {profile}, profile_limit = {profile_limit}")
+        _logger.debug(f"profile = {profile}, limit_per_profile = {limit_per_profile}")
         # STIX-shifter will alter the config objects, thus making them not reusable.
         # So only give STIX-shifter a copy of the configs.
         # Check `modernize` functions in the `stix_shifter_utils` for details.
@@ -84,6 +85,7 @@ def query_datasource(uri, pattern, session_id, config, store, limit=None):
             cool_down_after_transmission,
             allow_dev_connector,
             verify_cert,
+            subquery_time_window,
         ) = map(
             copy.deepcopy, get_datasource_from_profiles(profile, config["profiles"])
         )
@@ -98,43 +100,52 @@ def query_datasource(uri, pattern, session_id, config, store, limit=None):
 
         observation_metadata = gen_observation_metadata(connector_name, query_id)
 
-        dsl = translate_query(
-            connector_name, observation_metadata, pattern, connection_dict
-        )
+        for pattern in split_subquery_by_time_window(pattern, subquery_time_window):
 
-        raw_records_queue = Queue()
-        translated_data_queue = Queue()
+            if limit_per_profile:
+                if num_records >= limit_per_profile:
+                    _logger.debug("do not execute subquery due to limit return reached")
+                    break
+                if num_records > 0:
+                    limit_per_profile = limit_per_profile - num_records
 
-        exceptions = []
+            dsl = translate_query(
+                connector_name, observation_metadata, pattern, connection_dict
+            )
 
-        with multiproc.translate(
-            connector_name,
-            observation_metadata,
-            connection_dict.get("options", {}),
-            cache_data_path_prefix,
-            connector_name in config["options"]["fast_translate"],
-            raw_records_queue,
-            translated_data_queue,
-            config["options"]["translation_workers_count"],
-        ):
-            with multiproc.transmit(
+            raw_records_queue = Queue()
+            translated_data_queue = Queue()
+
+            exceptions = []
+
+            with multiproc.translate(
                 connector_name,
-                connection_dict,
-                configuration_dict,
-                retrieval_batch_size,
-                config["options"]["translation_workers_count"],
-                cool_down_after_transmission,
-                verify_cert,
-                dsl["queries"],
+                observation_metadata,
+                connection_dict.get("options", {}),
+                cache_data_path_prefix,
+                connector_name in config["options"]["fast_translate"],
                 raw_records_queue,
-                profile_limit,
+                translated_data_queue,
+                config["options"]["translation_workers_count"],
             ):
-                for result in multiproc.read_translated_results(
-                    translated_data_queue,
+                with multiproc.transmit(
+                    connector_name,
+                    connection_dict,
+                    configuration_dict,
+                    retrieval_batch_size,
                     config["options"]["translation_workers_count"],
+                    cool_down_after_transmission,
+                    verify_cert,
+                    dsl["queries"],
+                    raw_records_queue,
+                    limit_per_profile,
                 ):
-                    num_records += get_num_objects(result)
-                    ingest(result, observation_metadata, query_id, store)
+                    for result in multiproc.read_translated_results(
+                        translated_data_queue,
+                        config["options"]["translation_workers_count"],
+                    ):
+                        num_records += get_num_objects(result)
+                        ingest(result, observation_metadata, query_id, store)
 
     return ReturnFromStore(query_id)
 

@@ -166,11 +166,8 @@ def test_get_multiple_stixshifter_stix_limit_1(set_no_prefetch_kestrel_config, s
         s.execute(stmt)
         v = s.get_variable("var")
 
-        # The extended graph [ipv4-addr:value = '127.0.0.1'] is recognized and
-        # merged to prefetch query, resultsing in limited (32) processes. If
-        # not used by prefetch, the total number of process records prefetched
-        # is 240.
-        assert len(v) == 28
+        # HOST1 returns 26, which is larger than 15
+        assert len(v) == 26
         for i in range(len(v)):
             assert v[i]["type"] == "process"
             assert v[i]["name"] in [

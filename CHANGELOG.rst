@@ -9,6 +9,26 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+1.8.5 (2024-05-01)
+==================
+
+Added
+-----
+
+- cli/diag: add start/stop/last options
+- subquery generation support in stix-shifter interface based on specified time window
+- configuration doc on `subquery_time_window`
+
+Changed
+-------
+
+- cli/diag: change default timeframe to last 5 minutes
+
+Fixed
+-----
+
+- Repeated queries when stix-shifter pagination is off
+
 1.8.4 (2024-04-23)
 ==================
 

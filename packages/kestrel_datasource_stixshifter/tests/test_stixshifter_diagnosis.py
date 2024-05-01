@@ -31,6 +31,10 @@ def test_cli(stixshifter_profile_lab101):
 #### Kestrel specific config
 retrieval batch size: 2000
 cool down after transmission: 0
+allow unverified connector: False
+verify SSL or not: True
+split query into subquery: False
+subquery with time window (in seconds): 0
 enable fast translation: False
 
 #### Config to be passed to stix-shifter
@@ -78,7 +82,7 @@ one batch retrieved: 533 entries
 """
 
     result = subprocess.run(
-        args=[STIX_SHIFTER_DIAG, "lab101"],
+        args=[STIX_SHIFTER_DIAG, "--start=2000-01-01T00:00:00.000Z", "--stop=3000-01-01T00:00:00.000Z", "lab101"],
         universal_newlines=True,
         stdout=subprocess.PIPE,
     )
@@ -98,6 +102,10 @@ def test_cli_ecs(stixshifter_profile_ecs):
 #### Kestrel specific config
 retrieval batch size: 2000
 cool down after transmission: 0
+allow unverified connector: False
+verify SSL or not: True
+split query into subquery: False
+subquery with time window (in seconds): 0
 enable fast translation: False
 
 #### Config to be passed to stix-shifter

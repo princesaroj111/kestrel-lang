@@ -30,6 +30,7 @@ class Diagnosis:
             self.cool_down_after_transmission,
             self.allow_dev_connector,
             self.verify_cert,
+            self.subquery_time_window,
         ) = get_datasource_from_profiles(datasource_name, self.profiles)
         self.if_fast_translation = (
             self.connector_name in self.kestrel_options["fast_translate"]
@@ -50,6 +51,10 @@ class Diagnosis:
         print("#### Kestrel specific config")
         print(f"retrieval batch size: {self.retrieval_batch_size}")
         print(f"cool down after transmission: {self.cool_down_after_transmission}")
+        print(f"allow unverified connector: {self.allow_dev_connector}")
+        print(f"verify SSL or not: {self.verify_cert}")
+        print(f"split query into subquery: {bool(self.subquery_time_window)}")
+        print(f"subquery with time window (in seconds): {self.subquery_time_window}")
         print(f"enable fast translation: {self.if_fast_translation}")
 
         print()
