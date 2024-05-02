@@ -15,7 +15,7 @@ Unreleased
 Added
 -----
 
-- Rely stix-shifter connector init error message to Kestrel
+- Forward stix-shifter connector init error message to Kestrel
 
 1.8.5 (2024-05-01)
 ==================
