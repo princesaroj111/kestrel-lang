@@ -9,6 +9,14 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+1.8.6 (2024-05-02)
+==================
+
+Added
+-----
+
+- Rely stix-shifter connector init error message to Kestrel
+
 1.8.5 (2024-05-01)
 ==================
 
@@ -16,8 +24,8 @@ Added
 -----
 
 - cli/diag: add start/stop/last options
-- subquery generation support in stix-shifter interface based on specified time window
-- configuration doc on `subquery_time_window`
+- Subquery generation support in stix-shifter interface based on specified time window
+- Configuration doc on `subquery_time_window`
 
 Changed
 -------
