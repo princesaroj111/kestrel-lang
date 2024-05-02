@@ -97,27 +97,7 @@ class Transmitter(Process):
             self.configuration_dict,
         )
 
-        # hack stix-shifter v7 to support "disable certificate verification"
-        if not self.verify_cert:
-            disable_cert_verification_on_transmission(self.transmission)
-
-        search_meta_result = self.transmission.query(self.query)
-
-        if search_meta_result["success"]:
-            self.search_id = search_meta_result["search_id"]
-            if self.wait_datasource_search():
-                # no error so far
-                self.retrieve_data()
-
-                # some connector needs to delete the query in the datasource,
-                # e.g., chronicle, discard the return (successful or not)
-                self.transmission.delete(self.search_id)
-        else:
-            err_msg = (
-                search_meta_result["error"]
-                if "error" in search_meta_result
-                else "details not avaliable"
-            )
+        if not hasattr(self.transmission, "entry_point"):
             packet = TransmissionResult(
                 self.worker_name,
                 False,
@@ -125,10 +105,43 @@ class Transmitter(Process):
                 None,
                 WorkerLog(
                     logging.ERROR,
-                    f"STIX-shifter transmission.query() failed: {err_msg}",
+                    f"stix-shifter connector init: {self.transmission.init_error}",
                 ),
             )
             self.queue.put(packet)
+        else:
+            # hack stix-shifter v7 to support "disable certificate verification"
+            if not self.verify_cert:
+                disable_cert_verification_on_transmission(self.transmission)
+
+            search_meta_result = self.transmission.query(self.query)
+
+            if search_meta_result["success"]:
+                self.search_id = search_meta_result["search_id"]
+                if self.wait_datasource_search():
+                    # no error so far
+                    self.retrieve_data()
+
+                    # some connector needs to delete the query in the datasource,
+                    # e.g., chronicle, discard the return (successful or not)
+                    self.transmission.delete(self.search_id)
+            else:
+                err_msg = (
+                    search_meta_result["error"]
+                    if "error" in search_meta_result
+                    else "details not avaliable"
+                )
+                packet = TransmissionResult(
+                    self.worker_name,
+                    False,
+                    None,
+                    None,
+                    WorkerLog(
+                        logging.ERROR,
+                        f"STIX-shifter transmission.query() failed: {err_msg}",
+                    ),
+                )
+                self.queue.put(packet)
 
     def wait_datasource_search(self):
         # kestrel init status: "KINIT"
