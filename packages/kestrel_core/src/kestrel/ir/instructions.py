@@ -120,6 +120,7 @@ class Filter(TransformingInstruction):
 @dataclass(eq=False)
 class ProjectEntity(SolePredecessorTransformingInstruction):
     entity_type: str
+    native_type: Optional[str]
 
 
 @dataclass(eq=False)
@@ -156,6 +157,8 @@ class DataSource(SourceInstruction):
 @dataclass(eq=False)
 class Variable(SolePredecessorTransformingInstruction):
     name: str
+    entity_type: Optional[str] = None
+    native_type: Optional[str] = None
     # required to dereference a variable that has been created multiple times
     # the variable with the largest version will be used by dereference
     version: int = 0
@@ -166,6 +169,7 @@ class Reference(IntermediateInstruction):
     """Referred Kestrel variable (used in AST) before de-referencing to a Kestrel variable"""
 
     name: str
+    entity_type: Optional[str] = None
 
 
 @dataclass(eq=False)
@@ -186,6 +190,7 @@ class Offset(SolePredecessorTransformingInstruction):
 @dataclass(eq=False)
 class Construct(SourceInstruction):
     data: List[Mapping[str, Union[str, int, bool]]]
+    entity_type: Optional[str] = None
     interface: str = CACHE_INTERFACE_IDENTIFIER
 
 

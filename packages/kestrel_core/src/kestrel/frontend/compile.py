@@ -8,7 +8,10 @@ from dateutil.parser import parse as to_datetime
 from lark import Transformer, Token
 from typeguard import typechecked
 
-from kestrel.mapping.data_model import translate_comparison_to_ocsf
+from kestrel.mapping.data_model import (
+    translate_comparison_to_ocsf,
+    translate_projection_to_ocsf,
+)
 from kestrel.utils import unescape_quoted_string
 from kestrel.ir.filter import (
     FExpression,
@@ -173,7 +176,35 @@ class _KestrelT(Transformer):
         super().__init__()
 
     def start(self, args):
-        return reduce(compose, args, IRGraph())
+        graph = reduce(compose, args, IRGraph())
+
+        returns = graph.get_returns()
+        _logger.debug("start returns %s", returns)
+
+        #TODO: Walk graph for fixups?
+        for root in returns:
+            stack = [root]
+            native_type = None
+            entity_type = None
+            has_attrs = []  # node with attrs that need to be mapped
+            while stack:
+                curr = stack.pop()
+                _logger.debug("curr = %s", curr)
+                stack.extend(graph.predecessors(curr))
+                if isinstance(curr, Variable):
+                    # Entity type HAS NOT been mapped yet for Variable?
+                    native_type = curr.entity_type
+                    entity_type = self.entity_map.get(native_type, native_type)
+                elif isinstance(curr, ProjectEntity):
+                    # Entity type HAS been mapped for ProjectEntity
+                    native_type = curr.native_type
+                    entity_type = curr.entity_type
+                elif hasattr(curr, "attrs"):  #isinstance(curr, ProjectAttrs):
+                    has_attrs.append(curr)
+            for node in has_attrs:
+                # Map attrs to OCSF
+                node.attrs = translate_projection_to_ocsf(self.property_map, native_type, entity_type, node.attrs)
+        return graph
 
     def statement(self, args):
         return args[0]
@@ -213,10 +244,12 @@ class _KestrelT(Transformer):
         graph = IRGraph()
         if len(args) == 1:
             # Try to get entity type from first entity
+            entity_type = None
             data = args[0]
         else:
+            entity_type = args[0].value
             data = args[1]
-        data_node = Construct(data)
+        data_node = Construct(data, entity_type)
         graph.add_node(data_node)
         return graph, data_node
 
@@ -266,7 +299,7 @@ class _KestrelT(Transformer):
         # add reference nodes if used in Filter
         _add_reference_branches_for_filter(graph, filter_node)
 
-        projection_node = graph.add_node(ProjectEntity(mapped_entity_name), filter_node)
+        projection_node = graph.add_node(ProjectEntity(mapped_entity_name, entity_name), filter_node)
         root = projection_node
         if len(args) > 3:
             for arg in args[3:]:

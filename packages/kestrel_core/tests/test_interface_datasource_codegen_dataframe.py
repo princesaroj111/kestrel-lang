@@ -22,7 +22,7 @@ def test_evaluate_Construct():
            , {"name": "firefox.exe", "pid": 201}
            , {"name": "chrome.exe", "pid": 205}
            ]
-    ins = Construct(data)
+    ins = Construct(data, "process")
     df = evaluate_source_instruction(ins)
     assert df.equals(DataFrame(data))
 
