@@ -22,7 +22,7 @@ class InvalidDataSource(KestrelError):
     pass
 
 
-class InvalidYAMLinConfig(KestrelError):
+class InvalidYamlInConfig(KestrelError):
     pass
 
 
