@@ -40,8 +40,8 @@ class DataSource(DataClassJSONMixin):
     index_pattern: str
     timestamp: str
     timestamp_format: str
-    data_model_map: Optional[dict] = None
-    entity_identifier: Optional[dict] = None
+    data_model_map: Optional[Dict] = None
+    entity_identifier: Optional[Dict] = None
 
     def __post_init__(self):
         if not self.data_model_map:
