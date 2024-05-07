@@ -350,7 +350,7 @@ class _KestrelT(Transformer):
             delta = timedelta(minutes=num)
         elif unit == "SECOND":
             delta = timedelta(seconds=num)
-        stop = datetime.now(timezone.UTC)
+        stop = datetime.now(timezone.utc)
         start = stop - delta
         return TimeRange(start, stop)
 
