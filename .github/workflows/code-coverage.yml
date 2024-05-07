@@ -31,15 +31,15 @@ jobs:
         run: pip install pytest pytest-cov
       - name: Install kestrel [all packages]
         run: make install
-      - name: Coverage for kestrel_core and kestrel_datasource_stixbundle
+      - name: Coverage for kestrel_core
         working-directory: ./packages/kestrel_core
-        run: pytest -vv --cov-report=xml --cov=kestrel --cov=kestrel_datasource_stixbundle
-      - name: Coverage for kestrel_datasource_stixshifter
-        working-directory: ./packages/kestrel_datasource_stixshifter
-        run: pytest -vv --cov-report=xml --cov=kestrel_datasource_stixshifter
-      - name: Coverage for kestrel_analytics_python
-        working-directory: ./packages/kestrel_analytics_python
-        run: pytest -vv --cov-report=xml --cov=kestrel_analytics_python
+        run: pytest -vv --cov-report=xml --cov=kestrel
+      - name: Coverage for kestrel_interface_opensearch
+        working-directory: ./packages/kestrel_interface_opensearch
+        run: pytest -vv --cov-report=xml --cov=kestrel_interface_opensearch
+      - name: Coverage for kestrel_interface_sqlalchemy
+        working-directory: ./packages/kestrel_interface_sqlalchemy
+        run: pytest -vv --cov-report=xml --cov=kestrel_interface_sqlalchemy
       - name: Coverage for kestrel_jupyter
         working-directory: ./packages/kestrel_jupyter
         run: pytest -vv --cov-report=xml $(ls src | grep -v '.egg-info' | xargs | sed -r 's/^| / --cov=/g')
@@ -47,5 +47,5 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: false
-          files: ./packages/kestrel_core/coverage.xml,./packages/kestrel_datasource_stixshifter/coverage.xml,./packages/kestrel_analytics_python/coverage.xml,./packages/kestrel_jupyter/coverage.xml
+          files: ./packages/kestrel_core/coverage.xml,./packages/kestrel_interface_opensearch/coverage.xml,./packages/kestrel_interface_sqlalchemy/coverage.xml,./packages/kestrel_jupyter/coverage.xml
           verbose: true
