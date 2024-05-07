@@ -1,7 +1,7 @@
 # Lark Transformer
 
 import logging
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 from functools import reduce
 
 from dateutil.parser import parse as to_datetime
@@ -350,7 +350,7 @@ class _KestrelT(Transformer):
             delta = timedelta(minutes=num)
         elif unit == "SECOND":
             delta = timedelta(seconds=num)
-        stop = datetime.now(UTC)
+        stop = datetime.now(timezone.UTC)
         start = stop - delta
         return TimeRange(start, stop)
 

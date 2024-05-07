@@ -1,8 +1,7 @@
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, Mapping, Optional
+from dataclasses import dataclass
+from typing import Dict, Optional
 
-import yaml
 from mashumaro.mixins.json import DataClassJSONMixin
 
 from kestrel.config.utils import (
