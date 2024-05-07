@@ -61,7 +61,7 @@ def load_user_config(
 
 
 @typechecked
-def load_config() -> Mapping:
+def load_kestrel_config() -> Mapping:
     config_default = load_default_config()
     config_user = load_user_config(CONFIG_PATH_ENV_VAR, CONFIG_PATH_DEFAULT)
     _logger.debug(f"User configuration loaded: {config_user}")

@@ -1,4 +1,4 @@
-import kestrel.config.utils as cfg
+from kestrel.config.utils import load_kestrel_config
 import os
 
 
@@ -15,7 +15,7 @@ credentials:
 
     with open(os.getenv("KESTREL_CONFIG"), "w") as fp:
         fp.write(test_config)
-    config = cfg.load_config()
+    config = load_kestrel_config()
     assert config["credentials"]["username"] == "test-user"
     assert config["credentials"]["password"] == "test-password"
 
@@ -35,7 +35,7 @@ debug:
     os.environ["KESTREL_CACHE_DIRECTORY_PREFIX"] = "Kestrel2.0-"
     with open(os.getenv("KESTREL_CONFIG"), "w") as fp:
         fp.write(test_config)
-    config = cfg.load_config()
+    config = load_kestrel_config()
     assert config["credentials"]["username"] == "test-user"
     assert config["credentials"]["password"] == "test-password"
     assert config["debug"]["cache_directory_prefix"] == "Kestrel2.0-"
@@ -54,7 +54,7 @@ debug:
     os.environ["KESTREL_CACHE_DIRECTORY_PREFIX"] = "Kestrel2.0-"
     with open(os.getenv("KESTREL_CONFIG"), "w") as fp:
         fp.write(test_config)
-    config = cfg.load_config()
+    config = load_kestrel_config()
     assert config["credentials"]["username"] == "test-user"
     assert config["credentials"]["password"] == "test-password"
     assert config["debug"]["cache_directory_prefix"] == "$I_DONT_EXIST"
@@ -75,7 +75,7 @@ loadtest:
         fp.write(test_config)
     with open(os.path.join(tmp_path, "abc.yaml"), "w") as fp:
         fp.write("test: fake-value")
-    config = cfg.load_config()
+    config = load_kestrel_config()
     assert config["credentials"]["username"] == "test-user"
     assert config["credentials"]["password"] == "test-password"
     assert config["loadtest"]["xyz"]["abc"]["test"] == "fake-value"

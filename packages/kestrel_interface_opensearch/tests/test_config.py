@@ -52,3 +52,4 @@ def test_load_config(tmp_path):
     assert read_config.connections["localhost"].url == config["connections"]["localhost"]["url"]
     assert read_config.datasources["some_ds"].index_pattern == config["datasources"]["some_ds"]["index_pattern"]
     assert read_config.datasources["some_ds"].data_model_map["some.field"] == "other.field"
+    assert read_config.datasources["some_ds"].entity_identifier["process"] == "uid"
