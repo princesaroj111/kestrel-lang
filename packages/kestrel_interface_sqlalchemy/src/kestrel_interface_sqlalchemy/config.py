@@ -51,7 +51,9 @@ class Config(DataClassJSONMixin):
 
 def load_config():
     try:
-        interface_config = Config(**load_user_config(PROFILE_PATH_ENV_VAR, PROFILE_PATH_DEFAULT))
+        interface_config = Config(
+            **load_user_config(PROFILE_PATH_ENV_VAR, PROFILE_PATH_DEFAULT)
+        )
 
         # load default entity identifier from main Kestrel config
         kestrel_config = load_kestrel_config()
