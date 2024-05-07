@@ -6,6 +6,7 @@ from typeguard import typechecked
 from typing import Mapping, Union
 
 from kestrel.utils import update_nested_dict, load_data_file
+from kestrel.exceptions import InvalidYAMLinConfig
 
 CONFIG_DIR_DEFAULT = Path.home() / ".config" / "kestrel"
 CONFIG_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "kestrel.yaml"
@@ -21,12 +22,15 @@ def load_leaf_yaml(config: Mapping, path_dir: str) -> Mapping:
         if isinstance(v, Mapping):
             new[k] = load_leaf_yaml(v, path_dir)
         elif isinstance(v, str) and v.endswith(".yaml"):
-            if os.path.isabs(v):
-                with open(v, "r") as fp:
-                    new[k] = yaml.safe_load(fp.read())
-            else:
-                with open(os.path.join(path_dir, v), "r") as fp:
-                    new[k] = yaml.safe_load(fp.read())
+            try:
+                if os.path.isabs(v):
+                    with open(v, "r") as fp:
+                        new[k] = yaml.safe_load(fp.read())
+                else:
+                    with open(os.path.join(path_dir, v), "r") as fp:
+                        new[k] = yaml.safe_load(fp.read())
+            except:
+                raise InvalidYAMLinConfig(v)
         else:
             new[k] = v
     return new

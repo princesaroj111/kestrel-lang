@@ -22,6 +22,10 @@ class InvalidDataSource(KestrelError):
     pass
 
 
+class InvalidYAMLinConfig(KestrelError):
+    pass
+
+
 class VariableNotFound(KestrelError):
     pass
 
