@@ -18,4 +18,5 @@ datasources:
         table: my_events  # actual SQL table name
         timestamp: "@timestamp"
         timestamp_format: "%Y-%m-%d %H:%M:%S.%fZ"
-        data_model_mapping: "my_events_mapping.yaml"
+        data_model_map: "my_events_mapping.yaml"
+        entity_identifier: "my_events_entity_id.yaml" # override it from kestrel.yaml

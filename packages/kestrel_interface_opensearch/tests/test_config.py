@@ -35,7 +35,7 @@ def test_load_config(tmp_path):
                 "index_pattern": "logs-*",
                 "timestamp": "@timestamp",
                 "timestamp_format": "%Y-%m-%d %H:%M:%S.%f",
-                "data_model_mapping": str(tmp_path / "mapping.yaml")
+                "data_model_map": "mapping.yaml"
             }
         }
     }
@@ -51,3 +51,5 @@ def test_load_config(tmp_path):
     assert conn.url == config["connections"]["localhost"]["url"]
     assert read_config.connections["localhost"].url == config["connections"]["localhost"]["url"]
     assert read_config.datasources["some_ds"].index_pattern == config["datasources"]["some_ds"]["index_pattern"]
+    assert read_config.datasources["some_ds"].data_model_map["some.field"] == "other.field"
+    assert read_config.datasources["some_ds"].entity_identifier["process"] == "uid"

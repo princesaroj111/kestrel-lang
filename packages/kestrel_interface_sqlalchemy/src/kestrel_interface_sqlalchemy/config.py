@@ -1,13 +1,13 @@
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, Mapping, Optional
+from dataclasses import dataclass
+from typing import Dict, Optional
 
-import yaml
 from mashumaro.mixins.json import DataClassJSONMixin
 
 from kestrel.config.utils import (
     CONFIG_DIR_DEFAULT,
     load_user_config,
+    load_kestrel_config,
 )
 from kestrel.exceptions import InterfaceNotConfigured
 from kestrel.mapping.data_model import load_default_mapping
@@ -30,14 +30,11 @@ class DataSource(DataClassJSONMixin):
     table: str
     timestamp: str
     timestamp_format: str
-    data_model_mapping: Optional[str] = None  # Filename for mapping
-    data_model_map: Mapping = field(default_factory=dict)
+    data_model_map: Optional[Dict] = None
+    entity_identifier: Optional[Dict] = None
 
     def __post_init__(self):
-        if self.data_model_mapping:
-            with open(self.data_model_mapping, "r") as fp:
-                self.data_model_map = yaml.safe_load(fp)
-        else:
+        if not self.data_model_map:
             # Default to the built-in ECS mapping
             self.data_model_map = load_default_mapping("ecs")  # FIXME: need a default?
 
@@ -54,6 +51,16 @@ class Config(DataClassJSONMixin):
 
 def load_config():
     try:
-        return Config(**load_user_config(PROFILE_PATH_ENV_VAR, PROFILE_PATH_DEFAULT))
+        interface_config = Config(
+            **load_user_config(PROFILE_PATH_ENV_VAR, PROFILE_PATH_DEFAULT)
+        )
+
+        # load default entity identifier from main Kestrel config
+        kestrel_config = load_kestrel_config()
+        for ds in interface_config.datasources.values():
+            if not ds.entity_identifier:
+                ds.entity_identifier = kestrel_config["entity_identifier"]
+
+        return interface_config
     except TypeError:
         raise InterfaceNotConfigured()

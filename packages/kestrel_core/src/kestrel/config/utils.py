@@ -6,12 +6,34 @@ from typeguard import typechecked
 from typing import Mapping, Union
 
 from kestrel.utils import update_nested_dict, load_data_file
+from kestrel.exceptions import InvalidYamlInConfig
 
 CONFIG_DIR_DEFAULT = Path.home() / ".config" / "kestrel"
 CONFIG_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "kestrel.yaml"
 CONFIG_PATH_ENV_VAR = "KESTREL_CONFIG"  # override CONFIG_PATH_DEFAULT if provided
 
 _logger = logging.getLogger(__name__)
+
+
+@typechecked
+def load_leaf_yaml(config: Mapping, path_dir: str) -> Mapping:
+    new = {}
+    for k, v in config.items():
+        if isinstance(v, Mapping):
+            new[k] = load_leaf_yaml(v, path_dir)
+        elif isinstance(v, str) and v.endswith(".yaml"):
+            try:
+                if os.path.isabs(v):
+                    with open(v, "r") as fp:
+                        new[k] = yaml.safe_load(fp.read())
+                else:
+                    with open(os.path.join(path_dir, v), "r") as fp:
+                        new[k] = yaml.safe_load(fp.read())
+            except:
+                raise InvalidYamlInConfig(v)
+        else:
+            new[k] = v
+    return new
 
 
 @typechecked
@@ -36,13 +58,14 @@ def load_user_config(
             with open(config_path, "r") as fp:
                 _logger.debug(f"User configuration file found: {config_path}")
                 config = yaml.safe_load(os.path.expandvars(fp.read()))
+            config = load_leaf_yaml(config, os.path.dirname(config_path))
         except FileNotFoundError:
             _logger.debug(f"User configuration file not exist.")
     return config
 
 
 @typechecked
-def load_config() -> Mapping:
+def load_kestrel_config() -> Mapping:
     config_default = load_default_config()
     config_user = load_user_config(CONFIG_PATH_ENV_VAR, CONFIG_PATH_DEFAULT)
     _logger.debug(f"User configuration loaded: {config_user}")

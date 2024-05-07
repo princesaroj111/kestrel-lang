@@ -1,7 +1,7 @@
 # Lark Transformer
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import reduce
 
 from dateutil.parser import parse as to_datetime
@@ -158,14 +158,12 @@ def _add_reference_branches_for_filter(graph: IRGraph, filter_node: Filter):
 class _KestrelT(Transformer):
     def __init__(
         self,
-        default_variable=DEFAULT_VARIABLE,
         default_sort_order=DEFAULT_SORT_ORDER,
         token_prefix="",
         entity_map={},
         property_map={},
     ):
         # token_prefix is the modification by Lark when using `merge_transformers()`
-        self.default_variable = default_variable
         self.default_sort_order = default_sort_order
         self.token_prefix = token_prefix
         self.entity_map = entity_map
@@ -352,7 +350,7 @@ class _KestrelT(Transformer):
             delta = timedelta(minutes=num)
         elif unit == "SECOND":
             delta = timedelta(seconds=num)
-        stop = datetime.utcnow()
+        stop = datetime.now(timezone.utc)
         start = stop - delta
         return TimeRange(start, stop)
 
