@@ -30,14 +30,11 @@ class DataSource(DataClassJSONMixin):
     table: str
     timestamp: str
     timestamp_format: str
-    data_model_mapping: Optional[str] = None  # Filename for mapping
-    data_model_map: Mapping = field(default_factory=dict)
+    data_model_map: Optional[dict] = None
+    entity_identifier: Optional[dict] = None
 
     def __post_init__(self):
-        if self.data_model_mapping:
-            with open(self.data_model_mapping, "r") as fp:
-                self.data_model_map = yaml.safe_load(fp)
-        else:
+        if not self.data_model_map:
             # Default to the built-in ECS mapping
             self.data_model_map = load_default_mapping("ecs")  # FIXME: need a default?
 

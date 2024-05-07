@@ -147,11 +147,6 @@ endpoint:
         - source.mac
         - server.mac
         - destination.mac
-    port:
-        - client.port
-        - source.port
-        - server.port
-        - destination.port
 
 
 # dst_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint

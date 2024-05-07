@@ -15,6 +15,24 @@ _logger = logging.getLogger(__name__)
 
 
 @typechecked
+def load_leaf_yaml(config: Mapping, path_dir: str) -> Mapping:
+    new = {}
+    for k, v in config.items():
+        if isinstance(v, Mapping):
+            new[k] = load_leaf_yaml(v, path_dir)
+        elif isinstance(v, str) and v.endswith(".yaml"):
+            if os.path.isabs(v):
+                with open(v, "r") as fp:
+                    new[k] = yaml.safe_load(fp.read())
+            else:
+                with open(os.path.join(path_dir, v), "r") as fp:
+                    new[k] = yaml.safe_load(fp.read())
+        else:
+            new[k] = v
+    return new
+
+
+@typechecked
 def load_default_config() -> Mapping:
     _logger.debug(f"Loading default config file...")
     default_config = load_data_file("kestrel.config", "kestrel.yaml")
@@ -36,6 +54,7 @@ def load_user_config(
             with open(config_path, "r") as fp:
                 _logger.debug(f"User configuration file found: {config_path}")
                 config = yaml.safe_load(os.path.expandvars(fp.read()))
+            config = load_leaf_yaml(config, os.path.dirname(config_path))
         except FileNotFoundError:
             _logger.debug(f"User configuration file not exist.")
     return config
