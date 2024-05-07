@@ -19,7 +19,7 @@ entity_identifier:
   src_endpoint:
     - ip
     - port
-  src_endpoint:
+  dst_endpoint:
     - ip
     - port
   certificate: serial_number
