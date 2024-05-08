@@ -12,6 +12,11 @@ Unreleased
 1.8.7 (2024-05-08)
 ==================
 
+Added
+-----
+
+- Documentation about `pagination` in `stixshifter.yaml`
+
 Changed
 -------
 
