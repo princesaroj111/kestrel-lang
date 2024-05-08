@@ -93,7 +93,7 @@ def _remove_nl(s):
         ([Limit(1000), Offset(2000)],
          "SELECT {} FROM my_table LIMIT 2000, 1000"),
         # Test entity projection
-        ([Limit(3), Filter(StrComparison('cmd_line', StrCompOp.EQ, 'foo bar')), ProjectEntity('process')],
+        ([Limit(3), Filter(StrComparison('cmd_line', StrCompOp.EQ, 'foo bar')), ProjectEntity('process', 'process')],
          "SELECT {} FROM my_table WHERE CommandLine = 'foo bar' LIMIT 3"),
     ]
 )
