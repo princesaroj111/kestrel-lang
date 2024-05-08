@@ -9,13 +9,26 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+1.8.7 (2024-05-08)
+==================
+
+Added
+-----
+
+- Documentation about `pagination` in `stixshifter.yaml`
+
+Changed
+-------
+
+- stix-shifter upgraded to 7.0.7
+
 1.8.6 (2024-05-02)
 ==================
 
 Added
 -----
 
-- Rely stix-shifter connector init error message to Kestrel
+- Forward stix-shifter connector init error message to Kestrel
 
 1.8.5 (2024-05-01)
 ==================

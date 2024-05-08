@@ -27,6 +27,7 @@ will load profiles from 3 places (the later will override the former):
                     host: elastic.securitylog.company.com
                     port: 9200
                     indices: host101
+                    pagination: false # disable pagination (only <10k results) to have better performance; Kestrel default: true
                     options:  # use any of this section when needed
                         verify_cert: false  # allow invalid/expired/self-signed certificate
                         retrieval_batch_size: 10000  # set to 10000 to match default Elasticsearch page size; Kestrel default across connectors: 2000
