@@ -9,6 +9,14 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+1.8.7 (2024-05-08)
+==================
+
+Changed
+-------
+
+- stix-shifter upgraded to 7.0.7
+
 1.8.6 (2024-05-02)
 ==================
 
