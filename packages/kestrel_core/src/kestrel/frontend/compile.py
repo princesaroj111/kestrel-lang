@@ -177,33 +177,7 @@ class _KestrelT(Transformer):
 
     def start(self, args):
         graph = reduce(compose, args, IRGraph())
-
-        returns = graph.get_returns()
-        _logger.debug("start returns %s", returns)
-
-        #TODO: Walk graph for fixups?
-        for root in returns:
-            stack = [root]
-            native_type = None
-            entity_type = None
-            has_attrs = []  # node with attrs that need to be mapped
-            while stack:
-                curr = stack.pop()
-                _logger.debug("curr = %s", curr)
-                stack.extend(graph.predecessors(curr))
-                if isinstance(curr, Variable):
-                    # Entity type HAS NOT been mapped yet for Variable?
-                    native_type = curr.entity_type
-                    entity_type = self.entity_map.get(native_type, native_type)
-                elif isinstance(curr, ProjectEntity):
-                    # Entity type HAS been mapped for ProjectEntity
-                    native_type = curr.native_type
-                    entity_type = curr.entity_type
-                elif hasattr(curr, "attrs"):  #isinstance(curr, ProjectAttrs):
-                    has_attrs.append(curr)
-            for node in has_attrs:
-                # Map attrs to OCSF
-                node.attrs = translate_projection_to_ocsf(self.property_map, native_type, entity_type, node.attrs)
+        self._postprocess(graph)
         return graph
 
     def statement(self, args):
@@ -299,7 +273,9 @@ class _KestrelT(Transformer):
         # add reference nodes if used in Filter
         _add_reference_branches_for_filter(graph, filter_node)
 
-        projection_node = graph.add_node(ProjectEntity(mapped_entity_name, entity_name), filter_node)
+        projection_node = graph.add_node(
+            ProjectEntity(mapped_entity_name, entity_name), filter_node
+        )
         root = projection_node
         if len(args) > 3:
             for arg in args[3:]:
@@ -429,3 +405,39 @@ class _KestrelT(Transformer):
         explain = graph.add_node(Explain(), reference)
         graph.add_node(Return(), explain)
         return graph
+
+    def _postprocess(self, graph: IRGraph):
+        """
+        Post-process the IR graph to "fill-in" any missing data,
+        e.g. entity types that aren't available at the time the
+        instruction is added to the graph.
+
+        """
+        returns = graph.get_returns()
+        _logger.debug("start returns %s", returns)
+
+        # Walk graph for fixups
+        for root in returns:
+            stack = [root]
+            native_type = None
+            entity_type = None
+            has_attrs = []  # node with attrs that need to be mapped
+            while stack:
+                curr = stack.pop()
+                _logger.debug("curr = %s", curr)
+                stack.extend(graph.predecessors(curr))
+                if isinstance(curr, Variable):
+                    # Entity type HAS NOT been mapped yet for Variable
+                    native_type = curr.entity_type
+                    entity_type = self.entity_map.get(native_type, native_type)
+                elif isinstance(curr, ProjectEntity):
+                    # Entity type HAS been mapped for ProjectEntity
+                    native_type = curr.native_type
+                    entity_type = curr.entity_type
+                elif hasattr(curr, "attrs"):
+                    has_attrs.append(curr)
+            for node in has_attrs:
+                # Map attrs to OCSF
+                node.attrs = translate_projection_to_ocsf(
+                    self.property_map, native_type, entity_type, node.attrs
+                )

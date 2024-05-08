@@ -57,6 +57,26 @@ DISP proclist ATTR binary_ref.name
             next(res)
 
 
+def test_execute_in_cache_stix_process_filtered():
+    hf = """
+proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
+                       , {"binary_ref.name": "explorer.exe", "pid": 99}
+                       , {"binary_ref.name": "firefox.exe", "pid": 201}
+                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+                       ]
+browsers = proclist WHERE binary_ref.name in ('chrome.exe', 'firefox.exe')
+DISP browsers ATTR binary_ref.name, pid
+"""
+    b1 = DataFrame([ {"binary_ref.name": "firefox.exe", "pid": 201}
+                   , {"binary_ref.name": "chrome.exe", "pid": 205}
+                   ])
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
 def test_execute_in_cache_stix_file():
     data = [ {"name": "cmd.exe", "hashes.MD5": "AD7B9C14083B52BC532FBA5948342B98"}
            , {"name": "powershell.exe", "hashes.MD5": "04029E121A0CFA5991749937DD22A1D9"}
