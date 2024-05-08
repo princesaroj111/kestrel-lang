@@ -277,7 +277,7 @@ def translate_projection_to_ocsf(
     for attr in attrs:
         mapping = dmm.get(attr)
         if not mapping and native_type:
-            mapping = dmm.get(f"{native_type}:{attr}", attr)  #FIXME: only for STIX
+            mapping = dmm.get(f"{native_type}:{attr}", attr)  # FIXME: only for STIX
         else:
             mapping = attr
         ocsf_name = _get_from_mapping(mapping, "ocsf_field")
@@ -288,7 +288,10 @@ def translate_projection_to_ocsf(
     if entity_type:
         # Need to prune the entity name
         prefix = f"{entity_type}."
-        result = [field[len(prefix) :] if field.startswith(prefix) else field for field in result]
+        result = [
+            field[len(prefix) :] if field.startswith(prefix) else field
+            for field in result
+        ]
     return result
 
 
