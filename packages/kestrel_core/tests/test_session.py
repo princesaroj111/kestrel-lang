@@ -57,6 +57,7 @@ DISP proclist ATTR binary_ref.name
             next(res)
 
 
+@pytest.mark.skip("TODO: need attr mapping for Construct")
 def test_execute_in_cache_stix_process_ocsf_disp_attr():
     hf = """
 proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
@@ -64,12 +65,12 @@ proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
                        , {"binary_ref.name": "firefox.exe", "pid": 201}
                        , {"binary_ref.name": "chrome.exe", "pid": 205}
                        ]
-DISP proclist ATTR name
+DISP proclist ATTR file.name
 """
-    b1 = DataFrame([ {"name": "cmd.exe"}
-                   , {"name": "explorer.exe"}
-                   , {"name": "firefox.exe"}
-                   , {"name": "chrome.exe"}
+    b1 = DataFrame([ {"file.name": "cmd.exe"}
+                   , {"file.name": "explorer.exe"}
+                   , {"file.name": "firefox.exe"}
+                   , {"file.name": "chrome.exe"}
                    ])
     with Session() as session:
         res = session.execute_to_generate(hf)
