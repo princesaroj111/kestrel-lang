@@ -177,8 +177,7 @@ class _KestrelT(Transformer):
         super().__init__()
 
     def start(self, args):
-        graph = reduce(compose, args, IRGraph())
-        return graph
+        return reduce(compose, args, IRGraph())
 
     def statement(self, args):
         return args[0]

@@ -120,7 +120,7 @@ class Filter(TransformingInstruction):
 @dataclass(eq=False)
 class ProjectEntity(SolePredecessorTransformingInstruction):
     entity_type: str
-    native_type: Optional[str]
+    native_type: str
 
 
 @dataclass(eq=False)

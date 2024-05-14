@@ -120,9 +120,6 @@ def test_reverse_mapping_executable():
                 assert item["native_op"] == "LIKE"
                 assert item["ocsf_value"] == "basename"
 
-    # timestamp
-    #assert "@timestamp" in reverse_map
-
 
 @pytest.mark.parametrize(
     "dmm, field, op, value, expected_result",
