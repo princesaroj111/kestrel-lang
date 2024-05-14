@@ -57,6 +57,27 @@ DISP proclist ATTR binary_ref.name
             next(res)
 
 
+def test_execute_in_cache_stix_process_ocsf_disp_attr():
+    hf = """
+proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
+                       , {"binary_ref.name": "explorer.exe", "pid": 99}
+                       , {"binary_ref.name": "firefox.exe", "pid": 201}
+                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+                       ]
+DISP proclist ATTR name
+"""
+    b1 = DataFrame([ {"name": "cmd.exe"}
+                   , {"name": "explorer.exe"}
+                   , {"name": "firefox.exe"}
+                   , {"name": "chrome.exe"}
+                   ])
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
 def test_execute_in_cache_stix_process_filtered():
     hf = """
 proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
@@ -73,6 +94,34 @@ DISP browsers ATTR binary_ref.name, pid
     with Session() as session:
         res = session.execute_to_generate(hf)
         assert b1.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+def test_execute_in_cache_stix_process_with_ref_and_multi_returns():
+    hf = """
+proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
+                       , {"binary_ref.name": "explorer.exe", "pid": 99}
+                       , {"binary_ref.name": "firefox.exe", "pid": 201}
+                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+                       ]
+newvar = proclist WHERE binary_ref.name = "cmd.exe"
+DISP proclist ATTR binary_ref.name
+newvar2 = proclist WHERE binary_ref.name IN ("explorer.exe", "cmd.exe")
+newvar3 = newvar2 WHERE pid IN newvar.pid
+DISP newvar3 ATTR binary_ref.name
+"""
+    b1 = DataFrame([ {"binary_ref.name": "cmd.exe"}
+                   , {"binary_ref.name": "explorer.exe"}
+                   , {"binary_ref.name": "firefox.exe"}
+                   , {"binary_ref.name": "chrome.exe"}
+                   ])
+    b2 = DataFrame([ {"binary_ref.name": "cmd.exe"}
+                   ])
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
+        assert b2.equals(next(res))
         with pytest.raises(StopIteration):
             next(res)
 
