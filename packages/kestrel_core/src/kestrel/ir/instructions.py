@@ -169,7 +169,6 @@ class Reference(IntermediateInstruction):
     """Referred Kestrel variable (used in AST) before de-referencing to a Kestrel variable"""
 
     name: str
-    entity_type: Optional[str] = None
 
 
 @dataclass(eq=False)

@@ -38,6 +38,7 @@ from kestrel.ir.instructions import (
     Construct,
     DataSource,
     Filter,
+    Instruction,
     Limit,
     Offset,
     ProjectAttrs,
@@ -177,7 +178,6 @@ class _KestrelT(Transformer):
 
     def start(self, args):
         graph = reduce(compose, args, IRGraph())
-        self._postprocess(graph)
         return graph
 
     def statement(self, args):
@@ -185,8 +185,9 @@ class _KestrelT(Transformer):
 
     def assignment(self, args):
         # TODO: move the var+var into expression in Lark
-        variable_node = Variable(args[0].value)
         graph, root = args[1]
+        entity_type, native_type = self._get_type_from_predecessors(graph, root)
+        variable_node = Variable(args[0].value, entity_type, native_type)
         graph.add_node(variable_node, root)
         return graph
 
@@ -396,6 +397,16 @@ class _KestrelT(Transformer):
 
     def disp(self, args):
         graph, root = args[0]
+        _logger.debug("disp: root = %s", root)
+        if isinstance(root, ProjectAttrs):
+            # Map attrs to OCSF
+            entity_type, native_type = self._get_type_from_predecessors(graph, root)
+            _logger.debug(
+                "Map %s attrs to OCSF %s in %s", native_type, entity_type, root
+            )
+            root.attrs = translate_projection_to_ocsf(
+                self.property_map, native_type, entity_type, root.attrs
+            )
         graph.add_node(Return(), root)
         return graph
 
@@ -406,38 +417,18 @@ class _KestrelT(Transformer):
         graph.add_node(Return(), explain)
         return graph
 
-    def _postprocess(self, graph: IRGraph):
-        """
-        Post-process the IR graph to "fill-in" any missing data,
-        e.g. entity types that aren't available at the time the
-        instruction is added to the graph.
-
-        """
-        returns = graph.get_returns()
-        _logger.debug("start returns %s", returns)
-
-        # Walk graph for fixups
-        for root in returns:
-            stack = [root]
-            native_type = None
-            entity_type = None
-            has_attrs = []  # node with attrs that need to be mapped
-            while stack:
-                curr = stack.pop()
-                _logger.debug("curr = %s", curr)
-                stack.extend(graph.predecessors(curr))
-                if isinstance(curr, Variable):
-                    # Entity type HAS NOT been mapped yet for Variable
-                    native_type = curr.entity_type
-                    entity_type = self.entity_map.get(native_type, native_type)
-                elif isinstance(curr, ProjectEntity):
-                    # Entity type HAS been mapped for ProjectEntity
-                    native_type = curr.native_type
-                    entity_type = curr.entity_type
-                elif hasattr(curr, "attrs"):
-                    has_attrs.append(curr)
-            for node in has_attrs:
-                # Map attrs to OCSF
-                node.attrs = translate_projection_to_ocsf(
-                    self.property_map, native_type, entity_type, node.attrs
-                )
+    def _get_type_from_predecessors(self, graph: IRGraph, root: Instruction):
+        stack = [root]
+        native_type = None
+        entity_type = None
+        while stack and not all((native_type, entity_type)):
+            curr = stack.pop()
+            _logger.debug("_get_type: curr = %s", curr)
+            stack.extend(graph.predecessors(curr))
+            if isinstance(curr, Construct):
+                native_type = curr.entity_type
+                entity_type = self.entity_map.get(native_type, native_type)
+            elif isinstance(curr, Variable):
+                native_type = curr.native_type
+                entity_type = curr.entity_type
+        return entity_type, native_type
