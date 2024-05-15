@@ -53,20 +53,6 @@ comp2func = {
 
 
 @typechecked
-def _render_comp(comp: FComparison) -> BinaryExpression:
-    col: ColumnClause = column(comp.field)
-    if comp.op == StrCompOp.NMATCHES:
-        return ~comp2func[comp.op](col, comp.value)
-    return comp2func[comp.op](col, comp.value)
-
-
-@typechecked
-def _render_multi_comp(comps: MultiComp) -> BooleanClauseList:
-    op = and_ if comps.op == ExpOp.AND else or_
-    return reduce(op, map(_render_comp, comps.comps))
-
-
-@typechecked
 class SqlTranslator:
     def __init__(
         self,
@@ -87,19 +73,32 @@ class SqlTranslator:
         # SQLAlchemy statement object
         self.query: Select = select("*").select_from(from_obj)
 
+    @typechecked
+    def _render_comp(self, comp: FComparison) -> BinaryExpression:
+        col: ColumnClause = column(comp.field)
+        if comp.op == StrCompOp.NMATCHES:
+            return ~comp2func[comp.op](col, comp.value)
+        return comp2func[comp.op](col, comp.value)
+
+    @typechecked
+    def _render_multi_comp(self, comps: MultiComp) -> BooleanClauseList:
+        op = and_ if comps.op == ExpOp.AND else or_
+        return reduce(op, map(self._render_comp, comps.comps))
+
+    @typechecked
     def _render_exp(self, exp: BoolExp) -> BooleanClauseList:
         if isinstance(exp.lhs, BoolExp):
             lhs = self._render_exp(exp.lhs)
         elif isinstance(exp.lhs, MultiComp):
-            lhs = _render_multi_comp(exp.lhs)
+            lhs = self._render_multi_comp(exp.lhs)
         else:
-            lhs = _render_comp(exp.lhs)
+            lhs = self._render_comp(exp.lhs)
         if isinstance(exp.rhs, BoolExp):
             rhs = self._render_exp(exp.rhs)
         elif isinstance(exp.rhs, MultiComp):
-            rhs = _render_multi_comp(exp.rhs)
+            rhs = self._render_multi_comp(exp.rhs)
         else:
-            rhs = _render_comp(exp.rhs)
+            rhs = self._render_comp(exp.rhs)
         return and_(lhs, rhs) if exp.op == ExpOp.AND else or_(lhs, rhs)
 
     def add_Filter(self, filt: Filter) -> None:
@@ -120,9 +119,9 @@ class SqlTranslator:
         if isinstance(exp, BoolExp):
             comp = self._render_exp(exp)
         elif isinstance(exp, MultiComp):
-            comp = _render_multi_comp(exp)
+            comp = self._render_multi_comp(exp)
         else:
-            comp = _render_comp(exp)
+            comp = self._render_comp(exp)
         self.query = self.query.where(comp)
 
     def add_ProjectAttrs(self, proj: ProjectAttrs) -> None:

@@ -5,8 +5,7 @@ from uuid import UUID
 
 from pandas import DataFrame, read_sql
 import sqlalchemy
-from sqlalchemy import and_, column, or_
-from sqlalchemy.sql.elements import BooleanClauseList
+from sqlalchemy import column, or_
 from sqlalchemy.sql.expression import ColumnClause
 from typeguard import typechecked
 
@@ -83,27 +82,6 @@ class SQLAlchemyTranslator(SqlTranslator):
                 tmp = comp2func[op](col, value)
             translated_comps.append(tmp)
         return reduce(or_, translated_comps)
-
-    @typechecked
-    def _render_multi_comp(self, comps: MultiComp):
-        op = and_ if comps.op == ExpOp.AND else or_
-        return reduce(op, map(self._render_comp, comps.comps))
-
-    # This is copied verbatim from sql.py but we need to supply our own _render_comp
-    def _render_exp(self, exp: BoolExp) -> BooleanClauseList:
-        if isinstance(exp.lhs, BoolExp):
-            lhs = self._render_exp(exp.lhs)
-        elif isinstance(exp.lhs, MultiComp):
-            lhs = self._render_multi_comp(exp.lhs)
-        else:
-            lhs = self._render_comp(exp.lhs)
-        if isinstance(exp.rhs, BoolExp):
-            rhs = self._render_exp(exp.rhs)
-        elif isinstance(exp.rhs, MultiComp):
-            rhs = self._render_multi_comp(exp.rhs)
-        else:
-            rhs = self._render_comp(exp.rhs)
-        return and_(lhs, rhs) if exp.op == ExpOp.AND else or_(lhs, rhs)
 
     @typechecked
     def _add_filter(self) -> Optional[str]:
