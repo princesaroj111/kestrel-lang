@@ -267,12 +267,45 @@ def translate_projection_to_native(
 
 
 @typechecked
+def translate_projection_to_ocsf(
+    dmm: dict,
+    native_type: Optional[str],
+    entity_type: Optional[str],
+    attrs: list,
+) -> list:
+    result = []
+    for attr in attrs:
+        mapping = dmm.get(attr)
+        if not mapping and native_type:
+            mapping = dmm.get(f"{native_type}:{attr}", attr)  # FIXME: only for STIX
+        else:
+            mapping = attr
+        ocsf_name = _get_from_mapping(mapping, "ocsf_field")
+        if isinstance(ocsf_name, list):
+            result.extend(ocsf_name)
+        else:
+            result.append(ocsf_name)
+    if entity_type:
+        # Need to prune the entity name
+        prefix = f"{entity_type}."
+        result = [
+            field[len(prefix) :] if field.startswith(prefix) else field
+            for field in result
+        ]
+    return result
+
+
+@typechecked
 def translate_dataframe(df: DataFrame, dmm: dict) -> DataFrame:
     # Translate results into Kestrel OCSF data model
     # The column names of df are already mapped
     df = df.replace({np.nan: None})
     for col in df.columns:
-        mapping = dpath.get(dmm, col, separator=".")
+        try:
+            mapping = dpath.get(dmm, col, separator=".")
+        except KeyError:
+            _logger.debug("No mapping for %s", col)
+            mapping = None
         if isinstance(mapping, dict):
             transformer_name = mapping.get("ocsf_value")
             df[col] = run_transformer_on_series(transformer_name, df[col])

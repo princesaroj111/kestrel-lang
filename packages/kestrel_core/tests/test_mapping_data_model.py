@@ -121,7 +121,6 @@ def test_reverse_mapping_executable():
                 assert item["ocsf_value"] == "basename"
 
 
-
 @pytest.mark.parametrize(
     "dmm, field, op, value, expected_result",
     [

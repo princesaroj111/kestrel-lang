@@ -1,3 +1,4 @@
+import json
 import pytest
 import os
 from kestrel import Session
@@ -31,6 +32,113 @@ DISP cmd ATTR pid
         res = session.execute_to_generate(hf)
         assert b1.equals(next(res))
         assert b2.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+def test_execute_in_cache_stix_process():
+    hf = """
+proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
+                       , {"binary_ref.name": "explorer.exe", "pid": 99}
+                       , {"binary_ref.name": "firefox.exe", "pid": 201}
+                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+                       ]
+DISP proclist ATTR binary_ref.name
+"""
+    b1 = DataFrame([ {"binary_ref.name": "cmd.exe"}
+                   , {"binary_ref.name": "explorer.exe"}
+                   , {"binary_ref.name": "firefox.exe"}
+                   , {"binary_ref.name": "chrome.exe"}
+                   ])
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+@pytest.mark.skip("TODO: need attr mapping for Construct")
+def test_execute_in_cache_stix_process_ocsf_disp_attr():
+    hf = """
+proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
+                       , {"binary_ref.name": "explorer.exe", "pid": 99}
+                       , {"binary_ref.name": "firefox.exe", "pid": 201}
+                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+                       ]
+DISP proclist ATTR file.name
+"""
+    b1 = DataFrame([ {"file.name": "cmd.exe"}
+                   , {"file.name": "explorer.exe"}
+                   , {"file.name": "firefox.exe"}
+                   , {"file.name": "chrome.exe"}
+                   ])
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+def test_execute_in_cache_stix_process_filtered():
+    hf = """
+proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
+                       , {"binary_ref.name": "explorer.exe", "pid": 99}
+                       , {"binary_ref.name": "firefox.exe", "pid": 201}
+                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+                       ]
+browsers = proclist WHERE binary_ref.name in ('chrome.exe', 'firefox.exe')
+DISP browsers ATTR binary_ref.name, pid
+"""
+    b1 = DataFrame([ {"binary_ref.name": "firefox.exe", "pid": 201}
+                   , {"binary_ref.name": "chrome.exe", "pid": 205}
+                   ])
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+def test_execute_in_cache_stix_process_with_ref_and_multi_returns():
+    hf = """
+proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
+                       , {"binary_ref.name": "explorer.exe", "pid": 99}
+                       , {"binary_ref.name": "firefox.exe", "pid": 201}
+                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+                       ]
+newvar = proclist WHERE binary_ref.name = "cmd.exe"
+DISP proclist ATTR binary_ref.name
+newvar2 = proclist WHERE binary_ref.name IN ("explorer.exe", "cmd.exe")
+newvar3 = newvar2 WHERE pid IN newvar.pid
+DISP newvar3 ATTR binary_ref.name
+"""
+    b1 = DataFrame([ {"binary_ref.name": "cmd.exe"}
+                   , {"binary_ref.name": "explorer.exe"}
+                   , {"binary_ref.name": "firefox.exe"}
+                   , {"binary_ref.name": "chrome.exe"}
+                   ])
+    b2 = DataFrame([ {"binary_ref.name": "cmd.exe"}
+                   ])
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
+        assert b2.equals(next(res))
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+def test_execute_in_cache_stix_file():
+    data = [ {"name": "cmd.exe", "hashes.MD5": "AD7B9C14083B52BC532FBA5948342B98"}
+           , {"name": "powershell.exe", "hashes.MD5": "04029E121A0CFA5991749937DD22A1D9"}
+    ]
+    hf = f"""
+filelist = NEW file {json.dumps(data)}
+DISP filelist ATTR name, hashes.MD5
+"""
+    b1 = DataFrame(data)
+    with Session() as session:
+        res = session.execute_to_generate(hf)
+        assert b1.equals(next(res))
         with pytest.raises(StopIteration):
             next(res)
 

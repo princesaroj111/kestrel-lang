@@ -8,7 +8,10 @@ from dateutil.parser import parse as to_datetime
 from lark import Transformer, Token
 from typeguard import typechecked
 
-from kestrel.mapping.data_model import translate_comparison_to_ocsf
+from kestrel.mapping.data_model import (
+    translate_comparison_to_ocsf,
+    translate_projection_to_ocsf,
+)
 from kestrel.utils import unescape_quoted_string
 from kestrel.ir.filter import (
     FExpression,
@@ -35,6 +38,7 @@ from kestrel.ir.instructions import (
     Construct,
     DataSource,
     Filter,
+    Instruction,
     Limit,
     Offset,
     ProjectAttrs,
@@ -178,8 +182,9 @@ class _KestrelT(Transformer):
 
     def assignment(self, args):
         # TODO: move the var+var into expression in Lark
-        variable_node = Variable(args[0].value)
         graph, root = args[1]
+        entity_type, native_type = self._get_type_from_predecessors(graph, root)
+        variable_node = Variable(args[0].value, entity_type, native_type)
         graph.add_node(variable_node, root)
         return graph
 
@@ -211,10 +216,12 @@ class _KestrelT(Transformer):
         graph = IRGraph()
         if len(args) == 1:
             # Try to get entity type from first entity
+            entity_type = None
             data = args[0]
         else:
+            entity_type = args[0].value
             data = args[1]
-        data_node = Construct(data)
+        data_node = Construct(data, entity_type)
         graph.add_node(data_node)
         return graph, data_node
 
@@ -264,7 +271,9 @@ class _KestrelT(Transformer):
         # add reference nodes if used in Filter
         _add_reference_branches_for_filter(graph, filter_node)
 
-        projection_node = graph.add_node(ProjectEntity(mapped_entity_name), filter_node)
+        projection_node = graph.add_node(
+            ProjectEntity(mapped_entity_name, entity_name), filter_node
+        )
         root = projection_node
         if len(args) > 3:
             for arg in args[3:]:
@@ -385,6 +394,16 @@ class _KestrelT(Transformer):
 
     def disp(self, args):
         graph, root = args[0]
+        _logger.debug("disp: root = %s", root)
+        if isinstance(root, ProjectAttrs):
+            # Map attrs to OCSF
+            entity_type, native_type = self._get_type_from_predecessors(graph, root)
+            _logger.debug(
+                "Map %s attrs to OCSF %s in %s", native_type, entity_type, root
+            )
+            root.attrs = translate_projection_to_ocsf(
+                self.property_map, native_type, entity_type, root.attrs
+            )
         graph.add_node(Return(), root)
         return graph
 
@@ -394,3 +413,19 @@ class _KestrelT(Transformer):
         explain = graph.add_node(Explain(), reference)
         graph.add_node(Return(), explain)
         return graph
+
+    def _get_type_from_predecessors(self, graph: IRGraph, root: Instruction):
+        stack = [root]
+        native_type = None
+        entity_type = None
+        while stack and not all((native_type, entity_type)):
+            curr = stack.pop()
+            _logger.debug("_get_type: curr = %s", curr)
+            stack.extend(graph.predecessors(curr))
+            if isinstance(curr, Construct):
+                native_type = curr.entity_type
+                entity_type = self.entity_map.get(native_type, native_type)
+            elif isinstance(curr, Variable):
+                native_type = curr.native_type
+                entity_type = curr.entity_type
+        return entity_type, native_type

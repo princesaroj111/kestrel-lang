@@ -22,14 +22,14 @@ def test_evaluate_Construct():
            , {"name": "firefox.exe", "pid": 201}
            , {"name": "chrome.exe", "pid": 205}
            ]
-    ins = Construct(data)
+    ins = Construct(data, "process")
     df = evaluate_source_instruction(ins)
     assert df.equals(DataFrame(data))
 
 
 def test_non_exist_eval():
     with pytest.raises(NotImplementedError):
-        evaluate_transforming_instruction(Variable("asdf"), DataFrame())
+        evaluate_transforming_instruction(Variable("asdf", "foo", "bar"), DataFrame())
 
 
 def test_evaluate_Limit():

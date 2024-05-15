@@ -53,9 +53,9 @@ def test_get_node_by_id():
 def test_get_nodes_by_type_and_attributes():
     g = IRGraph()
     s = g.add_datasource("stixshifter://abc")
-    v1 = g.add_variable("asdf", s)
-    v2 = g.add_variable("qwer", s)
-    v3 = g.add_variable("123", s)
+    v1 = g.add_node(Variable("asdf", "x", "y"), s)
+    v2 = g.add_node(Variable("qwer", "u", "v"), s)
+    v3 = g.add_node(Variable("123", "i", "j"), s)
     ns = g.get_nodes_by_type_and_attributes(Variable, {"name": "asdf"})
     assert ns == [v1]
 
@@ -72,36 +72,13 @@ def test_get_returns():
     assert len(g.get_sink_nodes()) == 3
 
 
-def test_add_variable():
-    g = IRGraph()
-    s = g.add_datasource("stixshifter://abc")
-    v1 = g.add_variable("asdf", s)
-    assert len(g) == 2
-    assert len(g.edges()) == 1
-
-    v2 = g.add_variable("asdf", s)
-    assert len(g) == 3
-    assert len(g.edges()) == 2
-
-    v = Variable("asdf")
-    v3 = g.add_variable(v, s)
-    assert v == v3
-    v4 = g.add_variable(v, s)
-    assert v3 == v4
-
-    assert v1.version == 0
-    assert v2.version == 1
-    assert v3.version == 2
-    assert len(g) == 4
-    assert len(g.edges()) == 3
-
-
 def test_get_variables():
     g = IRGraph()
     s = g.add_datasource("stixshifter://abc")
-    v1 = g.add_variable("asdf", s)
-    v2 = g.add_variable("asdf", s)
-    v3 = g.add_variable("asdf", s)
+    v = Variable("asdf", "foo", "bar")
+    v1 = g.add_node(v, s)
+    v2 = g.add_node(v, s)
+    v3 = g.add_node(v, s)
     vs = g.get_variables()
     assert len(vs) == 1
     assert vs[0].name == "asdf"
@@ -110,11 +87,11 @@ def test_get_variables():
 def test_add_get_reference():
     g = IRGraph()
     s = g.add_node(DataSource("ss://ee"))
-    g.add_node(Variable("asdf"), s)
+    g.add_node(Variable("asdf", "foo", "bar"), s)
     g.add_node(Reference("asdf"))
     q1 = g.add_node(Reference("qwer"))
     q2 = g.add_node(Reference("qwer"))
-    g.add_node(Variable("qwer"), s)
+    g.add_node(Variable("qwer", "foo", "bar"), s)
     g.add_node(Reference("qwer"))
     assert len(g) == 4
     assert len(g.edges()) == 2
@@ -150,15 +127,15 @@ def test_deepcopy_graph():
 def test_update_graph():
     g = IRGraph()
     s = g.add_datasource("stixshifter://abc")
-    v1 = g.add_variable("asdf", s)
-    v2 = g.add_variable("asdf", s)
-    v3 = g.add_variable("asdf", s)
+    v1 = g.add_node(Variable("asdf", "foo", "bar"), s)
+    v2 = g.add_node(Variable("asdf", "foo", "bar"), s)
+    v3 = g.add_node(Variable("asdf", "foo", "bar"), s)
     r1 = g.add_return(v3)
 
     g2 = IRGraph()
     s2 = g2.add_datasource("stixshifter://abc")
-    v4 = g2.add_variable("asdf", g2.add_node(Reference("asdf")))
-    v5 = g2.add_variable("asdf", g2.add_node(TransformingInstruction(), s2))
+    v4 = g2.add_node(Variable("asdf", "foo", "bar"), g2.add_node(Reference("asdf")))
+    v5 = g2.add_node(Variable("asdf", "foo", "bar"), g2.add_node(TransformingInstruction(), s2))
     r2 = g2.add_return(v5)
 
     assert v1.version == 0
@@ -193,7 +170,7 @@ def test_serialization_deserialization():
     g1 = IRGraph()
     s = g1.add_node(DataSource("ss://ee"))
     r = g1.add_node(Reference("asdf"))
-    v = g1.add_node(Variable("asdf"), s)
+    v = g1.add_node(Variable("asdf", "foo", "bar"), s)
     j = g1.to_json()
     g2 = IRGraph(j)
     assert s in g2.nodes()
@@ -206,21 +183,21 @@ def test_find_cached_dependent_subgraph_of_node():
     g = IRGraph()
 
     a1 = g.add_node(DataSource("ss://ee"))
-    a2 = g.add_node(Variable("asdf"), a1)
+    a2 = g.add_node(Variable("asdf", "foo", "bar"), a1)
     a3 = g.add_node(Instruction())
     g.add_edge(a2, a3)
-    a4 = g.add_node(Variable("qwer"), a3)
+    a4 = g.add_node(Variable("qwer", "foo", "bar"), a3)
 
     b1 = g.add_node(DataSource("ss://eee"))
-    b2 = g.add_node(Variable("asdfe"), b1)
+    b2 = g.add_node(Variable("asdfe", "foo", "bar"), b1)
     b3 = g.add_node(Instruction())
     g.add_edge(b2, b3)
-    b4 = g.add_node(Variable("qwere"), b3)
+    b4 = g.add_node(Variable("qwere", "foo", "bar"), b3)
 
     c1 = g.add_node(Instruction())
     g.add_edge(a4, c1)
     g.add_edge(b4, c1)
-    c2 = g.add_node(Variable("zxcv"), c1)
+    c2 = g.add_node(Variable("zxcv", "foo", "bar"), c1)
 
     g2 = g.find_cached_dependent_subgraph_of_node(c2, InMemoryCache())
     assert networkx.utils.graphs_equal(g, g2)

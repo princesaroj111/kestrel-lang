@@ -16,7 +16,7 @@ from kestrel.exceptions import (
 
 
 def test_instruction_post_init():
-    v = Variable("asdf")
+    v = Variable("asdf", "foo", "bar")
     j = v.to_dict()
     assert "id" in j
     assert "instruction" in j
@@ -24,7 +24,7 @@ def test_instruction_post_init():
 
 
 def test_stable_id():
-    v = Variable("asdf")
+    v = Variable("asdf", "foo", "bar")
     _id = v.id
     v.name = "qwer"
     assert v.id == _id
@@ -48,7 +48,7 @@ def test_eq():
 
 def test_get_instruction_class():
     cls = get_instruction_class("Variable")
-    v = cls("asdf")
+    v = cls("asdf", "foo", "bar")
     assert cls == Variable
     assert isinstance(v, Variable)
 
@@ -86,7 +86,7 @@ def test_construct():
 
 
 def test_instruction_from_dict():
-    v = Variable("asdf")
+    v = Variable("asdf", "foo", "bar")
     d = v.to_dict()
     w = instruction_from_dict(d)
     assert w == v
@@ -97,7 +97,7 @@ def test_instruction_from_dict():
 
 
 def test_instruction_from_json():
-    v = Variable("asdf")
+    v = Variable("asdf", "foo", "bar")
     j = v.to_json()
     w = instruction_from_json(j)
     assert w == v
