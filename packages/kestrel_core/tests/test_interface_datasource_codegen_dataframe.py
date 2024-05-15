@@ -29,7 +29,7 @@ def test_evaluate_Construct():
 
 def test_non_exist_eval():
     with pytest.raises(NotImplementedError):
-        evaluate_transforming_instruction(Variable("asdf"), DataFrame())
+        evaluate_transforming_instruction(Variable("asdf", "foo", "bar"), DataFrame())
 
 
 def test_evaluate_Limit():

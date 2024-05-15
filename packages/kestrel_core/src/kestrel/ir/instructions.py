@@ -157,8 +157,8 @@ class DataSource(SourceInstruction):
 @dataclass(eq=False)
 class Variable(SolePredecessorTransformingInstruction):
     name: str
-    entity_type: Optional[str] = None
-    native_type: Optional[str] = None
+    entity_type: str
+    native_type: str
     # required to dereference a variable that has been created multiple times
     # the variable with the largest version will be used by dereference
     version: int = 0

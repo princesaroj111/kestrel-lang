@@ -230,21 +230,6 @@ class IRGraph(networkx.DiGraph):
         var_names = {v.name for v in self.get_nodes_by_type(Variable)}
         return [self.get_variable(var_name) for var_name in var_names]
 
-    def add_variable(
-        self, vx: Union[str, Variable], dependent_node: Instruction
-    ) -> Variable:
-        """Create new variable (if needed) and add to IRGraph
-
-        Parameters:
-            vx: variable name (str) or already created node (Variable)
-            dependent_node: the instruction to which the variable refer
-
-        Returns:
-            The variable node created/added
-        """
-        v = Variable(vx) if isinstance(vx, str) else vx
-        return self.add_node(v, dependent_node)
-
     def get_reference(self, ref_name: str) -> Reference:
         """Get a Kestrel reference by its name
 
