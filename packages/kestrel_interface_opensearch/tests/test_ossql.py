@@ -98,7 +98,6 @@ def _remove_nl(s):
     ]
 )
 def test_opensearch_translator(iseq, sql):
-    cols = '`CommandLine` AS `cmd_line`, `Image` AS `file.path`, `ProcessId` AS `pid`, `ParentProcessId` AS `parent_process.pid`'
     if ProjectEntity in {type(i) for i in iseq}:
         cols = '`CommandLine` AS `cmd_line`, `Image` AS `file.path`, `ProcessId` AS `pid`, `ParentProcessId` AS `parent_process.pid`'
     else:
