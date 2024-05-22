@@ -20,7 +20,7 @@ def make_deref_func(store: SqlStorage, symtable: SymbolTable):
 
         try:
             store_return = store.lookup(entity_table, reference.attribute)
-        except InvalidAttr as e:
+        except InvalidAttribute as e:
             _logger.warning(f"cannot deref {reference}. Invalid attribute in firepit.")
             raise InvalidAttribute(e.message)
 
