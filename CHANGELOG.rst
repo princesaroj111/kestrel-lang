@@ -9,6 +9,12 @@ The format is based on `Keep a Changelog`_.
 Unreleased
 ==========
 
+Fixed
+-----
+
+- Typo in an exception name
+- Corner cases fixed in `firepit`
+
 1.8.7 (2024-05-08)
 ==================
 
