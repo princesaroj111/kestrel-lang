@@ -16,6 +16,12 @@ shareable hunt-flow. Starting with:
 #. `Black Hat USA 2022 Kestrel hunting lab`_
 #. `Kestrel live tutorial in a cloud sandbox`_
 
+News
+====
+
+- Register `Black Hat USA 2024`_ to hunt with Kestrel
+- Learn scalable Kestrel deployment at `Red Hat Research Quarterly`_ (RHRQ)
+
 The Goal
 ========
 
@@ -182,12 +188,14 @@ Connecting With The Community
 .. _IJ'22 live hunt recording: https://www.youtube.com/embed/8Mw1yyYkeqM?start=23586&end=26545
 .. _SC eSummit on Threat Hunting & Offense Security: https://www.scmagazine.com/esummit/automating-the-hunt-for-advanced-threats
 .. _Cybersecurity Automation Workshop: http://www.cybersecurityautomationworkshop.org/
+.. _Black Hat USA 2024: https://www.blackhat.com/us-24/arsenal/schedule/index.html#kestrel--hunt-for-threats-across-security-data-lakes-39321
 .. _Black Hat USA 2023: https://www.blackhat.com/us-23/arsenal/schedule/index.html#identity-threat-hunting-with-kestrel-33662
 .. _Black Hat USA 2022: https://www.blackhat.com/us-22/arsenal/schedule/index.html#streamlining-and-automating-threat-hunting-with-kestrel-28014
 .. _BH'22 recording: https://www.youtube.com/watch?v=tf1VLIpFefs
 .. _Black Hat USA 2022 session recording: https://www.youtube.com/watch?v=tf1VLIpFefs
 .. _BH'22 hunting lab: https://mybinder.org/v2/gh/opencybersecurityalliance/black-hat-us-2022/HEAD?filepath=demo
 .. _Black Hat USA 2022 Kestrel hunting lab: https://mybinder.org/v2/gh/opencybersecurityalliance/black-hat-us-2022/HEAD?filepath=demo
+.. _Red Hat Research Quarterly: https://research.redhat.com/blog/article/team-threat-hunting-on-a-container-platform-kestrel-as-a-service/
 
 .. _slack invitation: https://join.slack.com/t/open-cybersecurity/shared_invite/zt-19pliofsm-L7eSSB8yzABM2Pls1nS12w
 .. _Open Cybersecurity Alliance workspace: https://open-cybersecurity.slack.com/
