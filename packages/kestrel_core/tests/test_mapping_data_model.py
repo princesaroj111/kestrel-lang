@@ -33,7 +33,13 @@ WINLOGBEAT_MAPPING = {
                 {
                     "native_field": "winlog.event_data.Image",
                     "native_op": "LIKE",
-                    "native_value": "endswith",
+                    "native_value": "winpath_endswith",
+                    "ocsf_value": "basename"
+                },
+                {   # Only for testing - winlogbeat will only use windows paths
+                    "native_field": "winlog.event_data.Image",
+                    "native_op": "LIKE",
+                    "native_value": "posixpath_endswith",
                     "ocsf_value": "basename"
                 }
             ],
@@ -41,7 +47,7 @@ WINLOGBEAT_MAPPING = {
                 {
                     "native_field": "winlog.event_data.Image",
                     "native_op": "LIKE",
-                    "native_value": "startswith",
+                    "native_value": "winpath_startswith",
                     "ocsf_value": "dirname"
                 }
             ]
@@ -56,7 +62,7 @@ WINLOGBEAT_MAPPING = {
                     {
                         "native_field": "winlog.event_data.ParentImage",
                         "native_op": "LIKE",
-                        "native_value": "endswith",
+                        "native_value": "winpath_endswith",
                         "ocsf_value": "basename"
                     }
                 ],
@@ -64,7 +70,7 @@ WINLOGBEAT_MAPPING = {
                     {
                         "native_field": "winlog.event_data.ParentImage",
                         "native_op": "LIKE",
-                        "native_value": "startswith",
+                        "native_value": "winpath_startswith",
                         "ocsf_value": "dirname"
                     }
                 ]
@@ -116,7 +122,7 @@ def test_reverse_mapping_executable():
             assert "ocsf_field" in item
             if item["ocsf_field"] == "process.file.name":
                 # Make sure all metadata from the mapping got reversed
-                assert item["native_value"] == "endswith"
+                assert item["native_value"] in ("posixpath_endswith", "winpath_endswith")
                 assert item["native_op"] == "LIKE"
                 assert item["ocsf_value"] == "basename"
 
@@ -127,11 +133,13 @@ def test_reverse_mapping_executable():
         (WINLOGBEAT_MAPPING, "process.file.path", "=", "C:\\TMP\\foo.exe",
          [("winlog.event_data.Image", "=", "C:\\TMP\\foo.exe")]),
         (WINLOGBEAT_MAPPING, "process.file.name", "=", "foo.exe",
-         [("winlog.event_data.Image", "LIKE", "%\\foo.exe")]),
+         [("winlog.event_data.Image", "LIKE", "%\\foo.exe"),
+          ("winlog.event_data.Image", "LIKE", "%/foo.exe")]),
         (ECS_MAPPING, "process.file.path", "=", "C:\\TMP\\foo.exe",
          [("process.executable", "=", "C:\\TMP\\foo.exe")]),
         (ECS_MAPPING, "process.file.name", "=", "foo.exe",
-         [("process.executable", "LIKE", "%\\foo.exe")]),
+         [("process.executable", "LIKE", "%\\foo.exe"),
+          ("process.executable", "LIKE", "%/foo.exe")]),
     ],
 )
 def test_translate_comparison_to_native(dmm, field, op, value, expected_result):

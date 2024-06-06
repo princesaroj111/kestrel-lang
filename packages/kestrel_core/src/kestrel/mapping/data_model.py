@@ -262,8 +262,15 @@ def translate_projection_to_native(
         else:
             # Pass-through?
             result.append((attr, attr))  # FIXME: raise exception instead?
-    _logger.debug("proj_to_native: return %s", result)
-    return result
+    # De-duplicate list while maintaining order
+    seen = set()
+    final_result = []
+    for pair in result:
+        if pair not in seen:
+            final_result.append(pair)
+            seen.add(pair)
+    _logger.debug("proj_to_native: return %s", final_result)
+    return final_result
 
 
 @typechecked
@@ -299,7 +306,6 @@ def translate_projection_to_ocsf(
 def translate_dataframe(df: DataFrame, dmm: dict) -> DataFrame:
     # Translate results into Kestrel OCSF data model
     # The column names of df are already mapped
-    df = df.replace({np.nan: None})
     for col in df.columns:
         try:
             mapping = dpath.get(dmm, col, separator=".")
@@ -308,5 +314,6 @@ def translate_dataframe(df: DataFrame, dmm: dict) -> DataFrame:
             mapping = None
         if isinstance(mapping, dict):
             transformer_name = mapping.get("ocsf_value")
-            df[col] = run_transformer_on_series(transformer_name, df[col])
+            df[col] = run_transformer_on_series(transformer_name, df[col].dropna())
+    df = df.replace({np.nan: None})
     return df

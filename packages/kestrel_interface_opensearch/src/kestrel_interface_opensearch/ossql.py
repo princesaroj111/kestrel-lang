@@ -123,7 +123,7 @@ class OpenSearchTranslator:
             self.from_ocsf_map, ocsf_field, comp.op, comp.value
         )
         try:
-            comps = [f"{f} {comp2func[o]} {_format_value(v)}" for f, o, v in comps]
+            comps = [f"`{f}` {comp2func[o]} {_format_value(v)}" for f, o, v in comps]
             conj = " OR ".join(comps)
             result = conj if len(comps) == 1 else f"({conj})"
         except KeyError:
@@ -237,7 +237,7 @@ class OpenSearchTranslator:
         if where:
             stages.append(f"WHERE {where}")
         if self.order_by:
-            stages.append(f"ORDER BY {self.order_by} {self.sort_dir.value}")
+            stages.append(f"ORDER BY `{self.order_by}` {self.sort_dir.value}")
         if self.limit:
             # https://opensearch.org/docs/latest/search-plugins/sql/sql/basic/#limit
             if self.offset:

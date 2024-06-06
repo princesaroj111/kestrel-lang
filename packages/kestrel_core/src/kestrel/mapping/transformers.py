@@ -5,6 +5,8 @@ from typing import Callable
 
 from pandas import Series
 
+from kestrel.mapping.path import Path
+
 
 # Dict of "registered" transformers
 _transformers = {}
@@ -28,27 +30,45 @@ def to_epoch_ms(value: str) -> int:
 
 
 @transformer
-def dirname(path: str) -> str:  # TODO: rename to winpath_dirname?
+def dirname(path: str) -> str:
     """Get the directory part of `path`"""
-    path_dir, _, _ = path.rpartition("\\")
-    return path_dir
+    return Path(path).dirname()
 
 
 @transformer
-def basename(path: str) -> str:  # TODO: rename to winpath_dirname?
+def basename(path: str) -> str:
     """Get the filename part of `path`"""
-    _, _, path_file = path.rpartition("\\")
-    return path_file
+    return Path(path).basename()
 
 
 @transformer
-def startswith(value: str) -> str:  # TODO: rename to winpath_startswith?
+def startswith(value: str) -> str:
+    return f"{value}%"
+
+
+@transformer
+def winpath_startswith(value: str) -> str:
     return f"{value}\\%"
 
 
 @transformer
-def endswith(value: str) -> str:  # TODO: rename to winpath_endswith?
+def posixpath_startswith(value: str) -> str:
+    return f"{value}/%"
+
+
+@transformer
+def endswith(value: str) -> str:
+    return f"%{value}"
+
+
+@transformer
+def winpath_endswith(value: str) -> str:
     return f"%\\{value}"
+
+
+@transformer
+def posixpath_endswith(value: str) -> str:
+    return f"%/{value}"
 
 
 @transformer
