@@ -55,15 +55,23 @@ process:
     uid: process.entity_id
     file:
         name:
-            native_field: process.executable
+          - native_field: process.executable
             native_op: LIKE
-            native_value: endswith
+            native_value: winpath_endswith
+            ocsf_value: basename
+          - native_field: process.executable
+            native_op: LIKE
+            native_value: posixpath_endswith
             ocsf_value: basename
         path: process.executable
         parent_folder:
-            native_field: process.executable
+          - native_field: process.executable
             native_op: LIKE
-            native_value: startswith
+            native_value: winpath_startswith
+            ocsf_value: dirname
+          - native_field: process.executable
+            native_op: LIKE
+            native_value: posixpath_startswith
             ocsf_value: dirname
         # This "hashes" notation comes from jmespath (filter projection)
         # It's much easier to use the ECS notation in this case
@@ -94,15 +102,23 @@ process:
         uid: process.parent.entity_id
         file:
             name:
-                native_field: process.parent.executable
+              - native_field: process.parent.executable
                 native_op: LIKE
-                native_value: endswith
+                native_value: winpath_endswith
+                ocsf_value: basename
+              - native_field: process.parent.executable
+                native_op: LIKE
+                native_value: posixpath_endswith
                 ocsf_value: basename
             path: process.parent.executable
             parent_folder:
-                native_field: process.parent.executable
+              - native_field: process.parent.executable
                 native_op: LIKE
-                native_value: startswith
+                native_value: winpath_startswith
+                ocsf_value: dirname
+              - native_field: process.parent.executable
+                native_op: LIKE
+                native_value: posixpath_startswith
                 ocsf_value: dirname
 
 

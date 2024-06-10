@@ -34,3 +34,9 @@ help:
         } \
         { lastLine = $$0 }' $(MAKEFILE_LIST) | sort -u
 	@printf "\n"
+
+
+PKG_DIRS = $(wildcard packages/kestrel_*)
+
+test:
+	for d in $(PKG_DIRS); do pytest $$d || break; done

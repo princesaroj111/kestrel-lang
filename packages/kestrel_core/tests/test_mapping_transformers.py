@@ -9,10 +9,16 @@ from kestrel.mapping.transformers import (
 
 @pytest.mark.parametrize(
     "transform, value, expected", [
+        ("dirname", "/tmp", "/"),
+        ("basename", "/tmp", "tmp"),
+        ("dirname", "/usr/local/bin/thing", "/usr/local/bin"),
+        ("basename", "/usr/local/bin/thing", "thing"),
+        ("posixpath_startswith", "/var", "/var/%"),
+        ("posixpath_endswith", "tmp.sh", r"%/tmp.sh"),
         ("dirname", r"C:\Windows\System32\cmd.exe", r"C:\Windows\System32"),
         ("basename", r"C:\Windows\System32\cmd.exe", r"cmd.exe"),
-        ("startswith", r"C:\Windows\System32", r"C:\Windows\System32\%"),
-        ("endswith", "cmd.exe", r"%\cmd.exe"),
+        ("winpath_startswith", r"C:\Windows\System32", r"C:\Windows\System32\%"),
+        ("winpath_endswith", "cmd.exe", r"%\cmd.exe"),
         ("to_int", 1234, 1234),
         ("to_int", 1234.1234, 1234),  # Maybe this should fail?
         ("to_int", "1234", 1234),

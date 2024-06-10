@@ -30,7 +30,7 @@ datasources:
         index_pattern: winlogbeat-mordor
         timestamp: "@timestamp"
         timestamp_format: "%Y-%m-%dT%H:%M:%S.%fZ"
-        data_model_mapping: "custom_mapping.yaml"
+        data_model_map: "custom_mapping.yaml"
     sysmon-events:
         connection: my_opensearch
         index_pattern: sysmon-*  # Search ALL indexes matching this pattern
@@ -41,4 +41,4 @@ datasources:
         index_pattern: firewall-*
         timestamp: "EventTime"
         timestamp_format: "%Y-%m-%d %H:%M:%S.%fZ"
-        data_model_mapping: "another_custom_mapping.yaml"
+        data_model_map: "another_custom_mapping.yaml"
