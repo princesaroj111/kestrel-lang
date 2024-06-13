@@ -236,6 +236,16 @@ network_activity:
     traffic: *traffic
 
 
+# https://schema.ocsf.io/1.2.0/objects/email
+email:
+    uid: email.message_id
+    from: email.from.address
+    to: email.to.address
+    reply_to: email.reply_to.address
+    cc: email.cc.address
+    subject: email.subject
+
+
 # https://schema.ocsf.io/1.2.0/objects/win/reg_key?extensions=win
 reg_key:
     endpoint: *endpoint
