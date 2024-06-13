@@ -31,7 +31,6 @@ def test_load_config_w_default_map(tmp_path):
     os.environ[PROFILE_PATH_ENV_VAR] = str(config_file)
     read_config = load_config()
     assert read_config.datasources["cloud_table"].data_model_map["process"]["name"] == "process.name"
-    assert read_config.datasources["cloud_table"].entity_identifier["process"] == ['uid', 'endpoint.uid']
 
 
 def test_load_config(tmp_path):
@@ -51,7 +50,6 @@ def test_load_config(tmp_path):
                 "timestamp": "eventTime",
                 "timestamp_format": "%Y-%m-%d %H:%M:%S.%f",
                 "data_model_map": str(tmp_path / "mapping.yaml"),
-                "entity_identifier": "eid.yaml"
             }
         }
     }
@@ -72,4 +70,3 @@ def test_load_config(tmp_path):
     assert read_config.datasources["cloud_table"].timestamp == config["datasources"]["cloud_table"]["timestamp"]
     assert read_config.datasources["cloud_table"].table == config["datasources"]["cloud_table"]["table"]
     assert read_config.datasources["cloud_table"].data_model_map["some.field"] == "other.field"
-    assert read_config.datasources["cloud_table"].entity_identifier["process"] == "pid"

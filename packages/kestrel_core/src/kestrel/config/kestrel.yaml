@@ -8,22 +8,26 @@ debug:
   cache_directory_path: "~/kestrel-debug-session" # put in user's home directory by default
 
 # default identifier attribute(s) of an entity across all datasource interfaces
+# always provide a list as identifiers even it is a single identifier
 # if multiple attributes are specified, logic AND will be added in between
-# each datasource interface config could have the same section to override this
 entity_identifier:
   file: # "hashes[?algorithm_id == 3]" # sha256
     - name
     - endpoint.uid
-  group: uid
+  group:
+    - uid
   process:
     - uid
     - endpoint.uid
-  endpoint: uid
+  endpoint:
+    - uid
   src_endpoint:
     - ip
     - port
   dst_endpoint:
     - ip
     - port
-  certificate: serial_number
-  user: uid
+  certificate:
+    - serial_number
+  user:
+    - uid

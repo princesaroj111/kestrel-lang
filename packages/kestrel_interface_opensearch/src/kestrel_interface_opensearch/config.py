@@ -10,7 +10,10 @@ from kestrel.config.utils import (
     load_kestrel_config,
 )
 from kestrel.exceptions import InterfaceNotConfigured
-from kestrel.mapping.data_model import load_default_mapping
+from kestrel.mapping.data_model import (
+    load_default_mapping,
+    check_entity_identifier_existence_in_mapping,
+)
 
 
 PROFILE_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "opensearch.yaml"
@@ -49,6 +52,11 @@ class DataSource(DataClassJSONMixin):
             # Default to the built-in ECS mapping
             self.data_model_map = load_default_mapping("ecs")
 
+        kestrel_config = load_kestrel_config()
+        check_entity_identifier_existence_in_mapping(
+            self.data_model_map, kestrel_config["entity_identifier"]
+        )
+
 
 @dataclass
 class Config(DataClassJSONMixin):
@@ -65,13 +73,6 @@ def load_config():
         interface_config = Config(
             **load_user_config(PROFILE_PATH_ENV_VAR, PROFILE_PATH_DEFAULT)
         )
-
-        # load default entity identifier from main Kestrel config
-        kestrel_config = load_kestrel_config()
-        for ds in interface_config.datasources.values():
-            if not ds.entity_identifier:
-                ds.entity_identifier = kestrel_config["entity_identifier"]
-
         return interface_config
     except TypeError:
         raise InterfaceNotConfigured()

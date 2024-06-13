@@ -1,4 +1,5 @@
 import logging
+from functools import reduce
 from typing import Optional, Union
 
 import dpath
@@ -12,6 +13,7 @@ from kestrel.mapping.transformers import (
     run_transformer_on_series,
 )
 from kestrel.utils import list_folder_files
+from kestrel.exceptions import IncompleteDataMapping
 
 _logger = logging.getLogger(__name__)
 
@@ -209,6 +211,23 @@ def load_default_mapping(
         with open(f, "r") as fp:
             result.update(yaml.safe_load(fp))
     return result
+
+
+@typechecked
+def check_entity_identifier_existence_in_mapping(
+    data_model_mapping: dict, entity_identifiers: dict
+):
+    for entity_name, ids in entity_identifiers.items():
+        if entity_name in data_model_mapping:
+            entity = data_model_mapping[entity_name]
+            for idx in ids:
+                idxs = idx.split(".")
+                try:
+                    reduce(lambda x, y: x[y], idxs, entity)
+                except KeyError:
+                    raise IncompleteDataMapping(
+                        f"Identifier '{idx}' missing in data mapping"
+                    )
 
 
 @typechecked

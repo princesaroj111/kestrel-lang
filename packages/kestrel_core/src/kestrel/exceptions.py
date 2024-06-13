@@ -26,6 +26,10 @@ class InvalidYamlInConfig(KestrelError):
     pass
 
 
+class InvalidKestrelConfig(KestrelError):
+    pass
+
+
 class VariableNotFound(KestrelError):
     pass
 
@@ -121,4 +125,8 @@ class DataSourceError(KestrelError):
 class UnsupportedOperatorError(KestrelError):
     """The data source doesn't support this operator"""
 
+    pass
+
+
+class IncompleteDataMapping(KestrelError):
     pass
