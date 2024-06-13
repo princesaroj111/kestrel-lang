@@ -1,4 +1,5 @@
 import logging
+from functools import reduce
 from typing import Optional, Union
 
 import dpath
@@ -12,6 +13,7 @@ from kestrel.mapping.transformers import (
     run_transformer_on_series,
 )
 from kestrel.utils import list_folder_files
+from kestrel.exceptions import IncompleteDataMapping
 
 _logger = logging.getLogger(__name__)
 
@@ -51,7 +53,22 @@ def _add_attr(obj: dict, key: str, value: str):
 
 
 def reverse_mapping(obj: dict, prefix: str = None, result: dict = None) -> dict:
-    """Reverse the mapping; return native -> OCSF map"""
+    """Reverse the mapping of `obj`
+
+    Newly loaded mapping from disk is OCSF -> native mapping. This function
+    takes in such mapping, and reverse it to native -> OCSF mapping, which can
+    be used by the frontend. The result mapping is flattened.
+
+    To call the function: `reverse_mapping(ocsf_to_native_mapping)`
+
+    Parameters:
+        obj: mapping loaded from disk (OCSF -> native)
+        prefix: key path to `obj`; used by the recursive function itself
+        result: intermediate result mapping; used by the recursive function itself
+
+    Returns:
+        native -> OCSF mapping
+    """
     if result is None:
         result = {}
     for k, v in obj.items():
@@ -209,6 +226,22 @@ def load_default_mapping(
         with open(f, "r") as fp:
             result.update(yaml.safe_load(fp))
     return result
+
+
+@typechecked
+def check_entity_identifier_existence_in_mapping(
+    data_model_mapping: dict, entity_identifiers: dict
+):
+    for entity_name, ids in entity_identifiers.items():
+        if entity_name in data_model_mapping:
+            entity = data_model_mapping[entity_name]
+            for idx in ids:
+                try:
+                    reduce(dict.__getitem__, idx.split("."), entity)
+                except KeyError:
+                    raise IncompleteDataMapping(
+                        f"Identifier '{idx}' missing in data mapping"
+                    )
 
 
 @typechecked

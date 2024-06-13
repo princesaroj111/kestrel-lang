@@ -1,3 +1,12 @@
 event: base_event
 activity: base_event
+device: endpoint
+registrykey: reg_key
+registryvalue: reg_value
 
+# Extended mapping to cover special field in OCSF activity
+actor.user: user
+# To simplify mapping, we do not cover parent process in actor.process
+# - This semantic only appear in Process Activity [1007], please use `process.parent_process` to specify in this case
+# - This works in Activity besides Process Activity [1007]
+actor.process: process

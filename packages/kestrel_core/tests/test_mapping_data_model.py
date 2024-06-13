@@ -2,6 +2,8 @@ import pytest
 
 import pandas as pd
 
+from kestrel.exceptions import IncompleteDataMapping
+from kestrel.config.utils import load_kestrel_config
 from kestrel.mapping.data_model import (
     load_default_mapping,
     reverse_mapping,
@@ -9,6 +11,7 @@ from kestrel.mapping.data_model import (
     translate_comparison_to_ocsf,
     translate_dataframe,
     translate_projection_to_native,
+    check_entity_identifier_existence_in_mapping,
 )
 
 
@@ -84,6 +87,14 @@ WINLOGBEAT_MAPPING = {
     "src_endpoint": {
         "ip": "winlog.event_data.SourceIp",
         "port": "winlog.event_data.SourcePort"
+    }
+}
+
+
+# Mapping for testing missing identifier
+INCOMPLETE_MAPPING = {
+    "process": {
+        "pid": "process.pid"
     }
 }
 
@@ -205,3 +216,9 @@ def test_translate_dataframe():  #TODO: more testing here
     dmm = load_default_mapping("ecs")
     df = translate_dataframe(df, dmm["process"])
     #TODO:assert df["file.name"].iloc[0] == "cmd.exe"
+
+
+def test_incomplete_mapping_no_identifier():
+    identifier_config = load_kestrel_config()["entity_identifier"]
+    with pytest.raises(IncompleteDataMapping):
+        check_entity_identifier_existence_in_mapping(INCOMPLETE_MAPPING, identifier_config)
