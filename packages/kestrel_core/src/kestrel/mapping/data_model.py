@@ -221,9 +221,8 @@ def check_entity_identifier_existence_in_mapping(
         if entity_name in data_model_mapping:
             entity = data_model_mapping[entity_name]
             for idx in ids:
-                idxs = idx.split(".")
                 try:
-                    reduce(lambda x, y: x[y], idxs, entity)
+                    reduce(dict.__getitem__, idx.split("."), entity)
                 except KeyError:
                     raise IncompleteDataMapping(
                         f"Identifier '{idx}' missing in data mapping"
