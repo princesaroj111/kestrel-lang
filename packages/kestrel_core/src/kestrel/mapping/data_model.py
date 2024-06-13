@@ -53,7 +53,22 @@ def _add_attr(obj: dict, key: str, value: str):
 
 
 def reverse_mapping(obj: dict, prefix: str = None, result: dict = None) -> dict:
-    """Reverse the mapping; return native -> OCSF map"""
+    """Reverse the mapping of `obj`
+
+    Newly loaded mapping from disk is OCSF -> native mapping. This function
+    takes in such mapping, and reverse it to native -> OCSF mapping, which can
+    be used by the frontend. The result mapping is flattened.
+
+    To call the function: `reverse_mapping(ocsf_to_native_mapping)`
+
+    Parameters:
+        obj: mapping loaded from disk (OCSF -> native)
+        prefix: key path to `obj`; used by the recursive function itself
+        result: intermediate result mapping; used by the recursive function itself
+
+    Returns:
+        native -> OCSF mapping
+    """
     if result is None:
         result = {}
     for k, v in obj.items():
