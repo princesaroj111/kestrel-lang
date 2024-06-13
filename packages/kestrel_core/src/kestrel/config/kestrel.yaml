@@ -11,6 +11,8 @@ debug:
 # always provide a list as identifiers even it is a single identifier
 # if multiple attributes are specified, logic AND will be added in between
 entity_identifier:
+  endpoint:
+    - uid
   file: # "hashes[?algorithm_id == 3]" # sha256
     - name
     - endpoint.uid
@@ -19,8 +21,6 @@ entity_identifier:
   process:
     - uid
     - endpoint.uid
-  endpoint:
-    - uid
   src_endpoint:
     - ip
     - port
@@ -30,4 +30,6 @@ entity_identifier:
   certificate:
     - serial_number
   user:
+    - uid
+  email:
     - uid
