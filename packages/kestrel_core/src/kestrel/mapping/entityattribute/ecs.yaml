@@ -8,6 +8,14 @@ endpoint: &endpoint
     mac: host.mac
 
 
+# https://schema.ocsf.io/1.1.0/objects/user
+user:
+    domain: user.domain
+    full_name: user.full_name
+    name: user.name
+    uid: user.id
+
+
 # https://schema.ocsf.io/1.1.0/objects/file
 file:
     endpoint: *endpoint
@@ -132,6 +140,11 @@ process:
                 native_op: LIKE
                 native_value: posixpath_startswith
                 ocsf_value: dirname
+    user:
+        domain: process.user.domain
+        full_name: process.user.full_name
+        name: process.user.name
+        uid: process.user.id
 
 
 # src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
@@ -213,14 +226,6 @@ certificate:
     version: x509.version_number
     issuer: x509.issuer.distinguished_name
     subject: x509.subject.distinguished_name
-
-
-# https://schema.ocsf.io/1.1.0/objects/user
-user:
-    domain: user.domain
-    full_name: user.full_name
-    name: user.name
-    uid: user.id
 
 
 # https://schema.ocsf.io/1.1.0/classes/network_activity
