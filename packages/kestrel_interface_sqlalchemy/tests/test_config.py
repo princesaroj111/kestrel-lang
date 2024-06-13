@@ -8,6 +8,7 @@ from kestrel_interface_sqlalchemy.config import (
     load_config,
 )
 
+
 def test_load_config_w_default_map(tmp_path):
     config = {
         "connections": {
@@ -30,7 +31,8 @@ def test_load_config_w_default_map(tmp_path):
     os.environ[PROFILE_PATH_ENV_VAR] = str(config_file)
     read_config = load_config()
     assert read_config.datasources["cloud_table"].data_model_map["process"]["name"] == "process.name"
-    assert read_config.datasources["cloud_table"].entity_identifier["process"] == "uid"
+    assert read_config.datasources["cloud_table"].entity_identifier["process"] == ['uid', 'endpoint.uid']
+
 
 def test_load_config(tmp_path):
     config = {

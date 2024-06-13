@@ -11,11 +11,14 @@ debug:
 # if multiple attributes are specified, logic AND will be added in between
 # each datasource interface config could have the same section to override this
 entity_identifier:
-  file: "hashes[?algorithm_id == 3]" # sha256
+  file: # "hashes[?algorithm_id == 3]" # sha256
+    - name
+    - endpoint.uid
   group: uid
-  process: uid
-  endpoint: ip
-  device: ip
+  process:
+    - uid
+    - endpoint.uid
+  endpoint: uid
   src_endpoint:
     - ip
     - port

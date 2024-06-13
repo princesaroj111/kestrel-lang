@@ -1,3 +1,5 @@
 event: base_event
 activity: base_event
-
+device: endpoint
+registrykey: reg_key
+registryvalue: reg_value
