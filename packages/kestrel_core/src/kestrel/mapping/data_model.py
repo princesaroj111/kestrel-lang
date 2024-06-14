@@ -230,7 +230,9 @@ def load_default_mapping(
 
 @typechecked
 def check_entity_identifier_existence_in_mapping(
-    data_model_mapping: dict, entity_identifiers: dict
+    data_model_mapping: dict,
+    entity_identifiers: dict,
+    interface_information: Optional[str] = None,
 ):
     for entity_name, ids in entity_identifiers.items():
         if entity_name in data_model_mapping:
@@ -239,9 +241,13 @@ def check_entity_identifier_existence_in_mapping(
                 try:
                     reduce(dict.__getitem__, idx.split("."), entity)
                 except KeyError:
-                    raise IncompleteDataMapping(
-                        f"Identifier '{idx}' missing in data mapping"
+                    msg_body = f"Identifier '{idx}' for entity '{entity_name}' is missing in data mapping"
+                    appendix = (
+                        f" at '{interface_information}'"
+                        if interface_information
+                        else ""
                     )
+                    raise IncompleteDataMapping(msg_body + appendix)
 
 
 @typechecked
