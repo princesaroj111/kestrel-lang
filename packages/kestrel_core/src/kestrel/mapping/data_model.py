@@ -46,9 +46,9 @@ def _add_attr(obj: dict, key: str, value: str):
         obj[key] = value
     else:
         existing = obj[key]
-        if isinstance(existing, str):
+        if isinstance(existing, str) and existing != value:
             obj[key] = [existing, value]
-        else:
+        elif value not in existing:
             existing.append(value)
 
 
@@ -219,10 +219,9 @@ def load_default_mapping(
     submodule: str = "entityattribute",
 ):
     result = {}
-    entityattr_mapping_files = list_folder_files(
+    for f in list_folder_files(
         mapping_pkg, submodule, prefix=data_model_name, extension="yaml"
-    )
-    for f in entityattr_mapping_files:
+    ):
         with open(f, "r") as fp:
             result.update(yaml.safe_load(fp))
     return result
