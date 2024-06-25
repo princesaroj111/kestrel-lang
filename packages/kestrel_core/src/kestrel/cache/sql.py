@@ -28,10 +28,10 @@ _logger = logging.getLogger(__name__)
 
 
 @typechecked
-class SqliteTranslator(SqlTranslator):
-    def __init__(self, from_obj: Union[SqlTranslator, str]):
-        if isinstance(from_obj, SqlTranslator):
-            fc = from_obj.query.subquery(name=from_obj.associated_variable)
+class SqlCacheTranslator(SqlTranslator):
+    def __init__(self, from_obj: Union[sqlalchemy.sql.expression.CTE, str]):
+        if isinstance(from_obj, sqlalchemy.sql.expression.CTE):
+            fc = from_obj
         else:  # str to represent table name
             fc = sqlalchemy.table(from_obj)
         super().__init__(
@@ -41,7 +41,7 @@ class SqliteTranslator(SqlTranslator):
 
 
 @typechecked
-class SqliteCache(AbstractCache):
+class SqlCache(AbstractCache):
     def __init__(
         self,
         initial_cache: Optional[Mapping[UUID, DataFrame]] = None,
@@ -84,7 +84,7 @@ class SqliteCache(AbstractCache):
     def get_virtual_copy(self) -> AbstractCache:
         v = copy(self)
         v.cache_catalog = copy(self.cache_catalog)
-        v.__class__ = SqliteCacheVirtual
+        v.__class__ = SqlCacheVirtual
         return v
 
     def evaluate_graph(
@@ -123,52 +123,90 @@ class SqliteCache(AbstractCache):
         self,
         graph: IRGraphEvaluable,
         instruction: Instruction,
-    ) -> SqliteTranslator:
+        cte_memory: Optional[Mapping[UUID, sqlalchemy.sql.expression.CTE]] = None,
+    ) -> SqlCacheTranslator:
+        """Evaluate the instruction in the graph
+
+        This method recursively traverse the graph from the instruction node to
+        evaluate the instruction with all its dependencies.
+
+        To avoid repeated traversal/evaluation of the same subgraph/subtree,
+        for each Variable instruction/node, the method performs dynamic
+        programming in the form of memorization subgraph results as CTEs. This
+        advanced feature requires the underlying SQL engine to support common
+        table expression (CTE), which may not be possible for query engines
+        like SQL on OpenSearch (Kestrel OpenSearch interface uses embedded
+        subquery instead of CTE).
+
+        To avoid unexpected Python behavior
+        https://docs.quantifiedcode.com/python-anti-patterns/correctness/mutable_default_value_as_argument.html
+        We use `None` as default value instead of `{}`
+
+        Parameters:
+            graph: the graph to traverse
+            instruction: the instruction to evaluate/return
+            cte_memory: memorize the subgraph traversed/evaluated in CTE
+
+        Returns:
+            A translator (SQL statements) to be executed
+        """
+        if cte_memory is None:
+            cte_memory = {}
+
         if instruction.id in self:
             # cached in sqlite
             table_name = self.cache_catalog[instruction.id]
-            translator = SqliteTranslator(table_name)
+            translator = SqlCacheTranslator(table_name)
 
         elif isinstance(instruction, SourceInstruction):
             if isinstance(instruction, Construct):
                 # cache the data
                 self[instruction.id] = DataFrame(instruction.data)
-                # pull the data to start a SqliteTranslator
+                # pull the data to start a SqlCacheTranslator
                 table_name = self.cache_catalog[instruction.id]
-                translator = SqliteTranslator(table_name)
+                translator = SqlCacheTranslator(table_name)
             else:
                 raise NotImplementedError(f"Unknown instruction type: {instruction}")
 
         elif isinstance(instruction, TransformingInstruction):
-            trunk, r2n = graph.get_trunk_n_branches(instruction)
-            translator = self._evaluate_instruction_in_graph(graph, trunk)
+            if instruction.id in cte_memory:
+                # this is a Variable, already evaluated
+                # just create a new use/translator from this Variable
+                translator = SqlCacheTranslator(cte_memory[instruction.id])
+            else:
+                trunk, r2n = graph.get_trunk_n_branches(instruction)
+                translator = self._evaluate_instruction_in_graph(
+                    graph, trunk, cte_memory
+                )
 
-            if isinstance(instruction, SolePredecessorTransformingInstruction):
-                if isinstance(instruction, (Return, Explain)):
-                    pass
-                elif isinstance(instruction, Variable):
-                    # start a new translator and use previous one as subquery
-                    # this allows using the variable as a dependent node
-                    # if the variable is a sink, `SELECT * FROM (subquery)` also works
-                    translator.associated_variable = instruction.name
-                    translator = SqliteTranslator(translator)
-                else:
+                if isinstance(instruction, SolePredecessorTransformingInstruction):
+                    if isinstance(instruction, (Return, Explain)):
+                        pass
+                    elif isinstance(instruction, Variable):
+                        cte = translator.query.cte(name=instruction.name)
+                        cte_memory[instruction.id] = cte
+                        translator = SqlCacheTranslator(cte)
+                    else:
+                        translator.add_instruction(instruction)
+
+                elif isinstance(instruction, Filter):
+                    # replace each ReferenceValue with a subquery
+                    # note that this subquery will be used as a value for the .in_ operator
+                    # we should not use .subquery() here but just `Select` class
+                    # otherwise, will get warning:
+                    #   SAWarning: Coercing Subquery object into a select() for use in IN();
+                    #   please pass a select() construct explicitly
+                    instruction.resolve_references(
+                        lambda x: self._evaluate_instruction_in_graph(
+                            graph, r2n[x], cte_memory
+                        ).query
+                    )
                     translator.add_instruction(instruction)
 
-            elif isinstance(instruction, Filter):
-                # replace each ReferenceValue with a subquery
-                # note that this subquery will be used as a value for the .in_ operator
-                # we should not use .subquery() here but just `Select` class
-                # otherwise, will get warning:
-                #   SAWarning: Coercing Subquery object into a select() for use in IN();
-                #   please pass a select() construct explicitly
-                instruction.resolve_references(
-                    lambda x: self._evaluate_instruction_in_graph(graph, r2n[x]).query
-                )
-                translator.add_instruction(instruction)
-
-            else:
-                raise NotImplementedError(f"Unknown instruction type: {instruction}")
+                else:
+                    raise NotImplementedError(
+                        f"Unknown instruction type: {instruction}"
+                    )
 
         else:
             raise NotImplementedError(f"Unknown instruction type: {instruction}")
@@ -177,7 +215,7 @@ class SqliteCache(AbstractCache):
 
 
 @typechecked
-class SqliteCacheVirtual(SqliteCache):
+class SqlCacheVirtual(SqlCache):
     def __getitem__(self, instruction_id: UUID) -> Any:
         return self.cache_catalog[instruction_id]
 

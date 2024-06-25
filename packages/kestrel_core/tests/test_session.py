@@ -8,7 +8,7 @@ from uuid import uuid4
 from kestrel.display import GraphExplanation
 from kestrel.ir.instructions import Construct
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
-from kestrel.cache import SqliteCache
+from kestrel.cache import SqlCache
 
 
 def test_execute_in_cache():
@@ -187,19 +187,19 @@ EXPLAIN chrome
         construct = session.irgraph.get_nodes_by_type(Construct)[0]
         assert ge.query.language == "SQL"
         stmt = ge.query.statement.replace('"', '')
-        assert stmt == f'SELECT * \nFROM (SELECT * \nFROM (SELECT * \nFROM (SELECT * \nFROM {construct.id.hex}v) AS proclist \nWHERE name != \'cmd.exe\') AS browsers \nWHERE pid = 205) AS chrome'
+        assert stmt == f"WITH proclist AS \n(SELECT * \nFROM {construct.id.hex}v), \nbrowsers AS \n(SELECT * \nFROM proclist \nWHERE name != 'cmd.exe'), \nchrome AS \n(SELECT * \nFROM browsers \nWHERE pid = 205)\n SELECT * \nFROM chrome"
         with pytest.raises(StopIteration):
             next(ress)
 
 
 def test_multi_interface_explain():
 
-    class DataLake(SqliteCache):
+    class DataLake(SqlCache):
         @staticmethod
         def schemes():
             return ["datalake"]
 
-    class Gateway(SqliteCache):
+    class Gateway(SqlCache):
         @staticmethod
         def schemes():
             return ["gateway"]
@@ -218,7 +218,7 @@ DISP procs
         session.interface_manager[CACHE_INTERFACE_IDENTIFIER].__class__ = DataLake
         session.irgraph.get_nodes_by_type_and_attributes(Construct, {"interface": CACHE_INTERFACE_IDENTIFIER})[0].interface = "datalake"
 
-        new_cache = SqliteCache(session_id = uuid4())
+        new_cache = SqlCache(session_id = uuid4())
         extra_db.append(new_cache.db_path)
         session.interface_manager.interfaces.append(new_cache)
         stmt2 = """
@@ -231,7 +231,7 @@ DISP nt
         session.interface_manager[CACHE_INTERFACE_IDENTIFIER].__class__ = Gateway
         session.irgraph.get_nodes_by_type_and_attributes(Construct, {"interface": CACHE_INTERFACE_IDENTIFIER})[0].interface = "gateway"
 
-        new_cache = SqliteCache(session_id = uuid4())
+        new_cache = SqlCache(session_id = uuid4())
         extra_db.append(new_cache.db_path)
         session.interface_manager.interfaces.append(new_cache)
         stmt3 = """
@@ -263,13 +263,13 @@ DISP d2
         query = disp.graphlets[0].query.statement.replace('"', '')
         procs = session.irgraph.get_variable("procs")
         c1 = next(session.irgraph.predecessors(procs))
-        assert query == f"SELECT pid \nFROM (SELECT * \nFROM (SELECT * \nFROM {c1.id.hex}) AS procs \nWHERE name IN ('firefox.exe', 'chrome.exe')) AS p2"
+        assert query == f"WITH procs AS \n(SELECT * \nFROM {c1.id.hex}), \np2 AS \n(SELECT * \nFROM procs \nWHERE name IN ('firefox.exe', 'chrome.exe'))\n SELECT pid \nFROM p2"
 
         assert len(disp.graphlets[1].graph["nodes"]) == 2
         query = disp.graphlets[1].query.statement.replace('"', '')
         nt = session.irgraph.get_variable("nt")
         c2 = next(session.irgraph.predecessors(nt))
-        assert query == f"SELECT * \nFROM (SELECT * \nFROM {c2.id.hex}) AS nt"
+        assert query == f"WITH nt AS \n(SELECT * \nFROM {c2.id.hex})\n SELECT * \nFROM nt"
 
         # the current session.execute_to_generate() logic does not store
         # in cache if evaluated by cache; the behavior may change in the future
@@ -277,13 +277,13 @@ DISP d2
         query = disp.graphlets[2].query.statement.replace('"', '')
         domain = session.irgraph.get_variable("domain")
         c3 = next(session.irgraph.predecessors(domain))
-        assert query == f"SELECT * \nFROM (SELECT * \nFROM {c3.id.hex}) AS domain"
+        assert query == f"WITH domain AS \n(SELECT * \nFROM {c3.id.hex})\n SELECT * \nFROM domain"
 
         assert len(disp.graphlets[3].graph["nodes"]) == 12
         query = disp.graphlets[3].query.statement.replace('"', '')
         p2 = session.irgraph.get_variable("p2")
         p2pa = next(session.irgraph.successors(p2))
-        assert query == f"SELECT * \nFROM (SELECT * \nFROM (SELECT * \nFROM {c3.id.hex}) AS domain \nWHERE ip IN (SELECT destination \nFROM (SELECT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT * \nFROM {p2pa.id.hex}v)) AS ntx)) AS d2"
+        assert query == f"WITH domain AS \n(SELECT * \nFROM {c3.id.hex}), \nntx AS \n(SELECT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT * \nFROM domain \nWHERE ip IN (SELECT destination \nFROM ntx))\n SELECT * \nFROM d2"
 
         df_ref = DataFrame([{"ip": "1.1.1.2", "domain": "xyz.cloudflare.com"}])
         assert df_ref.equals(df_res)
