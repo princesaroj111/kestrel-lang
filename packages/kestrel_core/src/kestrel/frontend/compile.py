@@ -288,13 +288,13 @@ class _KestrelT(Transformer):
 
     def get(self, args):
         graph = IRGraph()
-        entity_name = args[0].value
-        mapped_entity_name = self.entity_map.get(entity_name, entity_name)
+        vanilla_entity_name = args[0].value
+        mapped_entity_name = self.entity_map.get(vanilla_entity_name, vanilla_entity_name)
 
         # prepare Filter node
         filter_node = args[2]
         filter_node.exp = _map_filter_exp(
-            args[0].value, mapped_entity_name, filter_node.exp, self.property_map
+            vanilla_entity_name, mapped_entity_name, filter_node.exp, self.property_map
         )
 
         # add basic Source and Filter nodes
@@ -305,7 +305,7 @@ class _KestrelT(Transformer):
         _add_reference_branches_for_filter(graph, filter_node)
 
         projection_node = graph.add_node(
-            ProjectEntity(mapped_entity_name, entity_name), filter_node
+            ProjectEntity(mapped_entity_name, vanilla_entity_name), filter_node
         )
         root = projection_node
         if len(args) > 3:
