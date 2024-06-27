@@ -163,7 +163,7 @@ class AnalyticsInterface(SourceInstruction):
 @dataclass(eq=False)
 class Analytic(TransformingInstruction):
     name: str
-    params: dict = Mapping[str, Union[str, int, float, bool]]
+    params: Mapping[str, Union[str, int, float, bool]]
 
 
 @dataclass(eq=False)
