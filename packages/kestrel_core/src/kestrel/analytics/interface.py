@@ -98,7 +98,6 @@ A Python analytics is a python function that follows the rules:
 
 """
 
-
 import inspect
 import json
 import logging
