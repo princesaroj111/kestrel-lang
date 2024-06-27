@@ -290,3 +290,61 @@ DISP d2
 
     for db_file in extra_db:
         os.remove(db_file)
+
+
+def test_apply_on_construct():
+    hf = """
+proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
+                       , {"name": "explorer.exe", "pid": 99}
+                       , {"name": "firefox.exe", "pid": 201}
+                       , {"name": "chrome.exe", "pid": 205}
+                       ]
+APPLY python://something ON proclist WITH foo=abc,bar=1,baz=1.5
+DISP proclist ATTR name, foo, bar, baz
+"""
+    b1 = DataFrame([ {"name": "cmd.exe", "foo": "abc", "bar": 1, "baz": 1.5}
+                   , {"name": "explorer.exe", "foo": "abc", "bar": 1, "baz": 1.5}
+                   , {"name": "firefox.exe", "foo": "abc", "bar": 1, "baz": 1.5}
+                   , {"name": "chrome.exe", "foo": "abc", "bar": 1, "baz": 1.5}
+                   ])
+    with Session() as session:
+        # Add test analytic
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        session.interface_manager["python"].config["something"] = {
+            "module": os.path.join(test_dir, "test_analytic.py"),
+            "func": "do_something"
+        }
+        res = session.execute_to_generate(hf)
+        disp = next(res)
+        assert b1.equals(disp)
+        with pytest.raises(StopIteration):
+            next(res)
+
+
+def test_apply_on_construct_use_env():
+    hf = """
+proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
+                       , {"name": "explorer.exe", "pid": 99}
+                       , {"name": "firefox.exe", "pid": 201}
+                       , {"name": "chrome.exe", "pid": 205}
+                       ]
+APPLY python://something ON proclist WITH name=foo,value=1
+DISP proclist ATTR name, foo
+"""
+    b1 = DataFrame([ {"name": "cmd.exe", "foo": 1}
+                   , {"name": "explorer.exe", "foo": 1}
+                   , {"name": "firefox.exe", "foo": 1}
+                   , {"name": "chrome.exe", "foo": 1}
+                   ])
+    with Session() as session:
+        # Add test analytic
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        session.interface_manager["python"].config["something"] = {
+            "module": os.path.join(test_dir, "test_analytic.py"),
+            "func": "do_something_env"
+        }
+        res = session.execute_to_generate(hf)
+        disp = next(res)
+        assert b1.equals(disp)
+        with pytest.raises(StopIteration):
+            next(res)

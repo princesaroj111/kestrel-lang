@@ -54,6 +54,10 @@ Homepage = "https://github.com/opencybersecurityalliance/kestrel-lang"
 Documentation = "https://kestrel.readthedocs.io/"
 Repository = "https://github.com/opencybersecurityalliance/kestrel-lang.git"
 
+[project.scripts]
+kestrel = "kestrel.cli:kestrel"
+ikestrel = "kestrel.cli:ikestrel"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

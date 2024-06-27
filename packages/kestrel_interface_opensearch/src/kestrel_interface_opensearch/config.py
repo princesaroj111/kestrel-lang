@@ -6,15 +6,14 @@ from mashumaro.mixins.json import DataClassJSONMixin
 
 from kestrel.config.utils import (
     CONFIG_DIR_DEFAULT,
-    load_user_config,
     load_kestrel_config,
+    load_user_config,
 )
 from kestrel.exceptions import InterfaceNotConfigured
 from kestrel.mapping.data_model import (
-    load_default_mapping,
     check_entity_identifier_existence_in_mapping,
+    load_default_mapping,
 )
-
 
 PROFILE_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "opensearch.yaml"
 PROFILE_PATH_ENV_VAR = "KESTREL_OPENSEARCH_CONFIG"

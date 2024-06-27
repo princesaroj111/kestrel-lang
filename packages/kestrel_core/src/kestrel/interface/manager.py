@@ -1,23 +1,24 @@
 from __future__ import annotations
-import importlib
-import pkgutil
-import logging
-import inspect
-import sys
-import itertools
-from copy import copy
-from typeguard import typechecked
-from typing import Mapping, Iterable, Type
 
+import importlib
+import inspect
+import itertools
+import logging
+import pkgutil
+import sys
+from copy import copy
+from typing import Iterable, Mapping, Type
+
+from typeguard import typechecked
+
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.exceptions import (
+    ConflictingInterfaceScheme,
     InterfaceNotConfigured,
     InterfaceNotFound,
     InvalidInterfaceImplementation,
-    ConflictingInterfaceScheme,
 )
 from kestrel.interface.base import MODULE_PREFIX, AbstractInterface
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
-
 
 _logger = logging.getLogger(__name__)
 

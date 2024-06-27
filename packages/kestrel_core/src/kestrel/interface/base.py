@@ -1,21 +1,14 @@
 import json
 from abc import ABC, abstractmethod
-from pandas import DataFrame
+from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
-from typing import (
-    Mapping,
-    MutableMapping,
-    Optional,
-    Iterable,
-)
+
+from pandas import DataFrame
 
 from kestrel.display import GraphletExplanation
-from kestrel.ir.instructions import Instruction
+from kestrel.exceptions import InvalidSerializedDatasourceInterfaceCacheCatalog
 from kestrel.ir.graph import IRGraphEvaluable
-from kestrel.exceptions import (
-    InvalidSerializedDatasourceInterfaceCacheCatalog,
-)
-
+from kestrel.ir.instructions import Instruction
 
 MODULE_PREFIX = "kestrel_interface_"
 
@@ -93,6 +86,7 @@ class AbstractInterface(ABC):
     def evaluate_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_evaluate: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, DataFrame]:
         """Evaluate the IRGraph

@@ -3,13 +3,13 @@
 import logging
 from itertools import chain
 
-from kestrel.frontend.compile import _KestrelT
-from kestrel.mapping.data_model import reverse_mapping
-from kestrel.utils import load_data_file, list_folder_files
+import yaml
 from lark import Lark
 from typeguard import typechecked
-import yaml
 
+from kestrel.frontend.compile import _KestrelT
+from kestrel.mapping.data_model import reverse_mapping
+from kestrel.utils import list_folder_files, load_data_file
 
 _logger = logging.getLogger(__name__)
 

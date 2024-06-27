@@ -130,3 +130,23 @@ class UnsupportedOperatorError(KestrelError):
 
 class IncompleteDataMapping(KestrelError):
     pass
+
+
+class InvalidAnalytics(KestrelError):
+    pass
+
+
+class InvalidAnalyticsArgumentCount(KestrelError):
+    pass
+
+
+class InvalidAnalyticsInterfaceImplementation(KestrelError):
+    pass
+
+
+class InvalidAnalyticsOutput(KestrelError):
+    pass
+
+
+class AnalyticsError(KestrelError):
+    pass

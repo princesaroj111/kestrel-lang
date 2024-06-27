@@ -30,7 +30,6 @@ from kestrel.mapping.data_model import (
     translate_projection_to_native,
 )
 
-
 _logger = logging.getLogger(__name__)
 
 

@@ -7,7 +7,6 @@ from pandas import Series
 
 from kestrel.mapping.path import Path
 
-
 # Dict of "registered" transformers
 _transformers = {}
 

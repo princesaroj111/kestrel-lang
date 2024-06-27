@@ -1,10 +1,11 @@
 import logging
 from functools import reduce
-from typing import Callable, Iterable, Mapping, Optional
+from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
 
-from pandas import DataFrame, read_sql
 import sqlalchemy
+from kestrel_interface_sqlalchemy.config import load_config
+from pandas import DataFrame, read_sql
 from sqlalchemy import column, or_
 from sqlalchemy.sql.expression import ColumnClause
 from typeguard import typechecked
@@ -38,9 +39,6 @@ from kestrel.mapping.data_model import (
     translate_dataframe,
     translate_projection_to_native,
 )
-
-from kestrel_interface_sqlalchemy.config import load_config
-
 
 _logger = logging.getLogger(__name__)
 
@@ -191,6 +189,7 @@ class SQLAlchemyInterface(AbstractInterface):
     def explain_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_explain: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, GraphletExplanation]:
         mapping = {}

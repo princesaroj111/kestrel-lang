@@ -1,18 +1,19 @@
 import logging
 from contextlib import AbstractContextManager
-from uuid import uuid4
 from typing import Iterable
+from uuid import uuid4
+
 from typeguard import typechecked
 
-from kestrel.display import Display, GraphExplanation
-from kestrel.ir.graph import IRGraph
-from kestrel.ir.instructions import Instruction, Explain
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.analytics import PythonAnalyticsInterface
 from kestrel.cache import SqlCache
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
-from kestrel.interface import InterfaceManager
+from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
-
+from kestrel.frontend.parser import parse_kestrel
+from kestrel.interface import InterfaceManager
+from kestrel.ir.graph import IRGraph
+from kestrel.ir.instructions import Explain, Instruction
 
 _logger = logging.getLogger(__name__)
 
@@ -27,7 +28,11 @@ class Session(AbstractContextManager):
 
         # load all interfaces; cache is a special interface
         cache = SqlCache()
-        self.interface_manager = InterfaceManager([cache])
+
+        # Python analytics are "built-in"
+        pyanalytics = PythonAnalyticsInterface()
+
+        self.interface_manager = InterfaceManager([cache, pyanalytics])
 
     def execute(self, huntflow_block: str) -> Iterable[Display]:
         """Execute a Kestrel huntflow block.
@@ -90,16 +95,19 @@ class Session(AbstractContextManager):
         while True:
             for g in self.irgraph.find_dependent_subgraphs_of_node(ins, _cache):
                 interface = _interface_manager[g.interface]
+                _logger.debug("eval: subgraph: %s", [i.instruction for i in g.nodes()])
+                _logger.debug("eval: interface = %s", interface)
                 for iid, _display in (
                     interface.explain_graph(g)
                     if is_explain
-                    else interface.evaluate_graph(g)
+                    else interface.evaluate_graph(g, _cache)
                 ).items():
                     if is_explain:
                         display.graphlets.append(_display)
+                        if interface is not _cache:
+                            _cache[iid] = display
                     else:
                         display = _display
-                    if interface is not _cache:
                         _cache[iid] = display
                     if iid == ins.id:
                         return display

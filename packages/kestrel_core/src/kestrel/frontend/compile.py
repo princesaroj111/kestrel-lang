@@ -5,38 +5,34 @@ from datetime import datetime, timedelta, timezone
 from functools import reduce
 
 from dateutil.parser import parse as to_datetime
-from lark import Transformer, Token
+from lark import Token, Transformer
 from typeguard import typechecked
 
-from kestrel.mapping.data_model import (
-    translate_comparison_to_ocsf,
-    translate_projection_to_ocsf,
-)
-from kestrel.utils import unescape_quoted_string
+from kestrel.exceptions import IRGraphMissingNode
 from kestrel.ir.filter import (
-    FExpression,
+    BoolExp,
+    ExpOp,
     FComparison,
-    IntComparison,
+    FExpression,
     FloatComparison,
-    StrComparison,
+    IntComparison,
     ListComparison,
+    ListOp,
+    MultiComp,
+    NumCompOp,
     RefComparison,
     ReferenceValue,
-    MultiComp,
-    ListOp,
-    NumCompOp,
+    StrComparison,
     StrCompOp,
-    ExpOp,
-    BoolExp,
     TimeRange,
 )
-from kestrel.ir.graph import (
-    IRGraph,
-    compose,
-)
+from kestrel.ir.graph import IRGraph, compose
 from kestrel.ir.instructions import (
+    Analytic,
+    AnalyticsInterface,
     Construct,
     DataSource,
+    Explain,
     Filter,
     Instruction,
     Limit,
@@ -47,10 +43,12 @@ from kestrel.ir.instructions import (
     Return,
     Sort,
     Variable,
-    Explain,
 )
-from kestrel.exceptions import IRGraphMissingNode
-
+from kestrel.mapping.data_model import (
+    translate_comparison_to_ocsf,
+    translate_projection_to_ocsf,
+)
+from kestrel.utils import unescape_quoted_string
 
 _logger = logging.getLogger(__name__)
 
@@ -202,6 +200,7 @@ class _KestrelT(Transformer):
         self.token_prefix = token_prefix
         self.entity_map = entity_map
         self.property_map = property_map  # TODO: rename to data_model_map?
+        self.variable_map = {}  # To cache var type info
         super().__init__()
 
     def start(self, args):
@@ -215,6 +214,7 @@ class _KestrelT(Transformer):
         graph, root = args[1]
         entity_type, native_type = self._get_type_from_predecessors(graph, root)
         variable_node = Variable(args[0].value, entity_type, native_type)
+        self.variable_map[args[0].value] = (entity_type, native_type)
         graph.add_node(variable_node, root)
         return graph
 
@@ -283,6 +283,9 @@ class _KestrelT(Transformer):
             v = float(v) if "." in v else int(v)
         return v
 
+    def variables(self, args):
+        return [Reference(arg.value) for arg in args]
+
     def get(self, args):
         graph = IRGraph()
         entity_name = args[0].value
@@ -313,6 +316,23 @@ class _KestrelT(Transformer):
                     root = graph.add_node(arg, projection_node)
         return graph, root
 
+    def apply(self, args):
+        scheme, analytic_name = args[0]
+        refvar = args[1][0]  # TODO - this is a list of refs?
+        params = args[2] if len(args) > 2 else {}
+        vds = AnalyticsInterface(interface=scheme)
+        analytic = Analytic(name=analytic_name, params=params)
+        _logger.debug("apply: analytic: %s", analytic)
+        graph = IRGraph()
+        graph.add_node(refvar)
+        graph.add_node(analytic, refvar)
+        graph.add_node(vds)
+        graph.add_edge(vds, analytic)
+        entity_type, native_type = self.variable_map.get(refvar.name)
+        variable_node = Variable(refvar.name, entity_type, native_type)
+        graph.add_node(variable_node, analytic)
+        return graph
+
     def where_clause(self, args):
         exp = args[0]
         return Filter(exp)
@@ -339,6 +359,17 @@ class _KestrelT(Transformer):
         value = args[2]
         comp = _create_comp(field, op, value)
         return comp
+
+    def args(self, args):
+        return dict(args)
+
+    def arg_kv_pair(self, args):
+        name = args[0].value
+        if isinstance(args[1], ReferenceValue):
+            value = args[1].reference
+        else:
+            value = args[1]  # Should be int or float?
+        return (name, value)
 
     def op(self, args):
         """Convert operator token to a plain string"""
@@ -376,6 +407,11 @@ class _KestrelT(Transformer):
 
     def datasource(self, args):
         return DataSource(args[0].value)
+
+    def analytics_uri(self, args):
+        scheme, _, analytic = args[0].value.partition("://")
+        _logger.debug("analytics_uri: %s %s", scheme, analytic)
+        return scheme, analytic
 
     # Timespans
     def timespan_relative(self, args):

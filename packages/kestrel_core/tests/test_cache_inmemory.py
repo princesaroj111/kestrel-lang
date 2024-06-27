@@ -40,7 +40,7 @@ DISP browsers ATTR name, pid
 """
     graph = IRGraphEvaluable(parse_kestrel(stmt))
     c = InMemoryCache()
-    mapping = c.evaluate_graph(graph)
+    mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
     rets = graph.get_returns()
@@ -77,7 +77,7 @@ DISP p2 ATTR name, pid
 """
     graph = IRGraphEvaluable(parse_kestrel(stmt))
     c = InMemoryCache()
-    mapping = c.evaluate_graph(graph)
+    mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
     rets = graph.get_returns()
@@ -96,7 +96,7 @@ browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 """
     graph = IRGraphEvaluable(parse_kestrel(stmt))
     c = InMemoryCache()
-    mapping = c.evaluate_graph(graph)
+    mapping = c.evaluate_graph(graph, c)
     v = c.get_virtual_copy()
     new_entry = uuid4()
     v[new_entry] = True

@@ -2,7 +2,7 @@ import logging
 from functools import reduce
 from typing import Callable
 
-from sqlalchemy import and_, column, or_, select, FromClause, asc, desc
+from sqlalchemy import FromClause, and_, asc, column, desc, or_, select
 from sqlalchemy.engine import Compiled, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
 from sqlalchemy.sql.expression import ColumnClause, ColumnOperators
@@ -29,7 +29,6 @@ from kestrel.ir.instructions import (
     Sort,
     SortDirection,
 )
-
 
 _logger = logging.getLogger(__name__)
 
