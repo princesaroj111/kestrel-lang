@@ -7,7 +7,7 @@ import sys
 import uuid
 from dataclasses import InitVar, dataclass, field, fields
 from enum import Enum
-from typing import Any, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Callable, Iterable, List, Mapping, Optional, Type, Union
 
 from mashumaro.mixins.json import DataClassJSONMixin
 from typeguard import typechecked

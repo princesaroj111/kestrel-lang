@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import MutableMapping
+from typing import Iterable, MutableMapping
 from uuid import UUID
 
 from pandas import DataFrame
