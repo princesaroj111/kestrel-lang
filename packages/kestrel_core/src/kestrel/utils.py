@@ -1,11 +1,13 @@
 import collections.abc
-from importlib import resources
-from kestrel.__future__ import is_python_older_than_minor_version
 import os
+from importlib import resources
 from pathlib import Path
 from pkgutil import get_data
+from typing import Iterable, Mapping, Optional
+
 from typeguard import typechecked
-from typing import Optional, Mapping, Iterable
+
+from kestrel.__future__ import is_python_older_than_minor_version
 
 
 @typechecked

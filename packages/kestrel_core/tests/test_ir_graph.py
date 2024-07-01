@@ -301,7 +301,7 @@ DISP p5 ATTR pid, name, cmd_line
     assert len(gs[1]) == 6
     assert Counter(map(type, gs[1].nodes())) == Counter([Filter, Filter, Variable, Variable, ProjectEntity, DataSource])
 
-    c.evaluate_graph(gs[0])
+    c.evaluate_graph(gs[0], c)
     assert p1_projattr.id in c
     assert p1.id in c
     assert len(c) == 2

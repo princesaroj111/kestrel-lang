@@ -1,8 +1,10 @@
 from __future__ import annotations
-from pandas import DataFrame
-from typing import MutableMapping
-from uuid import UUID
+
 from abc import abstractmethod
+from typing import Iterable, MutableMapping
+from uuid import UUID
+
+from pandas import DataFrame
 
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.interface import AbstractInterface

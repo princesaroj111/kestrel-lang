@@ -1,30 +1,25 @@
 from copy import copy
+from typing import Any, Iterable, Mapping, MutableMapping, Optional
+from uuid import UUID
+
 from pandas import DataFrame
 from typeguard import typechecked
-from uuid import UUID
-from typing import (
-    Mapping,
-    MutableMapping,
-    Optional,
-    Iterable,
-    Any,
-)
 
 from kestrel.cache.base import AbstractCache
-from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.display import GraphletExplanation, NativeQuery
-from kestrel.ir.instructions import (
-    Instruction,
-    Return,
-    Explain,
-    Variable,
-    Filter,
-    SourceInstruction,
-    TransformingInstruction,
-)
 from kestrel.interface.codegen.dataframe import (
     evaluate_source_instruction,
     evaluate_transforming_instruction,
+)
+from kestrel.ir.graph import IRGraphEvaluable
+from kestrel.ir.instructions import (
+    Explain,
+    Filter,
+    Instruction,
+    Return,
+    SourceInstruction,
+    TransformingInstruction,
+    Variable,
 )
 
 
@@ -68,6 +63,7 @@ class InMemoryCache(AbstractCache):
     def evaluate_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_evaluate: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, DataFrame]:
         mapping = {}

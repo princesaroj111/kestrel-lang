@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typeguard import typechecked
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional, Union, Iterable, Any, Callable
+from typing import Any, Callable, Iterable, List, Optional, Union
 
 from mashumaro.mixins.json import DataClassJSONMixin
+from typeguard import typechecked
 
 
 class NumCompOp(str, Enum):

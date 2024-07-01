@@ -1,7 +1,9 @@
 import logging
-from typing import Iterable, Mapping, Optional, Tuple
+from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple
 from uuid import UUID
 
+from kestrel_interface_opensearch.config import load_config
+from kestrel_interface_opensearch.ossql import OpenSearchTranslator
 from opensearchpy import OpenSearch
 from pandas import DataFrame, concat
 
@@ -11,19 +13,15 @@ from kestrel.interface import AbstractInterface
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     DataSource,
+    Filter,
     Instruction,
     Return,
-    Variable,
-    Filter,
+    SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
-    SolePredecessorTransformingInstruction,
+    Variable,
 )
 from kestrel.mapping.data_model import translate_dataframe
-
-from kestrel_interface_opensearch.config import load_config
-from kestrel_interface_opensearch.ossql import OpenSearchTranslator
-
 
 _logger = logging.getLogger(__name__)
 
@@ -111,6 +109,7 @@ class OpenSearchInterface(AbstractInterface):
     def evaluate_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_evaluate: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, DataFrame]:
         mapping = {}

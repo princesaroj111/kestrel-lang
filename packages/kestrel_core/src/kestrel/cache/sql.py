@@ -1,6 +1,6 @@
 import logging
 from copy import copy
-from typing import Iterable, Mapping, Optional, Union, Any
+from typing import Any, Iterable, Mapping, MutableMapping, Optional, Union
 from uuid import UUID
 
 import sqlalchemy
@@ -9,19 +9,19 @@ from pandas import DataFrame, read_sql
 from typeguard import typechecked
 
 from kestrel.cache.base import AbstractCache
+from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
 from kestrel.ir.graph import IRGraphEvaluable
-from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.ir.instructions import (
     Construct,
+    Explain,
+    Filter,
     Instruction,
     Return,
-    Explain,
-    Variable,
-    Filter,
+    SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
-    SolePredecessorTransformingInstruction,
+    Variable,
 )
 
 _logger = logging.getLogger(__name__)
@@ -90,6 +90,7 @@ class SqlCache(AbstractCache):
     def evaluate_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_evaluate: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, DataFrame]:
         mapping = {}

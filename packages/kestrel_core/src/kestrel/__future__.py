@@ -1,6 +1,6 @@
 import sys
-from typeguard import typechecked
 
+from typeguard import typechecked
 
 """Entrance to invoke any backward compatibility patch
 

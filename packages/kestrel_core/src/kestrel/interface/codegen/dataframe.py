@@ -1,29 +1,30 @@
-import sys
-import inspect
-import re
-import operator
 import functools
-from typeguard import typechecked
-from pandas import DataFrame, Series
+import inspect
+import operator
+import re
+import sys
 from typing import Callable
 
+from pandas import DataFrame, Series
+from typeguard import typechecked
+
+from kestrel.ir.filter import (
+    BoolExp,
+    ExpOp,
+    FExpression,
+    ListOp,
+    MultiComp,
+    NumCompOp,
+    StrCompOp,
+)
 from kestrel.ir.instructions import (
-    SourceInstruction,
-    TransformingInstruction,
     Construct,
+    Filter,
     Limit,
     ProjectAttrs,
     ProjectEntity,
-    Filter,
-)
-from kestrel.ir.filter import (
-    FExpression,
-    BoolExp,
-    MultiComp,
-    StrCompOp,
-    NumCompOp,
-    ExpOp,
-    ListOp,
+    SourceInstruction,
+    TransformingInstruction,
 )
 
 

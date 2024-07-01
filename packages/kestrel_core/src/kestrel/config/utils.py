@@ -1,12 +1,13 @@
-import os
-import yaml
-from pathlib import Path
 import logging
-from typeguard import typechecked
+import os
+from pathlib import Path
 from typing import Mapping, Union
 
-from kestrel.utils import update_nested_dict, load_data_file
-from kestrel.exceptions import InvalidYamlInConfig, InvalidKestrelConfig
+import yaml
+from typeguard import typechecked
+
+from kestrel.exceptions import InvalidKestrelConfig, InvalidYamlInConfig
+from kestrel.utils import load_data_file, update_nested_dict
 
 CONFIG_DIR_DEFAULT = Path.home() / ".config" / "kestrel"
 CONFIG_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "kestrel.yaml"

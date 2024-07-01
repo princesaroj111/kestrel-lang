@@ -39,7 +39,7 @@ DISP proclist ATTR name
 """
     graph = IRGraphEvaluable(parse_kestrel(stmt))
     c = SqlCache()
-    mapping = c.evaluate_graph(graph)
+    mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
     rets = graph.get_returns()
@@ -64,7 +64,7 @@ DISP browsers ATTR name, pid
 """
     graph = IRGraphEvaluable(parse_kestrel(stmt))
     c = SqlCache()
-    mapping = c.evaluate_graph(graph)
+    mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
     rets = graph.get_returns()
@@ -93,7 +93,7 @@ DISP browsers ATTR pid
     # first DISP
     gs = graph.find_dependent_subgraphs_of_node(rets[0], c)
     assert len(gs) == 1
-    mapping = c.evaluate_graph(gs[0])
+    mapping = c.evaluate_graph(gs[0], c)
     df1 = DataFrame([ {"name": "explorer.exe", "pid": 99}
                     , {"name": "firefox.exe", "pid": 201}
                     , {"name": "chrome.exe", "pid": 205}
@@ -104,7 +104,7 @@ DISP browsers ATTR pid
     # second DISP
     gs = graph.find_dependent_subgraphs_of_node(rets[1], c)
     assert len(gs) == 1
-    mapping = c.evaluate_graph(gs[0])
+    mapping = c.evaluate_graph(gs[0], c)
     df2 = DataFrame([ {"pid": 99}
                     , {"pid": 201}
                     , {"pid": 205}
@@ -127,7 +127,7 @@ browsers = proclist WHERE name IN ("explorer.exe", "firefox.exe", "chrome.exe")
 """
     graph = IRGraphEvaluable(parse_kestrel(stmt))
     c = SqlCache()
-    _ = c.evaluate_graph(graph)
+    _ = c.evaluate_graph(graph, c)
 
 
 def test_eval_filter_with_ref():
@@ -144,7 +144,7 @@ DISP p2 ATTR name, pid
 """
     graph = IRGraphEvaluable(parse_kestrel(stmt))
     c = SqlCache()
-    mapping = c.evaluate_graph(graph)
+    mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
     rets = graph.get_returns()
@@ -163,7 +163,7 @@ browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 """
     graph = IRGraphEvaluable(parse_kestrel(stmt))
     c = SqlCache()
-    mapping = c.evaluate_graph(graph)
+    mapping = c.evaluate_graph(graph, c)
     v = c.get_virtual_copy()
     new_entry = uuid4()
     v[new_entry] = True

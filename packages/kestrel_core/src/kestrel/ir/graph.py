@@ -1,46 +1,54 @@
 from __future__ import annotations
-from typeguard import typechecked
-from typing import Any, Iterable, Tuple, Mapping, MutableMapping, Union, Optional
+
+import json
+import logging
 from collections import defaultdict
 from itertools import combinations
+from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple, Union
 from uuid import UUID
+
 import networkx
-import json
-from kestrel.ir.instructions import (
-    Instruction,
-    TransformingInstruction,
-    SolePredecessorTransformingInstruction,
-    IntermediateInstruction,
-    SourceInstruction,
-    Variable,
-    DataSource,
-    Reference,
-    Return,
-    Filter,
-    ProjectAttrs,
-    instruction_from_dict,
-)
-from kestrel.ir.filter import ReferenceValue
+from typeguard import typechecked
+
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.exceptions import (
+    DanglingFilter,
+    DanglingReferenceInFilter,
+    DataSourceNotFound,
+    DuplicatedDataSource,
+    DuplicatedReference,
+    DuplicatedReferenceInFilter,
+    DuplicatedSingletonInstruction,
+    DuplicatedVariable,
+    InevaluableInstruction,
     InstructionNotFound,
     InvalidSeralizedGraph,
-    VariableNotFound,
-    ReferenceNotFound,
-    DataSourceNotFound,
-    DuplicatedVariable,
-    DuplicatedReference,
-    DuplicatedDataSource,
-    DuplicatedSingletonInstruction,
+    LargerThanOneIndegreeInstruction,
+    MissingReferenceInFilter,
     MultiInterfacesInGraph,
     MultiSourcesInGraph,
-    InevaluableInstruction,
-    LargerThanOneIndegreeInstruction,
-    DuplicatedReferenceInFilter,
-    MissingReferenceInFilter,
-    DanglingReferenceInFilter,
-    DanglingFilter,
+    ReferenceNotFound,
+    VariableNotFound,
 )
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.ir.filter import ReferenceValue
+from kestrel.ir.instructions import (
+    Analytic,
+    AnalyticsInterface,
+    DataSource,
+    Filter,
+    Instruction,
+    IntermediateInstruction,
+    ProjectAttrs,
+    Reference,
+    Return,
+    SolePredecessorTransformingInstruction,
+    SourceInstruction,
+    TransformingInstruction,
+    Variable,
+    instruction_from_dict,
+)
+
+_logger = logging.getLogger(__name__)
 
 
 @typechecked
@@ -405,6 +413,8 @@ class IRGraph(networkx.DiGraph):
             elif len(ps) > 1:
                 raise DanglingReferenceInFilter(ps)
             return ps[0], r2n
+        elif isinstance(node, (Analytic, AnalyticsInterface)):
+            return ps[0], {}
         else:
             raise NotImplementedError(f"unknown instruction type: {node}")
 

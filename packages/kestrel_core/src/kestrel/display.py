@@ -1,5 +1,6 @@
-from typing import List, Union, Mapping
 from dataclasses import dataclass
+from typing import List, Mapping, Union
+
 from mashumaro.mixins.json import DataClassJSONMixin
 from pandas import DataFrame
 
