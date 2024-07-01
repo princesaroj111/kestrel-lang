@@ -104,8 +104,7 @@ class Session(AbstractContextManager):
                 ).items():
                     if is_explain:
                         display.graphlets.append(_display)
-                        if interface is not _cache:
-                            _cache[iid] = display
+                        _cache[iid] = True  # virtual cache; value type does not matter
                     else:
                         display = _display
                         _cache[iid] = display

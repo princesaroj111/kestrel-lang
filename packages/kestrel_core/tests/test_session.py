@@ -259,31 +259,33 @@ DISP d2
         assert isinstance(disp, GraphExplanation)
         assert len(disp.graphlets) == 4
 
+        # DISP procs
         assert len(disp.graphlets[0].graph["nodes"]) == 5
         query = disp.graphlets[0].query.statement.replace('"', '')
         procs = session.irgraph.get_variable("procs")
         c1 = next(session.irgraph.predecessors(procs))
         assert query == f"WITH procs AS \n(SELECT * \nFROM {c1.id.hex}), \np2 AS \n(SELECT * \nFROM procs \nWHERE name IN ('firefox.exe', 'chrome.exe'))\n SELECT pid \nFROM p2"
 
+        # DISP nt
         assert len(disp.graphlets[1].graph["nodes"]) == 2
         query = disp.graphlets[1].query.statement.replace('"', '')
         nt = session.irgraph.get_variable("nt")
         c2 = next(session.irgraph.predecessors(nt))
         assert query == f"WITH nt AS \n(SELECT * \nFROM {c2.id.hex})\n SELECT * \nFROM nt"
 
-        # the current session.execute_to_generate() logic does not store
-        # in cache if evaluated by cache; the behavior may change in the future
+        # DISP domain
         assert len(disp.graphlets[2].graph["nodes"]) == 2
         query = disp.graphlets[2].query.statement.replace('"', '')
         domain = session.irgraph.get_variable("domain")
         c3 = next(session.irgraph.predecessors(domain))
         assert query == f"WITH domain AS \n(SELECT * \nFROM {c3.id.hex})\n SELECT * \nFROM domain"
 
-        assert len(disp.graphlets[3].graph["nodes"]) == 12
+        # EXPLAIN d2
+        assert len(disp.graphlets[3].graph["nodes"]) == 11
         query = disp.graphlets[3].query.statement.replace('"', '')
         p2 = session.irgraph.get_variable("p2")
         p2pa = next(session.irgraph.successors(p2))
-        assert query == f"WITH domain AS \n(SELECT * \nFROM {c3.id.hex}), \nntx AS \n(SELECT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT * \nFROM domain \nWHERE ip IN (SELECT destination \nFROM ntx))\n SELECT * \nFROM d2"
+        assert query == f"WITH ntx AS \n(SELECT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT * \nFROM {domain.id.hex}v \nWHERE ip IN (SELECT destination \nFROM ntx))\n SELECT * \nFROM d2"
 
         df_ref = DataFrame([{"ip": "1.1.1.2", "domain": "xyz.cloudflare.com"}])
         assert df_ref.equals(df_res)
