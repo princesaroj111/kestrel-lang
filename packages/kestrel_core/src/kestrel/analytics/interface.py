@@ -164,7 +164,7 @@ class PythonAnalyticsInterface(AbstractInterface):
         serialized_cache_catalog: Optional[str] = None,
         session_id: Optional[UUID] = None,
     ):
-        _logger.debug("SQLAlchemyInterface: loading config")
+        _logger.debug("PythonAnalyticsInterface: loading config")
         super().__init__(serialized_cache_catalog, session_id)
         self.config = load_profiles()
 
@@ -291,9 +291,7 @@ class PythonAnalytics(AbstractContextManager):
 
         Returns:
 
-            Kestrel Display object: The Display object is the explicit return.
-            The function also has side effect to update the session with
-            returned Kestrel variables.
+            DataFrame: the analytics output (i.e. "enriched" DataFrame)
 
         """
         input_dataframes = [dataframe]  # TEMP
