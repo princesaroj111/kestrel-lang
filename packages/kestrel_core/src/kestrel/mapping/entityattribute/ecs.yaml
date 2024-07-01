@@ -140,6 +140,12 @@ process: &process
                 native_op: LIKE
                 native_value: posixpath_startswith
                 ocsf_value: dirname
+        user:
+            domain: process.parent.user.domain
+            full_name: process.parent.user.full_name
+            name: process.parent.user.name
+            uid: process.parent.user.id
+
     user:
         domain: process.user.domain
         full_name: process.user.full_name

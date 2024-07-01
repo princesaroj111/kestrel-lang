@@ -1,0 +1,28 @@
+# map from OCSF field to OCSF types that Kestrel support
+
+# entities
+endpoint: endpoint
+user: user
+file: file
+file.endpoint: endpoint
+group: group
+process: process
+process.endpoint: endpoint
+process.file: file
+process.user: user
+process.parent_process: process
+process.parent_process.file: file
+process.parent_process.user: user
+src_endpoint: endpoint
+dst_endpoint: endpoint
+network_endpoint: endpoint
+certificate: certificate
+connection_info: connection
+email: email
+reg_key: reg_key
+reg_value: reg_value
+actor.process: process
+actor.user: user
+
+# event
+network_activity: event
