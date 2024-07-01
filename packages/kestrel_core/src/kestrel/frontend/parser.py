@@ -26,10 +26,10 @@ def get_frontend_mapping(mapping_type: str, mapping_pkg: str, submodule: str) ->
         for f in list_folder_files(mapping_pkg, submodule, extension="yaml"):
             with open(f, "r") as fp:
                 mapping_ind = yaml.safe_load(fp)
-            if mapping_type == "property":
+            if mapping_type == "field":
                 # New data model map is always OCSF->native
                 mapping_ind = reverse_mapping(mapping_ind)
-            # the entity mapping or reversed property mapping is flatten structure
+            # the entity mapping or reversed field mapping is flatten structure
             # so just dict.update() will do
             mapping.update(mapping_ind)
         frontend_mapping[mapping_type] = mapping
@@ -56,9 +56,7 @@ _parser = Lark(
     parser="lalr",
     transformer=_KestrelT(
         entity_map=get_frontend_mapping("entity", "kestrel.mapping", "entityname"),
-        property_map=get_frontend_mapping(
-            "property", "kestrel.mapping", "entityattribute"
-        ),
+        field_map=get_frontend_mapping("field", "kestrel.mapping", "fields"),
     ),
 )
 

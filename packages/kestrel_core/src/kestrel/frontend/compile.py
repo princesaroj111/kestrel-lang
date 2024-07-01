@@ -103,7 +103,7 @@ def _map_filter_exp(
     native_entity_name: str,
     mapped_entity_name: str,
     filter_exp: FExpression,
-    property_map: dict,
+    field_map: dict,
 ) -> FExpression:
     if isinstance(
         filter_exp,
@@ -114,7 +114,7 @@ def _map_filter_exp(
         # init map_result from direct mapping from field
         map_result = set(
             translate_comparison_to_ocsf(
-                property_map, field, filter_exp.op, filter_exp.value
+                field_map, field, filter_exp.op, filter_exp.value
             )
         )
         # there is a case that `field` omits the return entity (prefix)
@@ -128,7 +128,7 @@ def _map_filter_exp(
                 filter(
                     lambda x: x[0].startswith(mapped_entity_name + "."),
                     translate_comparison_to_ocsf(
-                        property_map, full_field, filter_exp.op, filter_exp.value
+                        field_map, full_field, filter_exp.op, filter_exp.value
                     ),
                 )
             )
@@ -154,11 +154,11 @@ def _map_filter_exp(
         # recursively map boolean expressions
         filter_exp = BoolExp(
             _map_filter_exp(
-                native_entity_name, mapped_entity_name, filter_exp.lhs, property_map
+                native_entity_name, mapped_entity_name, filter_exp.lhs, field_map
             ),
             filter_exp.op,
             _map_filter_exp(
-                native_entity_name, mapped_entity_name, filter_exp.rhs, property_map
+                native_entity_name, mapped_entity_name, filter_exp.rhs, field_map
             ),
         )
     elif isinstance(filter_exp, MultiComp):
@@ -169,7 +169,7 @@ def _map_filter_exp(
         filter_exp = MultiComp(
             filter_exp.op,
             [
-                _map_filter_exp(native_entity_name, mapped_entity_name, x, property_map)
+                _map_filter_exp(native_entity_name, mapped_entity_name, x, field_map)
                 for x in filter_exp.comps
             ],
         )
@@ -193,13 +193,13 @@ class _KestrelT(Transformer):
         default_sort_order=DEFAULT_SORT_ORDER,
         token_prefix="",
         entity_map={},
-        property_map={},
+        field_map={},
     ):
         # token_prefix is the modification by Lark when using `merge_transformers()`
         self.default_sort_order = default_sort_order
         self.token_prefix = token_prefix
         self.entity_map = entity_map
-        self.property_map = property_map  # TODO: rename to data_model_map?
+        self.field_map = field_map
         self.variable_map = {}  # To cache var type info
         super().__init__()
 
@@ -289,12 +289,14 @@ class _KestrelT(Transformer):
     def get(self, args):
         graph = IRGraph()
         vanilla_entity_name = args[0].value
-        mapped_entity_name = self.entity_map.get(vanilla_entity_name, vanilla_entity_name)
+        mapped_entity_name = self.entity_map.get(
+            vanilla_entity_name, vanilla_entity_name
+        )
 
         # prepare Filter node
         filter_node = args[2]
         filter_node.exp = _map_filter_exp(
-            vanilla_entity_name, mapped_entity_name, filter_node.exp, self.property_map
+            vanilla_entity_name, mapped_entity_name, filter_node.exp, self.field_map
         )
 
         # add basic Source and Filter nodes
@@ -468,7 +470,7 @@ class _KestrelT(Transformer):
                 "Map %s attrs to OCSF %s in %s", native_type, entity_type, root
             )
             root.attrs = translate_projection_to_ocsf(
-                self.property_map, native_type, entity_type, root.attrs
+                self.field_map, native_type, entity_type, root.attrs
             )
         graph.add_node(Return(), root)
         return graph

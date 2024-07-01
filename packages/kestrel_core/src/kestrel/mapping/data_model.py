@@ -208,7 +208,7 @@ def translate_comparison_to_ocsf(
 def load_default_mapping(
     data_model_name: str,
     mapping_pkg: str = "kestrel.mapping",
-    submodule: str = "entityattribute",
+    submodule: str = "fields",
 ):
     result = {}
     for f in list_folder_files(
