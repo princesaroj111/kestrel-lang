@@ -14,26 +14,25 @@ from kestrel.utils import list_folder_files, load_data_file
 _logger = logging.getLogger(__name__)
 
 
+MAPPING_MODULE = "kestrel.mapping"
+
 # cache mapping in the module
 frontend_mapping = {}
 
 
 @typechecked
-def get_frontend_mapping(mapping_type: str, mapping_pkg: str, submodule: str) -> dict:
+def get_frontend_mapping(submodule: str, do_reverse_mapping: bool = False) -> dict:
     global frontend_mapping
-    if mapping_type not in frontend_mapping:
+    if submodule not in frontend_mapping:
         mapping = {}
-        for f in list_folder_files(mapping_pkg, submodule, extension="yaml"):
+        for f in list_folder_files(MAPPING_MODULE, submodule, extension="yaml"):
             with open(f, "r") as fp:
                 mapping_ind = yaml.safe_load(fp)
-            if mapping_type == "field":
-                # New data model map is always OCSF->native
+            if do_reverse_mapping:
                 mapping_ind = reverse_mapping(mapping_ind)
-            # the entity mapping or reversed field mapping is flatten structure
-            # so just dict.update() will do
             mapping.update(mapping_ind)
-        frontend_mapping[mapping_type] = mapping
-    return frontend_mapping[mapping_type]
+        frontend_mapping[submodule] = mapping
+    return frontend_mapping[submodule]
 
 
 @typechecked
@@ -55,8 +54,8 @@ _parser = Lark(
     load_data_file("kestrel.frontend", "kestrel.lark"),
     parser="lalr",
     transformer=_KestrelT(
-        entity_map=get_frontend_mapping("entity", "kestrel.mapping", "entityname"),
-        field_map=get_frontend_mapping("field", "kestrel.mapping", "fields"),
+        type_map=get_frontend_mapping("types"),
+        field_map=get_frontend_mapping("fields", True),
     ),
 )
 

@@ -102,7 +102,7 @@ def test_parser_mapping_single_comparison():
     # another test
     stmt = "x = GET ipv4-addr FROM if://ds WHERE value = '192.168.22.3'"
     parse_filter = get_parsed_filter_exp(stmt)
-    assert parse_filter.field == 'network_endpoint.ip'
+    assert parse_filter.field == 'endpoint.ip'
 
     # this is a special case in parser logic
     # if the field already has entity prefix, do not filter it with entity type
@@ -292,15 +292,18 @@ EXPLAIN proclist
 
 
 @pytest.mark.parametrize(
-    "stmt, entity, key", [
-        ("x = GET registry FROM if://ds WHERE key = 'bar'", "reg_key", "reg_key.path"),
-        ("x = GET user-account FROM if://ds WHERE user_id = '123'", "user", "user.uid"),
-        ("x = GET host FROM if://ds WHERE name = 'bar'", "endpoint", "endpoint.name"),
-        ("x = GET destination FROM if://ds WHERE mac = '22:33:44:55'", "network_endpoint", "network_endpoint.mac"),
-        ("x = GET registry FROM if://ds WHERE key = 'bar'", "reg_key", "reg_key.path"),
+    "stmt, entity, ocsf_proj_field, key", [
+        ("x = GET registry FROM if://ds WHERE key = 'bar'", "reg_key", "reg_key", "reg_key.path"),
+        ("x = GET user-account FROM if://ds WHERE user_id = '123'", "user", "user", "user.uid"),
+        ("x = GET host FROM if://ds WHERE name = 'bar'", "endpoint", "endpoint", "endpoint.name"),
+        ("x = GET destination FROM if://ds WHERE mac = '22:33:44:55'", "network_endpoint", "dst_endpoint", "dst_endpoint.mac"),
+        ("x = GET registry FROM if://ds WHERE key = 'bar'", "reg_key", "reg_key", "reg_key.path"),
+        ("x = GET process.parent.user FROM if://ds WHERE name = 'alice'", "user", "process.parent_process.user", "process.parent_process.user.name"),
+        ("x = GET process:parent_ref FROM if://ds WHERE command_line = 'cmd.exe -abc'", "process", "process.parent_process", "process.parent_process.cmd_line"),
     ]
 )
-def test_parser_entity_and_property_mapping(stmt, entity, key):
+def test_parser_entity_and_proj_and_field_mapping(stmt, entity, ocsf_proj_field, key):
     graph = parse_kestrel(stmt)
-    assert graph.get_nodes_by_type(ProjectEntity)[0].entity_type == entity
+    assert graph.get_nodes_by_type(Variable)[0].entity_type == entity
+    assert graph.get_nodes_by_type(ProjectEntity)[0].ocsf_field == ocsf_proj_field
     assert graph.get_nodes_by_type(Filter)[0].exp.field == key

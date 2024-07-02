@@ -129,7 +129,7 @@ class SqlTranslator:
 
     def add_ProjectEntity(self, proj: ProjectEntity) -> None:
         self.query = self.query.with_only_columns(
-            column(proj.entity_type)
+            column(proj.ocsf_field + ".*")
         )  # TODO: mapping?
 
     def add_Limit(self, lim: Limit) -> None:

@@ -55,7 +55,7 @@ def reverse_mapping(obj: dict, prefix: str = None, result: dict = None) -> dict:
 
     Newly loaded mapping from disk is OCSF -> native mapping. This function
     takes in such mapping, and reverse it to native -> OCSF mapping, which can
-    be used by the frontend. The result mapping is flattened.
+    be used by the frontend. The result mapping is flattened!
 
     To call the function: `reverse_mapping(ocsf_to_native_mapping)`
 
@@ -161,13 +161,16 @@ def translate_comparison_to_native(
 
 
 def translate_comparison_to_ocsf(
-    dmm: dict, field: str, op: str, value: Union[str, int, float]
+    to_ocsf_flattened_field_map: dict,
+    field: str,
+    op: str,
+    value: Union[str, int, float],
 ) -> list:
-    """Translate the (`field`, `op`, `value`) triple using data model map `dmm`
+    """Translate the (`field`, `op`, `value`) triple
 
     This function is used in the frontend to translate a comparison in
     the STIX (or, in the future, ECS) data model to the OCSF data
-    model, according to the data model mapping in `dmm`.
+    model, according to the data model mapping in `to_ocsf_flattened_field_map`.
 
     This function translates the (`field`, `op`, `value`) triple into a list of
     translated triples based on the provided data model map. The data model map
@@ -177,7 +180,7 @@ def translate_comparison_to_ocsf(
     the data model map to translate the field name.
 
     Parameters:
-        dmm: A dictionary that maps fields from one data model to another.
+        to_ocsf_flattened_field_map: a flattened native-to-ocsf field mapping
         field: The field name to be translated.
         op: The comparison operator.
         value: The value to be compared against.
@@ -191,7 +194,7 @@ def translate_comparison_to_ocsf(
     """
     _logger.debug("comp_to_ocsf: %s %s %s", field, op, value)
     result = []
-    mapping = dmm.get(field)
+    mapping = to_ocsf_flattened_field_map.get(field)
     if isinstance(mapping, str):
         # Simple 1:1 field name mapping
         result.append((mapping, op, value))
@@ -298,18 +301,35 @@ def translate_projection_to_native(
 
 
 @typechecked
-def translate_projection_to_ocsf(
-    dmm: dict,
+def translate_projection_entity_to_ocsf(
+    to_ocsf_flattened_field_map: dict, native_projection: str
+) -> str:
+    _map = to_ocsf_flattened_field_map
+    if not native_projection.endswith("*"):
+        native_projection += ".*"
+    ocsf_projection = _map.get(native_projection, native_projection)
+    if isinstance(ocsf_projection, list):
+        ocsf_projection = ocsf_projection[0]
+    ocsf_projection = ocsf_projection[:-2]
+    return ocsf_projection
+
+
+@typechecked
+def translate_projection_attrs_to_ocsf(
+    to_ocsf_flattened_field_map: dict,
     native_type: Optional[str],
     entity_type: Optional[str],
     attrs: list,
 ) -> list:
+    _map = to_ocsf_flattened_field_map
     result = []
     for attr in attrs:
-        mapping = dmm.get(attr)
-        if not mapping and native_type:
-            mapping = dmm.get(f"{native_type}:{attr}", attr)  # FIXME: only for STIX
-        else:
+        mapping = _map.get(attr)
+        if not mapping and native_type:  # try extend with STIX style
+            mapping = _map.get(f"{native_type}:{attr}")
+        if not mapping and native_type:  # try extend with ECS style
+            mapping = _map.get(f"{native_type}.{attr}")
+        if not mapping:  # still not found; pass through
             mapping = attr
         ocsf_name = _get_from_mapping(mapping, "ocsf_field")
         if isinstance(ocsf_name, list):

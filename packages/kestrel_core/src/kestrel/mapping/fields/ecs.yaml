@@ -1,5 +1,9 @@
+# "*" is for entity/event projection mapping besides a single field
+# if the submap is referred, there will be multiple reversed mappings, the first will be used
+
 # endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
 endpoint: &endpoint
+    "*": host.*
     uid: host.id
     domain: host.domain
     name: host.name
@@ -10,6 +14,7 @@ endpoint: &endpoint
 
 # https://schema.ocsf.io/1.1.0/objects/user
 user: &user
+    "*": user.*
     domain: user.domain
     full_name: user.full_name
     name: user.name
@@ -18,6 +23,7 @@ user: &user
 
 # https://schema.ocsf.io/1.1.0/objects/file
 file:
+    "*": file.*
     endpoint: *endpoint
     accessed_time: file.accessed
     attributes: file.attributes
@@ -61,6 +67,7 @@ file:
 
 # https://schema.ocsf.io/1.1.0/objects/group
 group:
+    "*": group.*
     domain: group.domain
     name: group.name
     uid: group.id
@@ -68,6 +75,7 @@ group:
 
 # https://schema.ocsf.io/1.1.0/objects/process
 process: &process
+    "*": process.*
     endpoint: *endpoint
     cmd_line: process.command_line
     name: process.name
@@ -116,6 +124,7 @@ process: &process
               - process.hash.ssdeep
               - process.hash.tlsh
     parent_process:
+        "*": process.parent.*
         cmd_line: process.parent.command_line
         name: process.parent.name
         pid: process.parent.pid
@@ -141,12 +150,14 @@ process: &process
                 native_value: posixpath_startswith
                 ocsf_value: dirname
         user:
+            "*": process.parent.user.*
             domain: process.parent.user.domain
             full_name: process.parent.user.full_name
             name: process.parent.user.name
             uid: process.parent.user.id
 
     user:
+        "*": process.user.*
         domain: process.user.domain
         full_name: process.user.full_name
         name: process.user.name
@@ -154,86 +165,76 @@ process: &process
 
 
 src_endpoint: &src_endpoint
-    domain:
-        - client.domain
-        - source.domain
-    hostname:
-        - client.domain
-        - source.domain
-    ip:
-        - client.ip
-        - source.ip
-    mac:
-        - client.mac
-        - source.mac
-    port:
-        - client.port
-        - source.port
+    "*": source.*
+    domain: source.domain
+    hostname: source.domain
+    ip: source.ip
+    mac: source.mac
+    port: source.port
+    # "*": client.*
+    # domain: client.domain
+    # hostname: client.domain
+    # ip: client.ip
+    # mac: client.mac
+    # port: client.port
 
 
 dst_endpoint: &dst_endpoint
-    domain:
-        - server.domain
-        - destination.domain
-    hostname:
-        - server.domain
-        - destination.domain
-    ip:
-        - server.ip
-        - destination.ip
-    mac:
-        - server.mac
-        - destination.mac
-    port:
-        - server.port
-        - destination.port
+    "*": destination.*
+    domain: destination.domain
+    hostname: destination.domain
+    ip: destination.ip
+    mac: destination.mac
+    port: destination.port
+    # "*": server.domain
+    # domain: server.domain
+    # hostname: server.domain
+    # ip: server.ip
+    # mac: server.mac
+    # port: server.port
 
 
 # endpoint: see https://schema.ocsf.io/1.2.0/objects/network_endpoint
-network_endpoint:
-    domain:
-        - client.domain
-        - source.domain
-        - server.domain
-        - destination.domain
-    hostname:
-        - client.domain
-        - source.domain
-        - server.domain
-        - destination.domain
-    ip:
-        - client.ip
-        - source.ip
-        - server.ip
-        - destination.ip
-    mac:
-        - client.mac
-        - source.mac
-        - server.mac
-        - destination.mac
-    port:
-        - client.port
-        - source.port
-        - server.port
-        - destination.port
+#network_endpoint:
+#    domain:
+#        - client.domain
+#        - source.domain
+#        - server.domain
+#        - destination.domain
+#    hostname:
+#        - client.domain
+#        - source.domain
+#        - server.domain
+#        - destination.domain
+#    ip:
+#        - client.ip
+#        - source.ip
+#        - server.ip
+#        - destination.ip
+#    mac:
+#        - client.mac
+#        - source.mac
+#        - server.mac
+#        - destination.mac
+#    port:
+#        - client.port
+#        - source.port
+#        - server.port
+#        - destination.port
 
 
 # https://schema.ocsf.io/1.1.0/objects/network_traffic
 network_traffic: &network_traffic
     bytes: network.bytes
-    bytes_in:
-        - destination.bytes
-        - server.bytes
-    bytes_out:
-        - client.bytes
-        - source.bytes
     packets: network.packets
-    packets_in:
-        - destination.packets
-        - server.packets
-    packets_out:
-        - client.packets
-        - source.packets
+    bytes_in: destination.bytes
+    bytes_out: source.bytes
+    packets_in: destination.packets
+    packets_out: source.packets
+    # bytes_in: server.bytes
+    # bytes_out: client.bytes
+    # packets_in: server.packets
+    # packets_out: client.packets
 
 
 # https://schema.ocsf.io/1.1.0/objects/network_connection_info
@@ -250,6 +251,7 @@ connection_info:
 
 # https://schema.ocsf.io/1.1.0/objects/certificate
 certificate:
+    "*": x509.*
     expiration_time: x509.not_after
     created_time: x509.not_before
     serial_number: x509.serial_number
@@ -260,16 +262,9 @@ certificate:
     subject: x509.subject.distinguished_name
 
 
-# https://schema.ocsf.io/1.1.0/classes/network_activity
-# Network Activity [4001] Class
-network_activity:
-    src_endpoint: *src_endpoint
-    dst_endpoint: *dst_endpoint
-    traffic: *network_traffic
-
-
 # https://schema.ocsf.io/1.2.0/objects/email
 email:
+    "*": email.*
     uid: email.message_id
     from: email.from.address
     to: email.to.address
@@ -280,6 +275,7 @@ email:
 
 # https://schema.ocsf.io/1.2.0/objects/win/reg_key?extensions=win
 reg_key:
+    "*": registry.*
     endpoint: *endpoint
     path: registry.key
 
@@ -297,3 +293,11 @@ actor.process: *process
 
 
 actor.user: *user
+
+
+# https://schema.ocsf.io/1.1.0/classes/network_activity
+# Network Activity [4001] Class
+network_activity:
+    src_endpoint: *src_endpoint
+    dst_endpoint: *dst_endpoint
+    traffic: *network_traffic
