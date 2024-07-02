@@ -99,7 +99,7 @@ class OpenSearchTranslator:
         # Query clauses
         self.table: str = select_from
         self.filt: Optional[Filter] = None
-        self.entity: Optional[str] = None
+        self.projection_base_field: Optional[str] = None
         self.project: Optional[ProjectAttrs] = None
         self.limit: int = 0
         self.offset: int = 0
@@ -115,7 +115,9 @@ class OpenSearchTranslator:
     @typechecked
     def _render_comp(self, comp: FComparison) -> str:
         prefix = (
-            f"{self.entity}." if (self.entity and comp.field != self.timestamp) else ""
+            f"{self.projection_base_field}."
+            if (self.projection_base_field and comp.field != self.timestamp)
+            else ""
         )
         ocsf_field = f"{prefix}{comp.field}"
         comps = translate_comparison_to_native(
@@ -191,7 +193,7 @@ class OpenSearchTranslator:
         """Get a list of native cols to project with their OCSF equivalents as SQL aliases"""
         projection = self.project.attrs if self.project else None
         name_pairs = translate_projection_to_native(
-            self.from_ocsf_map, self.entity, projection
+            self.from_ocsf_map, self.projection_base_field, projection
         )
         proj = [
             f"`{k}` AS `{v}`" if k != v else f"`{k}`"
@@ -205,8 +207,8 @@ class OpenSearchTranslator:
         return proj
 
     def add_ProjectEntity(self, proj: ProjectEntity) -> None:
-        self.entity = proj.entity_type
-        _logger.debug("Set base entity to '%s'", self.entity)
+        self.projection_base_field = proj.ocsf_field
+        _logger.debug("Set base entity to '%s'", self.projection_base_field)
 
     def add_Limit(self, lim: Limit) -> None:
         self.limit = lim.num

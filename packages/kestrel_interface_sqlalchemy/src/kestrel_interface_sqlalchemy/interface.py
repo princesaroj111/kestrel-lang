@@ -56,14 +56,14 @@ class SQLAlchemyTranslator(SqlTranslator):
         super().__init__(dialect, timefmt, timestamp, from_obj)
         self.dmm = dmm
         self.proj = None
-        self.entity_type = None
+        self.projection_base_field = None
         self.filt = None
 
     @typechecked
     def _render_comp(self, comp: FComparison):
         prefix = (
-            f"{self.entity_type}."
-            if (self.entity_type and comp.field != self.timestamp)
+            f"{self.projection_base_field}."
+            if (self.projection_base_field and comp.field != self.timestamp)
             else ""
         )
         ocsf_field = f"{prefix}{comp.field}"
@@ -117,11 +117,13 @@ class SQLAlchemyTranslator(SqlTranslator):
         self.proj = proj
 
     def add_ProjectEntity(self, proj: ProjectEntity) -> None:
-        self.entity_type = proj.entity_type
+        self.projection_base_field = proj.ocsf_field
 
     def result(self) -> sqlalchemy.Compiled:
         proj = self.proj.attrs if self.proj else None
-        pairs = translate_projection_to_native(self.dmm, self.entity_type, proj)
+        pairs = translate_projection_to_native(
+            self.dmm, self.projection_base_field, proj
+        )
         cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
         self._add_filter()
         self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
@@ -180,10 +182,10 @@ class SQLAlchemyInterface(AbstractInterface):
             # Get the data source's SQLAlchemy connection object
             conn = self.conns[self.config.datasources[table].connection]
             df = read_sql(sql, conn)
-            dmm = translator.dmm[
-                translator.entity_type
-            ]  # TODO: need a method for this?
-            mapping[instruction.id] = translate_dataframe(df, dmm)
+            entity_dmm = reduce(
+                dict.__getitem__, translator.projection_base_field.split("."), dmm
+            )
+            mapping[instruction.id] = translate_dataframe(df, entity_dmm)
         return mapping
 
     def explain_graph(

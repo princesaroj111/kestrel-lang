@@ -3,7 +3,6 @@ from collections import OrderedDict
 from functools import reduce
 from typing import Optional, Union
 
-import dpath
 import numpy as np
 import yaml
 from pandas import DataFrame
@@ -263,14 +262,18 @@ def _get_from_mapping(mapping: Union[str, list, dict], key) -> list:
 @typechecked
 def translate_projection_to_native(
     dmm: dict,
-    entity_type: Optional[str],
+    ocsf_base_field: Optional[str],
     attrs: Optional[list],
     # TODO: optional str or callable for joining entity_type and attr?
 ) -> list:
     result = []
 
-    if entity_type:
-        dmm = dmm[entity_type]
+    if ocsf_base_field:
+        try:
+            dmm = reduce(dict.__getitem__, ocsf_base_field.split("."), dmm)
+        except KeyError:
+            _logger.warning(f"No mapping for base projection field: {ocsf_base_field}")
+            dmm = {}
 
     if attrs:
         # project specified attributes
@@ -283,7 +286,7 @@ def translate_projection_to_native(
             except KeyError:
                 # TODO: think better way than pass-through, e.g., raise exception
                 _logger.warning(
-                    f"mapping not found for entity: '{entity_type}' and attribute: '{attr}'; treat it as no mapping needed"
+                    f"mapping not found for entity: '{ocsf_base_field}' and attribute: '{attr}'; treat it as no mapping needed"
                 )
                 result.append((attr, attr))
     else:
@@ -352,7 +355,7 @@ def translate_dataframe(df: DataFrame, dmm: dict) -> DataFrame:
     # The column names of df are already mapped
     for col in df.columns:
         try:
-            mapping = dpath.get(dmm, col, separator=".")
+            mapping = reduce(dict.__getitem__, col.split("."), dmm)
         except KeyError:
             _logger.debug("No mapping for %s", col)
             mapping = None
