@@ -46,8 +46,8 @@ from kestrel.ir.instructions import (
 )
 from kestrel.mapping.data_model import (
     translate_comparison_to_ocsf,
-    translate_projection_entity_to_ocsf,
-    translate_projection_attrs_to_ocsf,
+    translate_entity_projection_to_ocsf,
+    translate_attributes_projection_to_ocsf,
 )
 from kestrel.utils import unescape_quoted_string
 
@@ -298,7 +298,7 @@ class _KestrelT(Transformer):
     def get(self, args):
         graph = IRGraph()
         native_projection_field = args[0].value
-        ocsf_projection_field = translate_projection_entity_to_ocsf(
+        ocsf_projection_field = translate_entity_projection_to_ocsf(
             self.field_map, native_projection_field
         )
 
@@ -481,7 +481,7 @@ class _KestrelT(Transformer):
             _logger.debug(
                 "Map %s attrs to OCSF %s in %s", native_type, entity_type, root
             )
-            root.attrs = translate_projection_attrs_to_ocsf(
+            root.attrs = translate_attributes_projection_to_ocsf(
                 self.field_map, native_type, entity_type, root.attrs
             )
         graph.add_node(Return(), root)

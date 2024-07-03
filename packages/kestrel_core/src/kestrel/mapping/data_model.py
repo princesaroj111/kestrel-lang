@@ -304,7 +304,7 @@ def translate_projection_to_native(
 
 
 @typechecked
-def translate_projection_entity_to_ocsf(
+def translate_entity_projection_to_ocsf(
     to_ocsf_flattened_field_map: dict, native_projection: str
 ) -> str:
     _map = to_ocsf_flattened_field_map
@@ -318,7 +318,7 @@ def translate_projection_entity_to_ocsf(
 
 
 @typechecked
-def translate_projection_attrs_to_ocsf(
+def translate_attributes_projection_to_ocsf(
     to_ocsf_flattened_field_map: dict,
     native_type: Optional[str],
     entity_type: Optional[str],
