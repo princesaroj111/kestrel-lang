@@ -40,7 +40,7 @@ assignment: VARIABLE "=" expression
 
 find: "FIND"i ENTITY_TYPE RELATION (REVERSED)? VARIABLE where_clause? timespan? limit_clause?
 
-get: "GET"i ENTITY_TYPE ("FROM"i datasource)? where_clause timespan? limit_clause?
+get: "GET"i PROJECT_FIELD ("FROM"i datasource)? where_clause timespan? limit_clause?
 
 group: "GROUP"i VARIABLE BY grp_spec ("WITH"i agg_list)?
 
@@ -281,6 +281,9 @@ ATTRIBUTES: ATTRIBUTE (WS* "," WS* ATTRIBUTE)*
 
 ECNAME: (LETTER|"_") (LETTER|DIGIT|"_"|"-")*
 ECNAME_W_QUOTE: (LETTER|DIGIT|"_"|"-"|"'")+
+
+// extend ECNAME with "." and ":"
+PROJECT_FIELD: (LETTER|"_") (LETTER|DIGIT|"_"|"-"|"."|":")*
 
 PATH_SIMPLE: (ECNAME "://")? (LETTER|DIGIT|"_"|"-"|"."|"/")+
 

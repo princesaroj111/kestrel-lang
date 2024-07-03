@@ -3,7 +3,6 @@ from collections import OrderedDict
 from functools import reduce
 from typing import Optional, Union
 
-import dpath
 import numpy as np
 import yaml
 from pandas import DataFrame
@@ -55,7 +54,7 @@ def reverse_mapping(obj: dict, prefix: str = None, result: dict = None) -> dict:
 
     Newly loaded mapping from disk is OCSF -> native mapping. This function
     takes in such mapping, and reverse it to native -> OCSF mapping, which can
-    be used by the frontend. The result mapping is flattened.
+    be used by the frontend. The result mapping is flattened!
 
     To call the function: `reverse_mapping(ocsf_to_native_mapping)`
 
@@ -161,13 +160,16 @@ def translate_comparison_to_native(
 
 
 def translate_comparison_to_ocsf(
-    dmm: dict, field: str, op: str, value: Union[str, int, float]
+    to_ocsf_flattened_field_map: dict,
+    field: str,
+    op: str,
+    value: Union[str, int, float],
 ) -> list:
-    """Translate the (`field`, `op`, `value`) triple using data model map `dmm`
+    """Translate the (`field`, `op`, `value`) triple
 
     This function is used in the frontend to translate a comparison in
     the STIX (or, in the future, ECS) data model to the OCSF data
-    model, according to the data model mapping in `dmm`.
+    model, according to the data model mapping in `to_ocsf_flattened_field_map`.
 
     This function translates the (`field`, `op`, `value`) triple into a list of
     translated triples based on the provided data model map. The data model map
@@ -177,7 +179,7 @@ def translate_comparison_to_ocsf(
     the data model map to translate the field name.
 
     Parameters:
-        dmm: A dictionary that maps fields from one data model to another.
+        to_ocsf_flattened_field_map: a flattened native-to-ocsf field mapping
         field: The field name to be translated.
         op: The comparison operator.
         value: The value to be compared against.
@@ -191,7 +193,7 @@ def translate_comparison_to_ocsf(
     """
     _logger.debug("comp_to_ocsf: %s %s %s", field, op, value)
     result = []
-    mapping = dmm.get(field)
+    mapping = to_ocsf_flattened_field_map.get(field)
     if isinstance(mapping, str):
         # Simple 1:1 field name mapping
         result.append((mapping, op, value))
@@ -208,7 +210,7 @@ def translate_comparison_to_ocsf(
 def load_default_mapping(
     data_model_name: str,
     mapping_pkg: str = "kestrel.mapping",
-    submodule: str = "entityattribute",
+    submodule: str = "fields",
 ):
     result = {}
     for f in list_folder_files(
@@ -260,14 +262,18 @@ def _get_from_mapping(mapping: Union[str, list, dict], key) -> list:
 @typechecked
 def translate_projection_to_native(
     dmm: dict,
-    entity_type: Optional[str],
+    ocsf_base_field: Optional[str],
     attrs: Optional[list],
     # TODO: optional str or callable for joining entity_type and attr?
 ) -> list:
     result = []
 
-    if entity_type:
-        dmm = dmm[entity_type]
+    if ocsf_base_field:
+        try:
+            dmm = reduce(dict.__getitem__, ocsf_base_field.split("."), dmm)
+        except KeyError:
+            _logger.warning(f"No mapping for base projection field: {ocsf_base_field}")
+            dmm = {}
 
     if attrs:
         # project specified attributes
@@ -280,7 +286,7 @@ def translate_projection_to_native(
             except KeyError:
                 # TODO: think better way than pass-through, e.g., raise exception
                 _logger.warning(
-                    f"mapping not found for entity: '{entity_type}' and attribute: '{attr}'; treat it as no mapping needed"
+                    f"mapping not found for entity: '{ocsf_base_field}' and attribute: '{attr}'; treat it as no mapping needed"
                 )
                 result.append((attr, attr))
     else:
@@ -298,18 +304,35 @@ def translate_projection_to_native(
 
 
 @typechecked
-def translate_projection_to_ocsf(
-    dmm: dict,
+def translate_entity_projection_to_ocsf(
+    to_ocsf_flattened_field_map: dict, native_projection: str
+) -> str:
+    _map = to_ocsf_flattened_field_map
+    if not native_projection.endswith("*"):
+        native_projection += ".*"
+    ocsf_projection = _map.get(native_projection, native_projection)
+    if isinstance(ocsf_projection, list):
+        ocsf_projection = ocsf_projection[0]
+    ocsf_projection = ocsf_projection[:-2]
+    return ocsf_projection
+
+
+@typechecked
+def translate_attributes_projection_to_ocsf(
+    to_ocsf_flattened_field_map: dict,
     native_type: Optional[str],
     entity_type: Optional[str],
     attrs: list,
 ) -> list:
+    _map = to_ocsf_flattened_field_map
     result = []
     for attr in attrs:
-        mapping = dmm.get(attr)
-        if not mapping and native_type:
-            mapping = dmm.get(f"{native_type}:{attr}", attr)  # FIXME: only for STIX
-        else:
+        mapping = _map.get(attr)
+        if not mapping and native_type:  # try extend with STIX style
+            mapping = _map.get(f"{native_type}:{attr}")
+        if not mapping and native_type:  # try extend with ECS style
+            mapping = _map.get(f"{native_type}.{attr}")
+        if not mapping:  # still not found; pass through
             mapping = attr
         ocsf_name = _get_from_mapping(mapping, "ocsf_field")
         if isinstance(ocsf_name, list):
@@ -332,7 +355,7 @@ def translate_dataframe(df: DataFrame, dmm: dict) -> DataFrame:
     # The column names of df are already mapped
     for col in df.columns:
         try:
-            mapping = dpath.get(dmm, col, separator=".")
+            mapping = reduce(dict.__getitem__, col.split("."), dmm)
         except KeyError:
             _logger.debug("No mapping for %s", col)
             mapping = None

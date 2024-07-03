@@ -46,7 +46,8 @@ from kestrel.ir.instructions import (
 )
 from kestrel.mapping.data_model import (
     translate_comparison_to_ocsf,
-    translate_projection_to_ocsf,
+    translate_entity_projection_to_ocsf,
+    translate_attributes_projection_to_ocsf,
 )
 from kestrel.utils import unescape_quoted_string
 
@@ -100,10 +101,10 @@ def _create_comp(field: str, op_value: str, value) -> FComparison:
 
 @typechecked
 def _map_filter_exp(
-    native_entity_name: str,
-    mapped_entity_name: str,
+    native_projection_field: str,
+    ocsf_projection_field: str,
     filter_exp: FExpression,
-    property_map: dict,
+    field_map: dict,
 ) -> FExpression:
     if isinstance(
         filter_exp,
@@ -114,21 +115,21 @@ def _map_filter_exp(
         # init map_result from direct mapping from field
         map_result = set(
             translate_comparison_to_ocsf(
-                property_map, field, filter_exp.op, filter_exp.value
+                field_map, field, filter_exp.op, filter_exp.value
             )
         )
         # there is a case that `field` omits the return entity (prefix)
         # this is only alloed when it refers to the return entity
         # add mapping for those cases
         for full_field in (
-            f"{native_entity_name}:{field}",
-            f"{native_entity_name}.{field}",
+            f"{native_projection_field}:{field}",
+            f"{native_projection_field}.{field}",
         ):
             map_result |= set(
                 filter(
-                    lambda x: x[0].startswith(mapped_entity_name + "."),
+                    lambda x: x[0].startswith(ocsf_projection_field + "."),
                     translate_comparison_to_ocsf(
-                        property_map, full_field, filter_exp.op, filter_exp.value
+                        field_map, full_field, filter_exp.op, filter_exp.value
                     ),
                 )
             )
@@ -154,11 +155,17 @@ def _map_filter_exp(
         # recursively map boolean expressions
         filter_exp = BoolExp(
             _map_filter_exp(
-                native_entity_name, mapped_entity_name, filter_exp.lhs, property_map
+                native_projection_field,
+                ocsf_projection_field,
+                filter_exp.lhs,
+                field_map,
             ),
             filter_exp.op,
             _map_filter_exp(
-                native_entity_name, mapped_entity_name, filter_exp.rhs, property_map
+                native_projection_field,
+                ocsf_projection_field,
+                filter_exp.rhs,
+                field_map,
             ),
         )
     elif isinstance(filter_exp, MultiComp):
@@ -169,7 +176,9 @@ def _map_filter_exp(
         filter_exp = MultiComp(
             filter_exp.op,
             [
-                _map_filter_exp(native_entity_name, mapped_entity_name, x, property_map)
+                _map_filter_exp(
+                    native_projection_field, ocsf_projection_field, x, field_map
+                )
                 for x in filter_exp.comps
             ],
         )
@@ -192,14 +201,14 @@ class _KestrelT(Transformer):
         self,
         default_sort_order=DEFAULT_SORT_ORDER,
         token_prefix="",
-        entity_map={},
-        property_map={},
+        type_map={},
+        field_map={},
     ):
         # token_prefix is the modification by Lark when using `merge_transformers()`
         self.default_sort_order = default_sort_order
         self.token_prefix = token_prefix
-        self.entity_map = entity_map
-        self.property_map = property_map  # TODO: rename to data_model_map?
+        self.type_map = type_map
+        self.field_map = field_map
         self.variable_map = {}  # To cache var type info
         super().__init__()
 
@@ -288,13 +297,18 @@ class _KestrelT(Transformer):
 
     def get(self, args):
         graph = IRGraph()
-        entity_name = args[0].value
-        mapped_entity_name = self.entity_map.get(entity_name, entity_name)
+        native_projection_field = args[0].value
+        ocsf_projection_field = translate_entity_projection_to_ocsf(
+            self.field_map, native_projection_field
+        )
 
         # prepare Filter node
         filter_node = args[2]
         filter_node.exp = _map_filter_exp(
-            args[0].value, mapped_entity_name, filter_node.exp, self.property_map
+            native_projection_field,
+            ocsf_projection_field,
+            filter_node.exp,
+            self.field_map,
         )
 
         # add basic Source and Filter nodes
@@ -305,7 +319,7 @@ class _KestrelT(Transformer):
         _add_reference_branches_for_filter(graph, filter_node)
 
         projection_node = graph.add_node(
-            ProjectEntity(mapped_entity_name, entity_name), filter_node
+            ProjectEntity(ocsf_projection_field, native_projection_field), filter_node
         )
         root = projection_node
         if len(args) > 3:
@@ -467,8 +481,8 @@ class _KestrelT(Transformer):
             _logger.debug(
                 "Map %s attrs to OCSF %s in %s", native_type, entity_type, root
             )
-            root.attrs = translate_projection_to_ocsf(
-                self.property_map, native_type, entity_type, root.attrs
+            root.attrs = translate_attributes_projection_to_ocsf(
+                self.field_map, native_type, entity_type, root.attrs
             )
         graph.add_node(Return(), root)
         return graph
@@ -488,10 +502,13 @@ class _KestrelT(Transformer):
             curr = stack.pop()
             _logger.debug("_get_type: curr = %s", curr)
             stack.extend(graph.predecessors(curr))
-            if isinstance(curr, Construct):
-                native_type = curr.entity_type
-                entity_type = self.entity_map.get(native_type, native_type)
+            if isinstance(curr, ProjectEntity):
+                native_type = curr.native_field
+                entity_type = self.type_map.get(curr.ocsf_field, curr.ocsf_field)
             elif isinstance(curr, Variable):
                 native_type = curr.native_type
                 entity_type = curr.entity_type
+            elif isinstance(curr, Construct):
+                native_type = curr.entity_type
+                entity_type = self.type_map.get(native_type, native_type)
         return entity_type, native_type
