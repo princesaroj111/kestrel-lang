@@ -119,6 +119,18 @@ class Filter(TransformingInstruction):
 
 
 @dataclass(eq=False)
+class Identity(Filter):
+    """Identity is a special filter, requiring a Variable node as its dependent
+
+    An interface will use its entity identity config to implment identifying
+    the entity (dependent variable). Additional constraints in the `exp`
+    attribute needs to be added at evaluation as well.
+    """
+
+    pass
+
+
+@dataclass(eq=False)
 class ProjectEntity(SolePredecessorTransformingInstruction):
     ocsf_field: str
     native_field: str

@@ -21,10 +21,7 @@ entity_identifier:
   process:
     - uid
     - endpoint.uid
-  src_endpoint:
-    - ip
-    - port
-  dst_endpoint:
+  network_endpoint:
     - ip
     - port
   certificate:

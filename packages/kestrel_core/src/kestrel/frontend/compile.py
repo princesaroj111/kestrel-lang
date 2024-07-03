@@ -199,10 +199,12 @@ def _add_reference_branches_for_filter(graph: IRGraph, filter_node: Filter):
 class _KestrelT(Transformer):
     def __init__(
         self,
-        default_sort_order=DEFAULT_SORT_ORDER,
+        field_map,
+        type_map,
+        entity_entity_relation_table,
+        entity_event_relation_table,
         token_prefix="",
-        type_map={},
-        field_map={},
+        default_sort_order=DEFAULT_SORT_ORDER,
     ):
         # token_prefix is the modification by Lark when using `merge_transformers()`
         self.default_sort_order = default_sort_order
@@ -210,6 +212,8 @@ class _KestrelT(Transformer):
         self.type_map = type_map
         self.field_map = field_map
         self.variable_map = {}  # To cache var type info
+        self.entity_entity_relation_table = entity_entity_relation_table
+        self.entity_event_relation_table = entity_event_relation_table
         super().__init__()
 
     def start(self, args):

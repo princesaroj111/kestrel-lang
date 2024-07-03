@@ -5,11 +5,13 @@ from itertools import chain
 
 import yaml
 from lark import Lark
+from pandas import DataFrame
 from typeguard import typechecked
 
 from kestrel.frontend.compile import _KestrelT
 from kestrel.mapping.data_model import reverse_mapping
 from kestrel.utils import list_folder_files, load_data_file
+from kestrel.config.utils import load_relation_configs
 
 _logger = logging.getLogger(__name__)
 
@@ -17,13 +19,24 @@ _logger = logging.getLogger(__name__)
 MAPPING_MODULE = "kestrel.mapping"
 
 # cache mapping in the module
-frontend_mapping = {}
+frontend_mappings = {}
+
+# cache relation table in the module
+relation_tables = {}
+
+
+@typechecked
+def get_relation_table(table: str) -> DataFrame:
+    global relation_tables
+    if table not in relation_tables:
+        relation_tables[table] = load_relation_configs(table)
+    return relation_tables[table]
 
 
 @typechecked
 def get_frontend_mapping(submodule: str, do_reverse_mapping: bool = False) -> dict:
-    global frontend_mapping
-    if submodule not in frontend_mapping:
+    global frontend_mappings
+    if submodule not in frontend_mappings:
         mapping = {}
         for f in list_folder_files(MAPPING_MODULE, submodule, extension="yaml"):
             with open(f, "r") as fp:
@@ -31,8 +44,8 @@ def get_frontend_mapping(submodule: str, do_reverse_mapping: bool = False) -> di
             if do_reverse_mapping:
                 mapping_ind = reverse_mapping(mapping_ind)
             mapping.update(mapping_ind)
-        frontend_mapping[submodule] = mapping
-    return frontend_mapping[submodule]
+        frontend_mappings[submodule] = mapping
+    return frontend_mappings[submodule]
 
 
 @typechecked
@@ -49,16 +62,15 @@ def get_keywords():
     return keywords_comprehensive
 
 
-# Create a single, reusable transformer
-_parser = Lark(
-    load_data_file("kestrel.frontend", "kestrel.lark"),
-    parser="lalr",
-    transformer=_KestrelT(
-        type_map=get_frontend_mapping("types"),
-        field_map=get_frontend_mapping("fields", True),
-    ),
-)
-
-
 def parse_kestrel(stmts):
-    return _parser.parse(stmts)
+    lp = Lark(
+        load_data_file("kestrel.frontend", "kestrel.lark"),
+        parser="lalr",
+        transformer=_KestrelT(
+            get_frontend_mapping("fields", True),
+            get_frontend_mapping("types"),
+            get_relation_table("entity"),
+            get_relation_table("event"),
+        ),
+    )
+    return lp.parse(stmts)

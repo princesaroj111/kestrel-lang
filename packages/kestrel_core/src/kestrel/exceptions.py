@@ -30,6 +30,10 @@ class InvalidKestrelConfig(KestrelError):
     pass
 
 
+class InvalidKestrelRelationTable(KestrelError):
+    pass
+
+
 class VariableNotFound(KestrelError):
     pass
 

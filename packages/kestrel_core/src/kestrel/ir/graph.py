@@ -36,6 +36,7 @@ from kestrel.ir.instructions import (
     AnalyticsInterface,
     DataSource,
     Filter,
+    Identity,
     Instruction,
     IntermediateInstruction,
     ProjectAttrs,
@@ -413,7 +414,7 @@ class IRGraph(networkx.DiGraph):
             elif len(ps) > 1:
                 raise DanglingReferenceInFilter(ps)
             return ps[0], r2n
-        elif isinstance(node, (Analytic, AnalyticsInterface)):
+        elif isinstance(node, Analytic):
             return ps[0], {}
         else:
             raise NotImplementedError(f"unknown instruction type: {node}")
