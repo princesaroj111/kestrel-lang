@@ -6,8 +6,8 @@ from uuid import UUID
 import sqlalchemy
 from kestrel_interface_sqlalchemy.config import load_config
 from pandas import DataFrame, read_sql
-from sqlalchemy import column, or_
-from sqlalchemy.sql.expression import ColumnClause, CTE
+from sqlalchemy import column, or_, tuple_
+from sqlalchemy.sql.expression import CTE
 from typeguard import typechecked
 
 from kestrel.display import GraphletExplanation
@@ -16,6 +16,7 @@ from kestrel.interface.codegen.sql import SqlTranslator, comp2func
 from kestrel.ir.filter import (
     BoolExp,
     ExpOp,
+    RefComparison,
     FBasicComparison,
     MultiComp,
     StrComparison,
@@ -65,26 +66,35 @@ class SQLAlchemyTranslator(SqlTranslator):
 
     @typechecked
     def _render_comp(self, comp: FBasicComparison):
-        if isinstance(comp.value, ()):
-            ...
-        prefix = (
-            f"{self.projection_base_field}."
-            if (self.projection_base_field and comp.field != self.timestamp)
-            else ""
-        )
-        ocsf_field = f"{prefix}{comp.field}"
-        comps = translate_comparison_to_native(
-            self.dmm, ocsf_field, comp.op, comp.value
-        )
-        translated_comps = []
-        for field, op, value in comps:
-            col: ColumnClause = column(field)
-            if op == StrCompOp.NMATCHES:
-                tmp = ~comp2func[op](col, value)
+        if isinstance(comp, RefComparison):
+            # no translation for CTE/subquery (RefComparison)
+            # the results should already be in OCSF in a variable (CTE)
+            if len(comp.fields) == 1:
+                col = column(comp.fields[0])
             else:
-                tmp = comp2func[op](col, value)
-            translated_comps.append(tmp)
-        return reduce(or_, translated_comps)
+                col = tuple_(*[column(field) for field in comp.fields])
+            rendered_comp = comp2func[comp.op](col, comp.value)
+        else:
+            # do translation from a raw database table
+            prefix = (
+                f"{self.projection_base_field}."
+                if (self.projection_base_field and comp.field != self.timestamp)
+                else ""
+            )
+            ocsf_field = f"{prefix}{comp.field}"
+            comps = translate_comparison_to_native(
+                self.dmm, ocsf_field, comp.op, comp.value
+            )
+            translated_comps = (
+                (
+                    ~comp2func[op](column(field), value)
+                    if op == StrCompOp.NMATCHES
+                    else comp2func[op](column(field), value)
+                )
+                for field, op, value in comps
+            )
+            rendered_comp = reduce(or_, translated_comps)
+        return rendered_comp
 
     @typechecked
     def _add_filter(self) -> Optional[str]:
@@ -125,10 +135,15 @@ class SQLAlchemyTranslator(SqlTranslator):
         self.projection_base_field = proj.ocsf_field
 
     def result(self) -> sqlalchemy.Compiled:
-        pairs = translate_projection_to_native(
-            self.dmm, self.projection_base_field, self.projection_attributes
-        )
-        cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
+        # use self.dmm as an indicator whether this is FROM a variable/CTE
+        # if from variable, columns are already OCSF, no translation needed
+        if self.dmm:
+            pairs = translate_projection_to_native(
+                self.dmm, self.projection_base_field, self.projection_attributes
+            )
+            cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
+        else:
+            cols = [sqlalchemy.column(i) for i in self.projection_attributes]
         self._add_filter()
         self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
         return self.query.compile(dialect=self.dialect)

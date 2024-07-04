@@ -13,6 +13,7 @@ from kestrel.ir.filter import (
     ExpOp,
     FExpression,
     FBasicComparison,
+    RefComparison,
     ListOp,
     MultiComp,
     NumCompOp,
@@ -156,7 +157,8 @@ def _eval_Filter_exp_Comparison(
             c.value = list(c.value.itertuples(index=False, name=None))
 
     try:
-        if hasattr(c, "fields"):
+        # RefComparison has .fields; others have .field
+        if isinstance(c, RefComparison):
             if len(c.fields) == 1:
                 bools = df[c.fields[0]].apply(
                     functools.partial(comp2func[c.op], c.value)

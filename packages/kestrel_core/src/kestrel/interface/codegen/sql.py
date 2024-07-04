@@ -29,7 +29,6 @@ from kestrel.ir.instructions import (
     Sort,
     SortDirection,
 )
-from kestrel.exceptions import InvalidComparison
 
 _logger = logging.getLogger(__name__)
 
@@ -77,15 +76,13 @@ class SqlTranslator:
     def _render_comp(self, comp: FBasicComparison) -> BinaryExpression:
         # most FBasicComparison has .field; RefComparison has .fields
         # col: ColumnElement
-        if hasattr(comp, "fields"):
+        if isinstance(comp, RefComparison):
             if len(comp.fields) == 1:
                 col = column(comp.fields[0])
             else:
                 col = tuple_(*[column(field) for field in comp.fields])
-        elif hasattr(comp, "field"):
-            col = column(comp.field)
         else:
-            raise InvalidComparison(comp)
+            col = column(comp.field)
         if comp.op == StrCompOp.NMATCHES:
             return ~comp2func[comp.op](col, comp.value)
         return comp2func[comp.op](col, comp.value)
