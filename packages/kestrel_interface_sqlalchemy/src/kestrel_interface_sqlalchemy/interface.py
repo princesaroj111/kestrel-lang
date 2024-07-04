@@ -1,13 +1,13 @@
 import logging
 from functools import reduce
-from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional, Union
 from uuid import UUID
 
 import sqlalchemy
 from kestrel_interface_sqlalchemy.config import load_config
 from pandas import DataFrame, read_sql
 from sqlalchemy import column, or_
-from sqlalchemy.sql.expression import ColumnClause
+from sqlalchemy.sql.expression import ColumnClause, CTE
 from typeguard import typechecked
 
 from kestrel.display import GraphletExplanation
@@ -48,16 +48,20 @@ class SQLAlchemyTranslator(SqlTranslator):
     def __init__(
         self,
         dialect: sqlalchemy.engine.default.DefaultDialect,
-        timefmt: Callable,
-        timestamp: str,
-        from_obj: sqlalchemy.FromClause,
-        dmm: dict,
+        from_obj: Union[CTE, str],
+        dmm: Optional[dict] = None,  # CTE does not have dmm
+        timefmt: Optional[Callable] = None,  # CTE does not have timefmt
+        timestamp: Optional[str] = None,  # CTE does not have timestamp
     ):
-        super().__init__(dialect, timefmt, timestamp, from_obj)
+        if isinstance(from_obj, CTE):
+            fc = from_obj
+        else:  # str to represent table name
+            fc = sqlalchemy.table(from_obj)
+        super().__init__(dialect, fc, timefmt, timestamp)
         self.dmm = dmm
         self.projection_attributes = None
         self.projection_base_field = None
-        self.filt = None
+        self.filt: Filter = None
 
     @typechecked
     def _render_comp(self, comp: FBasicComparison):
@@ -166,13 +170,14 @@ class SQLAlchemyInterface(AbstractInterface):
     def evaluate_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_evaluate: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, DataFrame]:
         mapping = {}
         if not instructions_to_evaluate:
             instructions_to_evaluate = graph.get_sink_nodes()
         for instruction in instructions_to_evaluate:
-            translator = self._evaluate_instruction_in_graph(graph, instruction)
+            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             # TODO: may catch error in case evaluation starts from incomplete SQL
             sql = translator.result()
             _logger.debug("SQL query generated: %s", sql)
@@ -198,7 +203,7 @@ class SQLAlchemyInterface(AbstractInterface):
         if not instructions_to_explain:
             instructions_to_explain = graph.get_sink_nodes()
         for instruction in instructions_to_explain:
-            translator = self._evaluate_instruction_in_graph(graph, instruction)
+            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
             graph_dict = dep_graph.to_dict()
             query_stmt = translator.result()
@@ -208,41 +213,69 @@ class SQLAlchemyInterface(AbstractInterface):
     def _evaluate_instruction_in_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instruction: Instruction,
+        cte_memory: Optional[Mapping[UUID, CTE]] = None,
     ) -> SQLAlchemyTranslator:
         _logger.debug("instruction: %s", str(instruction))
-        translator = None
-        if isinstance(instruction, TransformingInstruction):
-            trunk, _r2n = graph.get_trunk_n_branches(instruction)
-            translator = self._evaluate_instruction_in_graph(graph, trunk)
 
-            if isinstance(instruction, SolePredecessorTransformingInstruction):
-                if isinstance(instruction, Return):
-                    pass
-                elif isinstance(instruction, Variable):
-                    pass
-                else:
-                    translator.add_instruction(instruction)
+        # same use as `cte_memory` in `kestrel.cache.sql`
+        if cte_memory is None:
+            cte_memory = {}
 
-            elif isinstance(instruction, Filter):
-                translator.add_instruction(instruction)
+        if instruction.id in cache:
+            raise NotImplementedError("Unhandled data from another interface or cache")
 
-            else:
-                raise NotImplementedError(f"Unknown instruction type: {instruction}")
-
-        elif isinstance(instruction, SourceInstruction):
+        if isinstance(instruction, SourceInstruction):
             if isinstance(instruction, DataSource):
                 ds = self.config.datasources[instruction.datasource]
                 connection = ds.connection
-                dialect = self.engines[connection].dialect
                 translator = SQLAlchemyTranslator(
-                    dialect,
+                    self.engines[connection].dialect,
+                    ds.table,
+                    ds.data_model_map,
                     lambda dt: dt.strftime(ds.timestamp_format),
                     ds.timestamp,
-                    sqlalchemy.table(ds.table),
-                    ds.data_model_map,
                 )
             else:
                 raise NotImplementedError(f"Unhandled instruction type: {instruction}")
+
+        elif isinstance(instruction, TransformingInstruction):
+            if instruction.id in cte_memory:
+                translator = SQLAlchemyTranslator(
+                    self.engines[connection].dialect,
+                    cte_memory[instruction.id],
+                )
+            else:
+                trunk, r2n = graph.get_trunk_n_branches(instruction)
+                translator = self._evaluate_instruction_in_graph(
+                    graph, cache, trunk, cte_memory
+                )
+
+                if isinstance(instruction, SolePredecessorTransformingInstruction):
+                    if isinstance(instruction, (Return, Explain)):
+                        pass
+                    elif isinstance(instruction, Variable):
+                        cte = translator.query.cte(name=instruction.name)
+                        cte_memory[instruction.id] = cte
+                        translator = SQLAlchemyTranslator(
+                            self.engines[connection].dialect,
+                            cte,
+                        )
+                    else:
+                        translator.add_instruction(instruction)
+
+                elif isinstance(instruction, Filter):
+                    instruction.resolve_references(
+                        lambda x: self._evaluate_instruction_in_graph(
+                            graph, cache, r2n[x], cte_memory
+                        ).query
+                    )
+                    translator.add_instruction(instruction)
+
+                else:
+                    raise NotImplementedError(
+                        f"Unknown instruction type: {instruction}"
+                    )
 
         return translator

@@ -31,7 +31,7 @@ import pytest
 
 ENGINE = sqlalchemy.create_engine("sqlite:///test.db")
 DIALECT = ENGINE.dialect
-TABLE = sqlalchemy.table("my_table")
+TABLE = "my_table"
 
 
 TIMEFMT = '%Y-%m-%dT%H:%M:%S.%fZ'
@@ -110,7 +110,7 @@ def test_sqlalchemy_translator(iseq, sql):
         cols = '"CommandLine" AS cmd_line, "Image" AS "file.path", "ProcessId" AS pid, "ParentProcessId" AS "parent_process.pid"'
     else:
         cols = '"CommandLine" AS "process.cmd_line", "Image" AS "process.file.path", "ProcessId" AS "process.pid", "ParentProcessId" AS "process.parent_process.pid"'
-    trans = SQLAlchemyTranslator(DIALECT, timefmt, "timestamp", TABLE, data_model_map)
+    trans = SQLAlchemyTranslator(DIALECT, TABLE, data_model_map, timefmt, "timestamp")
     for i in iseq:
         trans.add_instruction(i)
     #result = trans.result_w_literal_binds()

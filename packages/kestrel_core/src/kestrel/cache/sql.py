@@ -4,6 +4,7 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional, Union
 from uuid import UUID
 
 import sqlalchemy
+from sqlalchemy.sql.expression import CTE
 from dateutil.parser import parse as dt_parser
 from pandas import DataFrame, read_sql
 from typeguard import typechecked
@@ -29,15 +30,14 @@ _logger = logging.getLogger(__name__)
 
 @typechecked
 class SqlCacheTranslator(SqlTranslator):
-    def __init__(self, from_obj: Union[sqlalchemy.sql.expression.CTE, str]):
-        if isinstance(from_obj, sqlalchemy.sql.expression.CTE):
+    def __init__(self, from_obj: Union[CTE, str]):
+        if isinstance(from_obj, CTE):
             fc = from_obj
         else:  # str to represent table name
             fc = sqlalchemy.table(from_obj)
         super().__init__(
-            sqlalchemy.dialects.sqlite.dialect(), dt_parser, "time", fc
+            sqlalchemy.dialects.sqlite.dialect(), fc, dt_parser, "time"
         )  # FIXME: need mapping for timestamp?
-        self.associated_variable = None
 
 
 @typechecked
@@ -124,7 +124,7 @@ class SqlCache(AbstractCache):
         self,
         graph: IRGraphEvaluable,
         instruction: Instruction,
-        cte_memory: Optional[Mapping[UUID, sqlalchemy.sql.expression.CTE]] = None,
+        cte_memory: Optional[Mapping[UUID, CTE]] = None,
     ) -> SqlCacheTranslator:
         """Evaluate the instruction in the graph
 

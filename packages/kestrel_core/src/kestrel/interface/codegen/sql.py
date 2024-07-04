@@ -1,6 +1,6 @@
 import logging
 from functools import reduce
-from typing import Callable
+from typing import Callable, Optional
 
 from sqlalchemy import FromClause, and_, asc, column, tuple_, desc, or_, select
 from sqlalchemy.engine import Compiled, default
@@ -57,9 +57,9 @@ class SqlTranslator:
     def __init__(
         self,
         dialect: default.DefaultDialect,
-        timefmt: Callable,
-        timestamp: str,
         from_obj: FromClause,
+        timefmt: Optional[Callable],  # CTE does not have time
+        timestamp: Optional[str],  # CTE does not have time
     ):
         # SQLAlchemy Dialect object (e.g. from sqlalchemy.dialects import sqlite; sqlite.dialect())
         self.dialect = dialect
