@@ -13,6 +13,7 @@ from kestrel.ir.filter import (
     BoolExp,
     ExpOp,
     FBasicComparison,
+    RefComparison,
     ListOp,
     MultiComp,
     NumCompOp,
