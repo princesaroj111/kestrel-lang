@@ -7,7 +7,7 @@ import sys
 import uuid
 from dataclasses import InitVar, dataclass, field, fields
 from enum import Enum
-from typing import Any, Callable, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Callable, Iterable, Tuple, Mapping, Optional, Type, Union
 
 from mashumaro.mixins.json import DataClassJSONMixin
 from typeguard import typechecked
@@ -119,18 +119,6 @@ class Filter(TransformingInstruction):
 
 
 @dataclass(eq=False)
-class Identity(Filter):
-    """Identity is a special filter, requiring a Variable node as its dependent
-
-    An interface will use its entity identity config to implment identifying
-    the entity (dependent variable). Additional constraints in the `exp`
-    attribute needs to be added at evaluation as well.
-    """
-
-    pass
-
-
-@dataclass(eq=False)
 class ProjectEntity(SolePredecessorTransformingInstruction):
     ocsf_field: str
     native_field: str
@@ -138,8 +126,8 @@ class ProjectEntity(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class ProjectAttrs(SolePredecessorTransformingInstruction):
-    # mashumaro does not support typing.Iterable, only List
-    attrs: List[str]
+    # mashumaro does not support typing.Iterable, only List/Tuple
+    attrs: Tuple[str]
 
 
 @dataclass(eq=False)
@@ -212,7 +200,7 @@ class Offset(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class Construct(SourceInstruction):
-    data: List[Mapping[str, Union[str, int, bool]]]
+    data: Tuple[Mapping[str, Union[str, int, bool]]]
     entity_type: Optional[str] = None
     interface: str = CACHE_INTERFACE_IDENTIFIER
 

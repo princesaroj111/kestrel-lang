@@ -1,13 +1,14 @@
 import logging
 from collections import OrderedDict
 from functools import reduce
-from typing import Optional, Union
+from typing import Optional, Union, List, Iterable, Tuple, Any
 
 import numpy as np
 import yaml
 from pandas import DataFrame
 from typeguard import typechecked
 
+from kestrel.ir.filter import ReferenceValue
 from kestrel.exceptions import IncompleteDataMapping
 from kestrel.mapping.transformers import run_transformer, run_transformer_on_series
 from kestrel.utils import list_folder_files
@@ -102,9 +103,8 @@ def _get_map_triple(d: dict, prefix: str, op: str, value) -> tuple:
     return (d[f"{prefix}_field"], new_op, new_value)
 
 
-def translate_comparison_to_native(
-    dmm: dict, field: str, op: str, value: Union[str, int, float]
-) -> list:
+@typechecked
+def translate_comparison_to_native(dmm: dict, field: str, op: str, value: Any) -> list:
     """Translate the (`field`, `op`, `value`) triple using data model map `dmm`
 
     This function may be used in datasource interfaces to translate a comparison
@@ -159,11 +159,12 @@ def translate_comparison_to_native(
     return result
 
 
+@typechecked
 def translate_comparison_to_ocsf(
     to_ocsf_flattened_field_map: dict,
     field: str,
     op: str,
-    value: Union[str, int, float],
+    value: Union[str, int, float, List[str], List[int], ReferenceValue],
 ) -> list:
     """Translate the (`field`, `op`, `value`) triple
 
@@ -261,7 +262,7 @@ def _get_from_mapping(mapping: Union[str, list, dict], key) -> list:
 def translate_projection_to_native(
     dmm: dict,
     ocsf_base_field: Optional[str],
-    attrs: Optional[list],
+    attrs: Optional[Iterable],
     # TODO: optional str or callable for joining entity_type and attr?
 ) -> list:
     result = []
@@ -320,8 +321,8 @@ def translate_attributes_projection_to_ocsf(
     to_ocsf_flattened_field_map: dict,
     native_type: Optional[str],
     entity_type: Optional[str],
-    attrs: list,
-) -> list:
+    attrs: Iterable[str],
+) -> Tuple:
     _map = to_ocsf_flattened_field_map
     result = []
     for attr in attrs:
@@ -344,7 +345,7 @@ def translate_attributes_projection_to_ocsf(
             field[len(prefix) :] if field.startswith(prefix) else field
             for field in result
         ]
-    return result
+    return tuple(result)
 
 
 @typechecked

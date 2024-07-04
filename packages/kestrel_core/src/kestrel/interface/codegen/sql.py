@@ -2,17 +2,17 @@ import logging
 from functools import reduce
 from typing import Callable
 
-from sqlalchemy import FromClause, and_, asc, column, desc, or_, select
+from sqlalchemy import FromClause, and_, asc, column, tuple_, desc, or_, select
 from sqlalchemy.engine import Compiled, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import ColumnClause, ColumnOperators
+from sqlalchemy.sql.expression import ColumnOperators
 from sqlalchemy.sql.selectable import Select
 from typeguard import typechecked
 
 from kestrel.ir.filter import (
     BoolExp,
     ExpOp,
-    FComparison,
+    FBasicComparison,
     ListOp,
     MultiComp,
     NumCompOp,
@@ -29,6 +29,7 @@ from kestrel.ir.instructions import (
     Sort,
     SortDirection,
 )
+from kestrel.exceptions import InvalidComparison
 
 _logger = logging.getLogger(__name__)
 
@@ -73,8 +74,18 @@ class SqlTranslator:
         self.query: Select = select("*").select_from(from_obj)
 
     @typechecked
-    def _render_comp(self, comp: FComparison) -> BinaryExpression:
-        col: ColumnClause = column(comp.field)
+    def _render_comp(self, comp: FBasicComparison) -> BinaryExpression:
+        # most FBasicComparison has .field; RefComparison has .fields
+        # col: ColumnElement
+        if hasattr(comp, "fields"):
+            if len(comp.fields) == 1:
+                col = column(comp.fields[0])
+            else:
+                col = tuple_(*[column(field) for field in comp.fields])
+        elif hasattr(comp, "field"):
+            col = column(comp.field)
+        else:
+            raise InvalidComparison(comp)
         if comp.op == StrCompOp.NMATCHES:
             return ~comp2func[comp.op](col, comp.value)
         return comp2func[comp.op](col, comp.value)

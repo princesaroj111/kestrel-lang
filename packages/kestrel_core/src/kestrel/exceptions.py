@@ -10,6 +10,18 @@ class InvalidInstruction(KestrelError):
     pass
 
 
+class InvalidComparison(KestrelError):
+    pass
+
+
+class MismatchedFieldValueInMultiColumnComparison(KestrelError):
+    pass
+
+
+class InvalidOperatorInMultiColumnComparison(KestrelError):
+    pass
+
+
 class InvalidSeralizedGraph(KestrelError):
     pass
 

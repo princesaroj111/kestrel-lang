@@ -16,7 +16,7 @@ from kestrel.interface.codegen.sql import SqlTranslator, comp2func
 from kestrel.ir.filter import (
     BoolExp,
     ExpOp,
-    FComparison,
+    FBasicComparison,
     MultiComp,
     StrComparison,
     StrCompOp,
@@ -55,12 +55,14 @@ class SQLAlchemyTranslator(SqlTranslator):
     ):
         super().__init__(dialect, timefmt, timestamp, from_obj)
         self.dmm = dmm
-        self.proj = None
+        self.projection_attributes = None
         self.projection_base_field = None
         self.filt = None
 
     @typechecked
-    def _render_comp(self, comp: FComparison):
+    def _render_comp(self, comp: FBasicComparison):
+        if isinstance(comp.value, ()):
+            ...
         prefix = (
             f"{self.projection_base_field}."
             if (self.projection_base_field and comp.field != self.timestamp)
@@ -71,8 +73,7 @@ class SQLAlchemyTranslator(SqlTranslator):
             self.dmm, ocsf_field, comp.op, comp.value
         )
         translated_comps = []
-        for i in comps:
-            field, op, value = i
+        for field, op, value in comps:
             col: ColumnClause = column(field)
             if op == StrCompOp.NMATCHES:
                 tmp = ~comp2func[op](col, value)
@@ -114,15 +115,14 @@ class SQLAlchemyTranslator(SqlTranslator):
         self.filt = filt
 
     def add_ProjectAttrs(self, proj: ProjectAttrs) -> None:
-        self.proj = proj
+        self.projection_attributes = proj.attrs
 
     def add_ProjectEntity(self, proj: ProjectEntity) -> None:
         self.projection_base_field = proj.ocsf_field
 
     def result(self) -> sqlalchemy.Compiled:
-        proj = self.proj.attrs if self.proj else None
         pairs = translate_projection_to_native(
-            self.dmm, self.projection_base_field, proj
+            self.dmm, self.projection_base_field, self.projection_attributes
         )
         cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
         self._add_filter()

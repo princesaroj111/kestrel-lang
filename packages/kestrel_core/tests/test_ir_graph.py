@@ -369,7 +369,7 @@ DISP p4
     sinks = gs[0].get_sink_nodes()
     assert len(sinks) == 1
     sink = sinks[0]
-    assert isinstance(sink, ProjectAttrs) and sink.attrs == ['name']
+    assert isinstance(sink, ProjectAttrs) and sink.attrs == ('name',)
     c[sink.id] = DataFrame()
 
     gs = graph.find_dependent_subgraphs_of_node(graph.get_returns()[0], c)

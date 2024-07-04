@@ -33,10 +33,8 @@ from kestrel.exceptions import (
 from kestrel.ir.filter import ReferenceValue
 from kestrel.ir.instructions import (
     Analytic,
-    AnalyticsInterface,
     DataSource,
     Filter,
-    Identity,
     Instruction,
     IntermediateInstruction,
     ProjectAttrs,
@@ -398,7 +396,7 @@ class IRGraph(networkx.DiGraph):
                     for p, pp in pps
                     if isinstance(p, ProjectAttrs)
                     and isinstance(pp, (Variable, Reference))
-                    and p.attrs == [rv.attribute]
+                    and p.attrs == rv.attributes
                     and pp.name == rv.reference
                 ]
                 if not ppfs:

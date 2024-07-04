@@ -199,7 +199,7 @@ DISP browsers ATTR name, pid
     proclist = graph.get_variable("proclist")
     browsers = graph.get_variable("browsers")
     proj = graph.get_nodes_by_type(ProjectAttrs)[0]
-    assert proj.attrs == ['name', 'pid']
+    assert proj.attrs == ('name', 'pid')
     ft = graph.get_nodes_by_type(Filter)[0]
     assert ft.exp.to_dict() == {"lhs": {"field": "name", "op": "=", "value": "firefox.exe"}, "op": "OR", "rhs": {"field": "name", "op": "=", "value": "chrome.exe"}}
     ret = graph.get_returns()[0]
@@ -213,14 +213,14 @@ DISP browsers ATTR name, pid
 
 @pytest.mark.parametrize(
     "stmt, node_cnt, expected", [
-        ("x = y WHERE foo = z.foo", 5, [ReferenceValue("z", "foo")]),
+        ("x = y WHERE foo = z.foo", 5, [ReferenceValue("z", ("foo",))]),
         ("x = y WHERE foo > 1.5", 3, []),
-        ("x = y WHERE foo = 'bar' OR baz = z.baz", 5, [ReferenceValue("z", "baz")]),
-        ("x = y WHERE (foo = 'bar' OR baz = z.baz) AND (fox = w.fox AND bbb = z.bbb)", 8, [ReferenceValue("z", "baz"), ReferenceValue("w", "fox"), ReferenceValue("z", "bbb")]),
-        ("x = GET process FROM s://x WHERE foo = z.foo", 6, [ReferenceValue("z", "foo")]),
+        ("x = y WHERE foo = 'bar' OR baz = z.baz", 5, [ReferenceValue("z", ("baz",))]),
+        ("x = y WHERE (foo = 'bar' OR baz = z.baz) AND (fox = w.fox AND bbb = z.bbb)", 8, [ReferenceValue("z", ("baz",)), ReferenceValue("w", ("fox",)), ReferenceValue("z", ("bbb",))]),
+        ("x = GET process FROM s://x WHERE foo = z.foo", 6, [ReferenceValue("z", ("foo",))]),
         ("x = GET file FROM s://y WHERE foo > 1.5", 4, []),
-        ("x = GET file FROM c://x WHERE foo = 'bar' OR baz = z.baz", 6, [ReferenceValue("z", "baz")]),
-        ("x = GET user FROM s://x WHERE (foo = 'bar' OR baz = z.baz) AND (fox = w.fox AND bbb = z.bbb)", 9, [ReferenceValue("z", "baz"), ReferenceValue("w", "fox"), ReferenceValue("z", "bbb")]),
+        ("x = GET file FROM c://x WHERE foo = 'bar' OR baz = z.baz", 6, [ReferenceValue("z", ("baz",))]),
+        ("x = GET user FROM s://x WHERE (foo = 'bar' OR baz = z.baz) AND (fox = w.fox AND bbb = z.bbb)", 9, [ReferenceValue("z", ("baz",)), ReferenceValue("w", ("fox",)), ReferenceValue("z", ("bbb",))]),
     ]
 )
 def test_reference_branch(stmt, node_cnt, expected):
@@ -232,7 +232,7 @@ def test_reference_branch(stmt, node_cnt, expected):
     for rv in expected:
         r = graph.get_reference(rv.reference)
         assert r
-        projs = [p for p in graph.successors(r) if isinstance(p, ProjectAttrs) and p.attrs == [rv.attribute]]
+        projs = [p for p in graph.successors(r) if isinstance(p, ProjectAttrs) and p.attrs == rv.attributes]
         assert projs and len(projs) == 1
         proj = projs[0]
         assert proj
@@ -254,7 +254,7 @@ DISP proclist ATTR name, pid LIMIT 2 OFFSET 3
     assert {"proclist"} == {v.name for v in graph.get_variables()}
     proclist = graph.get_variable("proclist")
     proj = graph.get_nodes_by_type(ProjectAttrs)[0]
-    assert proj.attrs == ['name', 'pid']
+    assert proj.attrs == ('name', 'pid')
     limit = graph.get_nodes_by_type(Limit)[0]
     assert limit.num == 2
     offset = graph.get_nodes_by_type(Offset)[0]

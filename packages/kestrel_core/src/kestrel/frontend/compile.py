@@ -7,8 +7,9 @@ from functools import reduce
 from dateutil.parser import parse as to_datetime
 from lark import Token, Transformer
 from typeguard import typechecked
+from typing import Union, List
 
-from kestrel.exceptions import IRGraphMissingNode
+from kestrel.exceptions import IRGraphMissingNode, InvalidComparison
 from kestrel.ir.filter import (
     BoolExp,
     ExpOp,
@@ -77,26 +78,34 @@ def _trim_ocsf_event_field(field: str) -> str:
 
 
 @typechecked
-def _create_comp(field: str, op_value: str, value) -> FComparison:
+def _create_comp(
+    field: str, op_value: str, value: Union[str, int, float, List, ReferenceValue]
+) -> FComparison:
     # TODO: implement MultiComp
 
     if op_value in (ListOp.IN, ListOp.NIN):
         op = ListOp
-        comp = RefComparison if isinstance(value, ReferenceValue) else ListComparison
+        compf = RefComparison if isinstance(value, ReferenceValue) else ListComparison
     elif isinstance(value, int):
         op = NumCompOp
-        comp = IntComparison
+        compf = IntComparison
     elif isinstance(value, float):
         op = NumCompOp
-        comp = FloatComparison
+        compf = FloatComparison
     elif isinstance(value, ReferenceValue):
         op = ListOp
         op_value = ListOp.IN if op_value in (ListOp.IN, StrCompOp.EQ) else ListOp.NIN
-        comp = RefComparison
+        compf = RefComparison
     else:
         op = StrCompOp
-        comp = StrComparison
-    return comp(_trim_ocsf_event_field(field), op(op_value), value)
+        compf = StrComparison
+
+    if compf is RefComparison:
+        comp = compf([_trim_ocsf_event_field(field)], op(op_value), value)
+    else:
+        comp = compf(_trim_ocsf_event_field(field), op(op_value), value)
+
+    return comp
 
 
 @typechecked
@@ -111,7 +120,16 @@ def _map_filter_exp(
         (IntComparison, FloatComparison, StrComparison, ListComparison, RefComparison),
     ):
         # get the field/key
-        field = filter_exp.field
+        if hasattr(filter_exp, "field"):
+            field = filter_exp.field
+        elif hasattr(filter_exp, "fields"):
+            if len(filter_exp.fields) > 1:
+                raise NotImplementedError(
+                    "Kestrel syntax does not support fields tuple yet"
+                )
+            field = filter_exp.fields[0]
+        else:
+            raise InvalidComparison(filter_exp)
         # init map_result from direct mapping from field
         map_result = set(
             translate_comparison_to_ocsf(
@@ -192,7 +210,7 @@ def _add_reference_branches_for_filter(graph: IRGraph, filter_node: Filter):
     else:
         for refvalue in filter_node.get_references():
             r = graph.add_node(Reference(refvalue.reference))
-            p = graph.add_node(ProjectAttrs([refvalue.attribute]), r)
+            p = graph.add_node(ProjectAttrs(refvalue.attributes), r)
             graph.add_edge(p, filter_node)
 
 
@@ -357,7 +375,7 @@ class _KestrelT(Transformer):
 
     def attr_clause(self, args):
         attrs = args[0].split(",")
-        attrs = [attr.strip() for attr in attrs]
+        attrs = tuple(attr.strip() for attr in attrs)
         return ProjectAttrs(attrs)
 
     def sort_clause(self, args):
@@ -405,7 +423,7 @@ class _KestrelT(Transformer):
     def reference_or_simple_string(self, args):
         vname = args[0].value
         attr = args[1].value if len(args) > 1 else None
-        return ReferenceValue(vname, attr)
+        return ReferenceValue(vname, (attr,))
 
     def number(self, args):
         v = args[0].value

@@ -3,10 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Iterable, List, Optional, Union
+from typing import Any, Callable, Iterable, List, Tuple, Optional, Union
 
 from mashumaro.mixins.json import DataClassJSONMixin
 from typeguard import typechecked
+
+from kestrel.exceptions import MismatchedFieldValueInMultiColumnComparison
 
 
 class NumCompOp(str, Enum):
@@ -98,16 +100,20 @@ class ReferenceValue(DataClassJSONMixin):
     """Value for reference"""
 
     reference: str
-    attribute: Optional[str]
+    attributes: Tuple[str]
 
 
 @dataclass
 class RefComparison(DataClassJSONMixin):
     """Referred variable comparison"""
 
-    field: str
+    fields: List[str]
     op: ListOp
     value: ReferenceValue
+
+    def __post_init__(self):
+        if len(self.fields) != len(self.value.attributes):
+            raise MismatchedFieldValueInMultiColumnComparison(self)
 
 
 class ExpOp(str, Enum):
@@ -167,6 +173,15 @@ FComparison = Union[
     ListComparison,
     RefComparison,
     MultiComp,
+]
+
+
+FBasicComparison = Union[
+    IntComparison,
+    FloatComparison,
+    StrComparison,
+    ListComparison,
+    RefComparison,
 ]
 
 

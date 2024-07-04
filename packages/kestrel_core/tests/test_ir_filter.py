@@ -131,12 +131,12 @@ def test_filter_with_reference():
     filter_nodes = graph.get_nodes_by_type(Filter)
     exp = filter_nodes[0].exp
     exp_dict = exp.to_dict()
-    assert exp_dict == {'lhs': {'field': 'foo', 'op': '=', 'value': 'bar'}, 'op': 'OR', 'rhs': {'field': 'baz', 'op': 'IN', 'value': {'reference': 'z', 'attribute': 'baz'}}}
+    assert exp_dict == {'lhs': {'field': 'foo', 'op': '=', 'value': 'bar'}, 'op': 'OR', 'rhs': {'fields': ['baz'], 'op': 'IN', 'value': {'reference': 'z', 'attributes': ['baz']}}}
 
 
 def test_fill_references_in_exp():
     lhs = StrComparison("foo", StrCompOp.EQ, "bar")
-    rhs = RefComparison("baz", "=", ReferenceValue("var", "attr"))
+    rhs = RefComparison(["baz"], "=", ReferenceValue("var", ("attr",)))
     exp = BoolExp(lhs, ExpOp.AND, rhs)
     rs = get_references_from_exp(exp)
     assert len(list(rs)) == 1
