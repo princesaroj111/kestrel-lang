@@ -50,6 +50,10 @@ class VariableNotFound(KestrelError):
     pass
 
 
+class SourceNotFound(KestrelError):
+    pass
+
+
 class ReferenceNotFound(KestrelError):
     pass
 

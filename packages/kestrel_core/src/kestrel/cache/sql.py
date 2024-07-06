@@ -124,7 +124,7 @@ class SqlCache(AbstractCache):
         self,
         graph: IRGraphEvaluable,
         instruction: Instruction,
-        cte_memory: Optional[Mapping[UUID, CTE]] = None,
+        subquery_memory: Optional[Mapping[UUID, SqlCacheTranslator]] = None,
     ) -> SqlCacheTranslator:
         """Evaluate the instruction in the graph
 
@@ -146,13 +146,13 @@ class SqlCache(AbstractCache):
         Parameters:
             graph: the graph to traverse
             instruction: the instruction to evaluate/return
-            cte_memory: memorize the subgraph traversed/evaluated in CTE
+            subquery_memory: memorize the subgraph traversed/evaluated
 
         Returns:
             A translator (SQL statements) to be executed
         """
-        if cte_memory is None:
-            cte_memory = {}
+        if subquery_memory is None:
+            subquery_memory = {}
 
         if instruction.id in self:
             # cached in sqlite
@@ -170,23 +170,24 @@ class SqlCache(AbstractCache):
                 raise NotImplementedError(f"Unknown instruction type: {instruction}")
 
         elif isinstance(instruction, TransformingInstruction):
-            if instruction.id in cte_memory:
+            if instruction.id in subquery_memory:
                 # this is a Variable, already evaluated
                 # just create a new use/translator from this Variable
-                translator = SqlCacheTranslator(cte_memory[instruction.id])
+                translator = subquery_memory[instruction.id]
             else:
                 trunk, r2n = graph.get_trunk_n_branches(instruction)
                 translator = self._evaluate_instruction_in_graph(
-                    graph, trunk, cte_memory
+                    graph, trunk, subquery_memory
                 )
 
                 if isinstance(instruction, SolePredecessorTransformingInstruction):
                     if isinstance(instruction, (Return, Explain)):
                         pass
                     elif isinstance(instruction, Variable):
-                        cte = translator.query.cte(name=instruction.name)
-                        cte_memory[instruction.id] = cte
-                        translator = SqlCacheTranslator(cte)
+                        subquery_memory[instruction.id] = translator
+                        translator = SqlCacheTranslator(
+                            translator.query.cte(name=instruction.name)
+                        )
                     else:
                         translator.add_instruction(instruction)
 
@@ -199,7 +200,7 @@ class SqlCache(AbstractCache):
                     #   please pass a select() construct explicitly
                     instruction.resolve_references(
                         lambda x: self._evaluate_instruction_in_graph(
-                            graph, r2n[x], cte_memory
+                            graph, r2n[x], subquery_memory
                         ).query
                     )
                     translator.add_instruction(instruction)

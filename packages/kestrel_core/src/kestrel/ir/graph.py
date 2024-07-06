@@ -29,6 +29,7 @@ from kestrel.exceptions import (
     MultiSourcesInGraph,
     ReferenceNotFound,
     VariableNotFound,
+    SourceNotFound,
 )
 from kestrel.ir.filter import ReferenceValue
 from kestrel.ir.instructions import (
@@ -39,6 +40,7 @@ from kestrel.ir.instructions import (
     IntermediateInstruction,
     ProjectAttrs,
     Reference,
+    ReferenceDataSource,
     Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
@@ -85,7 +87,7 @@ class IRGraph(networkx.DiGraph):
         Parameters:
             node: the instruction to add
             dependent_node: the dependent instruction if node is a TransformingInstruction
-            deref: whether to dereference Reference instruction (only useful for if node is Reference)
+            deref: whether to dereference Reference/ReferenceDataSource instruction (only useful for if node is Reference/ReferenceDataSource)
 
         Returns:
             The node added
@@ -102,7 +104,7 @@ class IRGraph(networkx.DiGraph):
 
         Parameters:
             nodes: the list of nodes/instructions to add
-            deref: whether to deref Reference node
+            deref: whether to deref when adding node
         """
         for node in nodes:
             self._add_node(node, deref)
@@ -113,7 +115,7 @@ class IRGraph(networkx.DiGraph):
         Parameters:
             u: the source of the edge
             v: the target of the edge
-            deref: whether to deref Reference node
+            deref: whether to deref when adding node
         """
         ux = self._add_node(u, deref)
         vx = self._add_node(v, deref)
@@ -126,7 +128,7 @@ class IRGraph(networkx.DiGraph):
 
         Parameters:
             edges: the edges to add
-            deref: whether to deref Reference node
+            deref: whether to deref when adding node
         """
         for u, v in edges:
             self.add_edge(u, v, deref)
@@ -413,8 +415,11 @@ class IRGraph(networkx.DiGraph):
                 raise DanglingReferenceInFilter(ps)
             return ps[0], r2n
         elif isinstance(node, Analytic):
+            ps = [x for x in ps if isinstance(x, (Variable, Reference))]
             return ps[0], {}
         else:
+            # TODO: x = y + z, which is trunk?
+            # Further check ReferenceDataSource deref in _add_node() for FIND
             raise NotImplementedError(f"unknown instruction type: {node}")
 
     def update(self, ng: IRGraph):
@@ -530,7 +535,8 @@ class IRGraph(networkx.DiGraph):
 
         # add non-source nodes to cache as default execution environment
         # e.g., a path starting from a cached Variable
-        # nodes directly preceeding an interface impacted node do not need evaluation
+        # cached nodes directly preceeding an interface impacted node do not need evaluation
+        # they will be given to the interface in cache directly
         cached_nodes = set([n for n in g.nodes() if n.id in cache])
         for n in cached_nodes - pns:
             a2ns[_CII].add(n)
@@ -551,16 +557,16 @@ class IRGraph(networkx.DiGraph):
             ps = set().union(*[set(g.predecessors(n)) for n in a2uns[interface]])
             a2uns[interface].update(ps & cached_nodes)
 
-        # a patch (corner case handling) for get_trunk_n_branches()
-        # add Variable/Reference node if succeeded by ProjectAttrs and Filter,
-        # which are in the dependent graph; the Variable is only needed by
-        # get_trunk_n_branches() as an auxiliary node
+        # Add Variable/Reference node if succeeded by ProjectAttrs and Filter,
+        # which will be needed (for metadata) by get_trunk_n_branches() in the
+        # evaluation phase, through the succeeding node (ProjectAttrs) is
+        # already in cache.
         for interface in a2uns:
             auxs = []
             for n in a2uns[interface]:
                 if isinstance(n, ProjectAttrs):
                     # need to search in `self`, not `g`, since the boundry of
-                    # `g` is cut by the cache
+                    # `g` is cut by the cache and ProjectAttrs will be cached
                     p = next(self.predecessors(n))
                     s = next(g.successors(n))
                     if (
@@ -573,7 +579,7 @@ class IRGraph(networkx.DiGraph):
 
         # remove dep graphs with only one node
         # e.g., `ds://a` in "y = GET file FROM ds://a WHERE x = v.x"
-        # when v.x not in cache
+        # when v.x not in cache (evaluation needed for v.x first)
         dep_nodes = [ns for ns in a2uns.values() if len(ns) > 1]
         # need to search in `self` due to the patch for get_trunk_n_branches()
         dep_graphs = [
@@ -652,6 +658,30 @@ class IRGraph(networkx.DiGraph):
         """
         return json.dumps(self.to_dict())
 
+    def get_datasource_of_node(
+        self, node: TransformingInstruction
+    ) -> Union[DataSource, Construct]:
+        """Search for the DataSource of the variable
+
+        Only two types could be returned. ReferenceDataSource is not the trunk
+        of Analytics node (defined in get_trunk_n_branches()), and it will not
+        be the source node returned by this method.
+
+        Parameters:
+            node: the node to start search
+
+        Returns:
+            DataSource of the node
+        """
+        while isinstance(node, TransformingInstruction) and not isinstance(
+            node, SourceInstruction
+        ):
+            node, _ = self.get_trunk_n_branches(node)
+        if not isinstance(node, (DataSource, Construct)):
+            raise SourceNotFound(v, node)
+        else:
+            return node
+
     def _add_node(self, node: Instruction, deref: bool = True) -> Instruction:
         """Add just the node
 
@@ -662,7 +692,7 @@ class IRGraph(networkx.DiGraph):
 
         Parameters:
             node: the node/instruction to add
-            deref: whether to deref is a Reference node
+            deref: whether to deref a Reference/ReferenceDataSource node
 
         Returns:
             The node added or found or derefed
@@ -681,6 +711,17 @@ class IRGraph(networkx.DiGraph):
                         else:
                             # deref succeed, no need to add node
                             node = v
+                    else:
+                        node = self._add_singleton_instruction(node)
+                elif isinstance(node, ReferenceDataSource):
+                    if deref:
+                        try:
+                            v = self.get_variable(node.name)
+                        except VariableNotFound:
+                            # deref failed, add Reference node directly
+                            node = self._add_singleton_instruction(node)
+                        else:
+                            node = self.get_datasource_of_node(v)
                     else:
                         node = self._add_singleton_instruction(node)
                 else:

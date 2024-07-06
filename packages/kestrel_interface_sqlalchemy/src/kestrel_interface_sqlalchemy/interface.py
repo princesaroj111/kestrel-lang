@@ -1,4 +1,5 @@
 import logging
+import inspect
 from functools import reduce
 from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional, Union
 from uuid import UUID
@@ -40,6 +41,7 @@ from kestrel.mapping.data_model import (
     translate_dataframe,
     translate_projection_to_native,
 )
+from kestrel.exceptions import SourceNotFound
 
 _logger = logging.getLogger(__name__)
 
@@ -100,21 +102,20 @@ class SQLAlchemyTranslator(SqlTranslator):
     def _add_filter(self) -> Optional[str]:
         if not self.filt:
             return
-        filt = self.filt
-        if filt.timerange.start:
+        if self.filt.timerange.start:
             # Convert the timerange to the appropriate pair of comparisons
             start_comp = StrComparison(
-                self.timestamp, ">=", self.timefmt(filt.timerange.start)
+                self.timestamp, ">=", self.timefmt(self.filt.timerange.start)
             )
             stop_comp = StrComparison(
-                self.timestamp, "<", self.timefmt(filt.timerange.stop)
+                self.timestamp, "<", self.timefmt(self.filt.timerange.stop)
             )
             # AND them together
             time_exp = BoolExp(start_comp, ExpOp.AND, stop_comp)
             # AND that with any existing filter expression
-            exp = BoolExp(filt.exp, ExpOp.AND, time_exp)
+            exp = BoolExp(self.filt.exp, ExpOp.AND, time_exp)
         else:
-            exp = filt.exp
+            exp = self.filt.exp
         if isinstance(exp, BoolExp):
             comp = self._render_exp(exp)
         elif isinstance(exp, MultiComp):
@@ -135,17 +136,28 @@ class SQLAlchemyTranslator(SqlTranslator):
         self.projection_base_field = proj.ocsf_field
 
     def result(self) -> sqlalchemy.Compiled:
-        # use self.dmm as an indicator whether this is FROM a variable/CTE
-        # if from variable, columns are already OCSF, no translation needed
         if self.dmm:
+            # translation required
+            # basically this is not from a subquery/CTE (already normalized)
+            # it is possible: self.projection_base_field is None (will use root)
+            # it is possible: self.projection_attributes is None (will translate all)
             pairs = translate_projection_to_native(
                 self.dmm, self.projection_base_field, self.projection_attributes
             )
             cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
-        else:
+        elif self.projection_attributes:
             cols = [sqlalchemy.column(i) for i in self.projection_attributes]
+        else:
+            # if projection_attributes not specified, `SELECT *` (default option)
+            # this can happen if the table is loaded cached ProjectAttrs
+            # or just a Kestrel expression on a varaible (Filter only)
+            cols = None
+
         self._add_filter()
-        self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
+
+        if cols is not None:
+            self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
+
         return self.query.compile(dialect=self.dialect)
 
 
@@ -230,52 +242,95 @@ class SQLAlchemyInterface(AbstractInterface):
         graph: IRGraphEvaluable,
         cache: MutableMapping[UUID, Any],
         instruction: Instruction,
-        cte_memory: Optional[Mapping[UUID, CTE]] = None,
+        subquery_memory: Optional[Mapping[UUID, SQLAlchemyTranslator]] = None,
     ) -> SQLAlchemyTranslator:
+        # if method name needs update/change, also update for the `inspect`
+        # if any parameter name needs update/change, also update for the `inspect`
+
         _logger.debug("instruction: %s", str(instruction))
 
-        # same use as `cte_memory` in `kestrel.cache.sql`
-        if cte_memory is None:
-            cte_memory = {}
+        # same use as `subquery_memory` in `kestrel.cache.sql`
+        if subquery_memory is None:
+            subquery_memory = {}
 
         if instruction.id in cache:
-            raise NotImplementedError("Unhandled data from another interface or cache")
+            # first get the datasource assocaited with the cached node
+            ds = None
+            x_layer_backed = 1
+            while not ds:
+                caller = inspect.stack()[x_layer_backed]
+                if caller[3] != "_evaluate_instruction_in_graph":
+                    # back tracked too far
+                    break
+                successor = caller[0].f_locals["instruction"]
+                try:
+                    ds = graph.get_datasource_of_node(successor)
+                except SourceNotFound:
+                    x_layer_backed += 1
+            if not ds:
+                _logger.error(
+                    "backed tracked entire stack but still do not find source"
+                )
+                raise SourceNotFound(instruction)
+
+            # then check the datasource config to see if the datalake supports write
+            ds_config = self.config.datasources[ds.datasource]
+            conn_config = self.config.connections[ds_config.connection]
+
+            if conn_config.table_creation_permission:
+                table_name = instruction.id
+
+                # create a new table for the cached DataFrame
+                cache[instruction.id].to_sql(
+                    table_name,
+                    con=self.conns[ds_config.connection],
+                    if_exists="replace",
+                    index=False,
+                )
+
+                # SELECT * from the new table
+                translator = SQLAlchemyTranslator(
+                    self.engines[ds_config.connection].dialect,
+                    table_name,
+                    None,
+                    None,
+                    None,
+                )
+
+            else:
+                raise NotImplementedError("Read-only data lake not handled")
+                # list(cache[instruction.id].itertuples(index=False, name=None))
 
         if isinstance(instruction, SourceInstruction):
             if isinstance(instruction, DataSource):
-                ds = self.config.datasources[instruction.datasource]
-                connection = ds.connection
+                ds_config = self.config.datasources[instruction.datasource]
                 translator = SQLAlchemyTranslator(
-                    self.engines[connection].dialect,
-                    ds.table,
-                    ds.data_model_map,
-                    lambda dt: dt.strftime(ds.timestamp_format),
-                    ds.timestamp,
+                    self.engines[ds_config.connection].dialect,
+                    ds_config.table,
+                    ds_config.data_model_map,
+                    lambda dt: dt.strftime(ds_config.timestamp_format),
+                    ds_config.timestamp,
                 )
             else:
                 raise NotImplementedError(f"Unhandled instruction type: {instruction}")
 
         elif isinstance(instruction, TransformingInstruction):
-            if instruction.id in cte_memory:
-                translator = SQLAlchemyTranslator(
-                    self.engines[connection].dialect,
-                    cte_memory[instruction.id],
-                )
+            if instruction.id in subquery_memory:
+                translator = subquery_memory[instruction.id]
             else:
                 trunk, r2n = graph.get_trunk_n_branches(instruction)
                 translator = self._evaluate_instruction_in_graph(
-                    graph, cache, trunk, cte_memory
+                    graph, cache, trunk, subquery_memory
                 )
 
                 if isinstance(instruction, SolePredecessorTransformingInstruction):
                     if isinstance(instruction, (Return, Explain)):
                         pass
                     elif isinstance(instruction, Variable):
-                        cte = translator.query.cte(name=instruction.name)
-                        cte_memory[instruction.id] = cte
+                        subquery_memory[instruction.id] = translator
                         translator = SQLAlchemyTranslator(
-                            self.engines[connection].dialect,
-                            cte,
+                            translator.dialect,
+                            translator.query.cte(name=instruction.name),
                         )
                     else:
                         translator.add_instruction(instruction)

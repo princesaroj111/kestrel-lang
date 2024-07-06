@@ -77,7 +77,7 @@ class Session(AbstractContextManager):
         if ins not in self.irgraph:
             raise InstructionNotFound(ins.to_dict())
 
-        pred = self.irgraph.get_trunk_n_branches(ins)[0]
+        pred, _ = self.irgraph.get_trunk_n_branches(ins)
         is_explain = isinstance(pred, Explain)
         display = GraphExplanation([])
 

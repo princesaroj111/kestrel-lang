@@ -3,8 +3,9 @@
 # SqlAlchemy instance; those connection names are referenced from the
 # datasources.
 connections:
-    my_events:
+    my_data_lake:
         url: sqlite:////home/pcoccoli/events.db  # SQLAlchemy connection string
+        table_creation_permission: true  # this helps decide how to load cache
 
 # A single database can have many tables.  For each table that will be
 # available as a Kestrel datasource, create a named entry here that
@@ -14,7 +15,7 @@ connections:
 # containing a kestrel data model mapping, in YAML format.
 datasources:
     events:  # This is also the data source name you'll use in your hunts
-        connection: my_events # references the connection info above
+        connection: my_data_lake # references the connection info above
         table: my_events  # actual SQL table name
         timestamp: "@timestamp"
         timestamp_format: "%Y-%m-%d %H:%M:%S.%fZ"

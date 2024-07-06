@@ -14,6 +14,7 @@ def test_load_config_w_default_map(tmp_path):
         "connections": {
             "some-data-lake": {
                 "url": "presto://jdoe@example.com:8889/hive",
+                "table_creation_permission": True,
             }
         },
         "datasources": {
@@ -38,9 +39,11 @@ def test_load_config(tmp_path):
         "connections": {
             "localhost": {
                 "url": "sqlite:////home/jdoe/test.db",
+                "table_creation_permission": True,
             },
             "some-data-lake": {
                 "url": "presto://jdoe@example.com:8889/hive",
+                "table_creation_permission": True,
             }
         },
         "datasources": {
