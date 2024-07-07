@@ -2,7 +2,6 @@ import logging
 from functools import reduce
 from typing import Callable, Optional
 
-import sqlalchemy
 from sqlalchemy import FromClause, and_, asc, column, tuple_, desc, or_, select
 from sqlalchemy.engine import Compiled, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
