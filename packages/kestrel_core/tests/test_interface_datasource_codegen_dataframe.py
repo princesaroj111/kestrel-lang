@@ -67,7 +67,7 @@ p2 = proclist WHERE pid > 100
 p3 = proclist WHERE name LIKE "c%.exe"
 p4 = proclist WHERE name MATCHES r"^c\w{2}\.exe"
 """
-    graph = parse_kestrel(stmt)
+    graph = parse_kestrel(stmt, {})
     c = graph.get_nodes_by_type(Construct)[0]
     df0 = evaluate_source_instruction(c)
     assert df0.to_dict("records") == [ {"name": "cmd.exe", "pid": 123}

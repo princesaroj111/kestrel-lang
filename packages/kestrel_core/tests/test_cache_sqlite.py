@@ -37,7 +37,7 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 DISP proclist ATTR name
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt))
+    graph = IRGraphEvaluable(parse_kestrel(stmt, {}))
     c = SqlCache()
     mapping = c.evaluate_graph(graph, c)
 
@@ -62,7 +62,7 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
 browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 DISP browsers ATTR name, pid
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt))
+    graph = IRGraphEvaluable(parse_kestrel(stmt, {}))
     c = SqlCache()
     mapping = c.evaluate_graph(graph, c)
 
@@ -86,7 +86,7 @@ browsers = proclist WHERE name != "cmd.exe"
 DISP browsers
 DISP browsers ATTR pid
 """
-    graph = parse_kestrel(stmt)
+    graph = parse_kestrel(stmt, {})
     c = SqlCache()
     rets = graph.get_returns()
 
@@ -125,7 +125,7 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 browsers = proclist WHERE name IN ("explorer.exe", "firefox.exe", "chrome.exe")
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt))
+    graph = IRGraphEvaluable(parse_kestrel(stmt, {}))
     c = SqlCache()
     _ = c.evaluate_graph(graph, c)
 
@@ -142,7 +142,7 @@ specials = proclist WHERE pid IN [123, 201]
 p2 = proclist WHERE pid = browsers.pid and name = specials.name
 DISP p2 ATTR name, pid
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt))
+    graph = IRGraphEvaluable(parse_kestrel(stmt, {}))
     c = SqlCache()
     mapping = c.evaluate_graph(graph, c)
 
@@ -161,7 +161,7 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt))
+    graph = IRGraphEvaluable(parse_kestrel(stmt, {}))
     c = SqlCache()
     mapping = c.evaluate_graph(graph, c)
     v = c.get_virtual_copy()

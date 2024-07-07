@@ -10,6 +10,7 @@ from typeguard import typechecked
 
 from kestrel.frontend.compile import _KestrelT
 from kestrel.mapping.data_model import reverse_mapping
+from kestrel.ir.graph import IRGraph
 from kestrel.utils import list_folder_files, load_data_file
 from kestrel.config.utils import load_relation_configs
 
@@ -62,7 +63,17 @@ def get_keywords():
     return keywords_comprehensive
 
 
-def parse_kestrel(stmts):
+@typechecked
+def parse_kestrel(stmts: str, entity_identifier_map: dict) -> IRGraph:
+    """Parse Kestrel code block into IRGraph
+
+    Parameters:
+        stmts: Kestrel code block (statements)
+        entity_identifier_map: identifiers for each entity, required by FIND
+
+    Returns:
+        IRGraph
+    """
     lp = Lark(
         load_data_file("kestrel.frontend", "kestrel.lark"),
         parser="lalr",
@@ -71,6 +82,7 @@ def parse_kestrel(stmts):
             get_frontend_mapping("types"),
             get_relation_table("entity"),
             get_relation_table("event"),
+            entity_identifier_map,
         ),
     )
     return lp.parse(stmts)

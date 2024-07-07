@@ -3,7 +3,7 @@ import json
 from kestrel.frontend.parser import parse_kestrel
 from kestrel.ir.filter import (
     IntComparison, FloatComparison, StrComparison, ListComparison,
-    RefComparison, ReferenceValue, ListOp, NumCompOp, StrCompOp, ExpOp,
+    RefComparison, ReferenceValue, ListOp, NumCompOp, StrCompOp, ExpOp, AbsoluteTrue,
     BoolExp, MultiComp, get_references_from_exp, resolve_reference_with_function,
 )
 from kestrel.ir.instructions import (
@@ -86,6 +86,7 @@ def test_multi_comparison():
 
 @pytest.mark.parametrize(
     "lhs, op, rhs", [
+        (StrComparison("foo", StrCompOp.EQ, "bar"), ExpOp.AND, AbsoluteTrue()),
         (StrComparison("foo", StrCompOp.EQ, "bar"), ExpOp.AND, IntComparison("baz", NumCompOp.EQ, 42)),
         (StrComparison("foo", StrCompOp.LIKE, "%bar%"), ExpOp.OR, IntComparison("baz", NumCompOp.LE, 42)),
         (IntComparison("baz", NumCompOp.GE, 42), ExpOp.AND, StrComparison("foo", StrCompOp.NEQ, "bar")),
@@ -127,7 +128,7 @@ def test_filter_compound_exp():
 
 def test_filter_with_reference():
     stmt = "x = y WHERE foo = 'bar' OR baz = z.baz"
-    graph = parse_kestrel(stmt)
+    graph = parse_kestrel(stmt, {})
     filter_nodes = graph.get_nodes_by_type(Filter)
     exp = filter_nodes[0].exp
     exp_dict = exp.to_dict()

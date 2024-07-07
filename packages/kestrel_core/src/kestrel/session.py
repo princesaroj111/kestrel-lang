@@ -8,6 +8,7 @@ from typeguard import typechecked
 from kestrel.analytics import PythonAnalyticsInterface
 from kestrel.cache import SqlCache
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.config import load_kestrel_config
 from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
 from kestrel.frontend.parser import parse_kestrel
@@ -25,6 +26,7 @@ class Session(AbstractContextManager):
     def __init__(self):
         self.session_id = uuid4()
         self.irgraph = IRGraph()
+        self.config = load_kestrel_config()
 
         # load all interfaces; cache is a special interface
         cache = SqlCache()
@@ -59,7 +61,7 @@ class Session(AbstractContextManager):
         Yields:
             Evaluated result per Return instruction
         """
-        irgraph_new = parse_kestrel(huntflow_block)
+        irgraph_new = parse_kestrel(huntflow_block, self.config["entity_identifier"])
         self.irgraph.update(irgraph_new)
 
         for ret in irgraph_new.get_returns():

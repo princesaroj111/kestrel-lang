@@ -221,6 +221,7 @@ class _KestrelT(Transformer):
         type_map,
         entity_entity_relation_table,
         entity_event_relation_table,
+        entity_identifier_map,
         token_prefix="",
         default_sort_order=DEFAULT_SORT_ORDER,
     ):
@@ -229,6 +230,7 @@ class _KestrelT(Transformer):
         self.token_prefix = token_prefix
         self.type_map = type_map
         self.field_map = field_map
+        self.entity_identifier_map = entity_identifier_map
         self.variable_map = {}  # To cache var type info
         self.entity_entity_relation_table = entity_entity_relation_table
         self.entity_event_relation_table = entity_event_relation_table
@@ -347,10 +349,29 @@ class _KestrelT(Transformer):
         if len(args) > 3:
             for arg in args[3:]:
                 if isinstance(arg, TimeRange):
-                    filter_node.timerange = args[3]
+                    filter_node.timerange = arg
                 elif isinstance(arg, Limit):
                     root = graph.add_node(arg, projection_node)
         return graph, root
+
+    def find(self, args):
+        return_entity_type = args[0].value
+        relation = args[1].value
+        if_reverse, input_var = (
+            (True, args[3])
+            if hasattr(args[2], "type")
+            and args[2].type == self.token_prefix + "REVERSED"
+            else (False, args[2])
+        )
+        filter_node = Filter()
+        if len(args) > 3:
+            for arg in args[3:]:
+                if isinstance(arg, Filter):
+                    filter_node = arg
+                if isinstance(arg, TimeRange):
+                    filter_node.timerange = arg
+                elif isinstance(arg, Limit):
+                    limit_node = arg
 
     def apply(self, args):
         scheme, analytic_name = args[0]

@@ -98,32 +98,6 @@ class SQLAlchemyTranslator(SqlTranslator):
             rendered_comp = reduce(or_, translated_comps)
         return rendered_comp
 
-    @typechecked
-    def _add_filter(self) -> Optional[str]:
-        if not self.filt:
-            return
-        if self.filt.timerange.start:
-            # Convert the timerange to the appropriate pair of comparisons
-            start_comp = StrComparison(
-                self.timestamp, ">=", self.timefmt(self.filt.timerange.start)
-            )
-            stop_comp = StrComparison(
-                self.timestamp, "<", self.timefmt(self.filt.timerange.stop)
-            )
-            # AND them together
-            time_exp = BoolExp(start_comp, ExpOp.AND, stop_comp)
-            # AND that with any existing filter expression
-            exp = BoolExp(self.filt.exp, ExpOp.AND, time_exp)
-        else:
-            exp = self.filt.exp
-        if isinstance(exp, BoolExp):
-            comp = self._render_exp(exp)
-        elif isinstance(exp, MultiComp):
-            comp = self._render_multi_comp(exp)
-        else:
-            comp = self._render_comp(exp)
-        self.query = self.query.where(comp)
-
     def add_Filter(self, filt: Filter) -> None:
         # Just save filter and compile it later
         # Probably need the entity projection set first
@@ -136,6 +110,13 @@ class SQLAlchemyTranslator(SqlTranslator):
         self.projection_base_field = proj.ocsf_field
 
     def result(self) -> sqlalchemy.Compiled:
+
+        # 1. process the filter
+        if self.filt:
+            selection = self.filter_to_selection(self.filt)
+            self.query = self.query.where(selection)
+
+        # 2. process projections
         if self.dmm:
             # translation required
             # basically this is not from a subquery/CTE (already normalized)
@@ -153,11 +134,10 @@ class SQLAlchemyTranslator(SqlTranslator):
             # or just a Kestrel expression on a varaible (Filter only)
             cols = None
 
-        self._add_filter()
-
         if cols is not None:
             self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
 
+        # 3. return compiled result
         return self.query.compile(dialect=self.dialect)
 
 

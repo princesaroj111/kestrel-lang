@@ -40,7 +40,7 @@ assignment: VARIABLE "=" expression
 
 find: "FIND"i ENTITY_TYPE RELATION (REVERSED)? VARIABLE where_clause? timespan? limit_clause?
 
-get: "GET"i PROJECT_FIELD ("FROM"i datasource)? where_clause timespan? limit_clause?
+get: "GET"i PROJECT_FIELD "FROM"i datasource where_clause timespan? limit_clause?
 
 group: "GROUP"i VARIABLE BY grp_spec ("WITH"i agg_list)?
 

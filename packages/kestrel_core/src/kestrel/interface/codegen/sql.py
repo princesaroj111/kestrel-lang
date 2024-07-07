@@ -2,10 +2,11 @@ import logging
 from functools import reduce
 from typing import Callable, Optional
 
+import sqlalchemy
 from sqlalchemy import FromClause, and_, asc, column, tuple_, desc, or_, select
 from sqlalchemy.engine import Compiled, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import ColumnOperators
+from sqlalchemy.sql.expression import ColumnOperators, ColumnElement
 from sqlalchemy.sql.selectable import Select
 from typeguard import typechecked
 
@@ -19,6 +20,7 @@ from kestrel.ir.filter import (
     NumCompOp,
     StrComparison,
     StrCompOp,
+    AbsoluteTrue,
 )
 from kestrel.ir.instructions import (
     Filter,
@@ -94,14 +96,22 @@ class SqlTranslator:
         return reduce(op, map(self._render_comp, comps.comps))
 
     @typechecked
+    def _render_true(self) -> ColumnElement:
+        return sqlalchemy.true()
+
+    @typechecked
     def _render_exp(self, exp: BoolExp) -> BooleanClauseList:
-        if isinstance(exp.lhs, BoolExp):
+        if isinstance(exp.lhs, AbsoluteTrue):
+            lhs = self._render_true()
+        elif isinstance(exp.lhs, BoolExp):
             lhs = self._render_exp(exp.lhs)
         elif isinstance(exp.lhs, MultiComp):
             lhs = self._render_multi_comp(exp.lhs)
         else:
             lhs = self._render_comp(exp.lhs)
-        if isinstance(exp.rhs, BoolExp):
+        if isinstance(exp.rhs, AbsoluteTrue):
+            rhs = self._render_true()
+        elif isinstance(exp.rhs, BoolExp):
             rhs = self._render_exp(exp.rhs)
         elif isinstance(exp.rhs, MultiComp):
             rhs = self._render_multi_comp(exp.rhs)
@@ -109,7 +119,8 @@ class SqlTranslator:
             rhs = self._render_comp(exp.rhs)
         return and_(lhs, rhs) if exp.op == ExpOp.AND else or_(lhs, rhs)
 
-    def add_Filter(self, filt: Filter) -> None:
+    @typechecked
+    def filter_to_selection(self, filt: Filter) -> ColumnElement:
         if filt.timerange.start:
             # Convert the timerange to the appropriate pair of comparisons
             start_comp = StrComparison(
@@ -124,13 +135,19 @@ class SqlTranslator:
             exp = BoolExp(filt.exp, ExpOp.AND, time_exp)
         else:
             exp = filt.exp
-        if isinstance(exp, BoolExp):
-            comp = self._render_exp(exp)
+        if isinstance(exp, AbsoluteTrue):
+            selection = self._render_true()
+        elif isinstance(exp, BoolExp):
+            selection = self._render_exp(exp)
         elif isinstance(exp, MultiComp):
-            comp = self._render_multi_comp(exp)
+            selection = self._render_multi_comp(exp)
         else:
-            comp = self._render_comp(exp)
-        self.query = self.query.where(comp)
+            selection = self._render_comp(exp)
+        return selection
+
+    def add_Filter(self, filt: Filter) -> None:
+        selection = self.filter_to_selection(filt)
+        self.query = self.query.where(selection)
 
     def add_ProjectAttrs(self, proj: ProjectAttrs) -> None:
         cols = [column(col) for col in proj.attrs]
