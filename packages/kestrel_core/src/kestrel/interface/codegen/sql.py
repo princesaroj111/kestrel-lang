@@ -20,7 +20,6 @@ from kestrel.ir.filter import (
     NumCompOp,
     StrComparison,
     StrCompOp,
-    AbsoluteTrue,
 )
 from kestrel.ir.instructions import (
     Filter,
@@ -96,22 +95,14 @@ class SqlTranslator:
         return reduce(op, map(self._render_comp, comps.comps))
 
     @typechecked
-    def _render_true(self) -> ColumnElement:
-        return sqlalchemy.true()
-
-    @typechecked
     def _render_exp(self, exp: BoolExp) -> BooleanClauseList:
-        if isinstance(exp.lhs, AbsoluteTrue):
-            lhs = self._render_true()
-        elif isinstance(exp.lhs, BoolExp):
+        if isinstance(exp.lhs, BoolExp):
             lhs = self._render_exp(exp.lhs)
         elif isinstance(exp.lhs, MultiComp):
             lhs = self._render_multi_comp(exp.lhs)
         else:
             lhs = self._render_comp(exp.lhs)
-        if isinstance(exp.rhs, AbsoluteTrue):
-            rhs = self._render_true()
-        elif isinstance(exp.rhs, BoolExp):
+        if isinstance(exp.rhs, BoolExp):
             rhs = self._render_exp(exp.rhs)
         elif isinstance(exp.rhs, MultiComp):
             rhs = self._render_multi_comp(exp.rhs)
@@ -135,9 +126,7 @@ class SqlTranslator:
             exp = BoolExp(filt.exp, ExpOp.AND, time_exp)
         else:
             exp = filt.exp
-        if isinstance(exp, AbsoluteTrue):
-            selection = self._render_true()
-        elif isinstance(exp, BoolExp):
+        if isinstance(exp, BoolExp):
             selection = self._render_exp(exp)
         elif isinstance(exp, MultiComp):
             selection = self._render_multi_comp(exp)

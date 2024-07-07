@@ -5,6 +5,7 @@ from kestrel.interface.codegen.dataframe import (
     evaluate_source_instruction,
     evaluate_transforming_instruction,
 )
+from kestrel.ir.graph import IRGraph
 
 from kestrel.ir.instructions import (
     Construct,
@@ -67,7 +68,7 @@ p2 = proclist WHERE pid > 100
 p3 = proclist WHERE name LIKE "c%.exe"
 p4 = proclist WHERE name MATCHES r"^c\w{2}\.exe"
 """
-    graph = parse_kestrel(stmt, {})
+    graph = parse_kestrel(stmt, IRGraph(), {})
     c = graph.get_nodes_by_type(Construct)[0]
     df0 = evaluate_source_instruction(c)
     assert df0.to_dict("records") == [ {"name": "cmd.exe", "pid": 123}

@@ -147,11 +147,6 @@ class BoolExp(DataClassJSONMixin):
     rhs: FExpression
 
 
-@dataclass(frozen=True)
-class AbsoluteTrue(DataClassJSONMixin):
-    pass
-
-
 @dataclass
 class TimeRange(DataClassJSONMixin):
     """The time range of interest"""
@@ -168,7 +163,6 @@ FExpression = Union[
     RefComparison,
     MultiComp,
     BoolExp,
-    AbsoluteTrue,
 ]
 
 

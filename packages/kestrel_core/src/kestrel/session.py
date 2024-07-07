@@ -61,7 +61,9 @@ class Session(AbstractContextManager):
         Yields:
             Evaluated result per Return instruction
         """
-        irgraph_new = parse_kestrel(huntflow_block, self.config["entity_identifier"])
+        irgraph_new = parse_kestrel(
+            huntflow_block, self.irgraph, self.config["entity_identifier"]
+        )
         self.irgraph.update(irgraph_new)
 
         for ret in irgraph_new.get_returns():

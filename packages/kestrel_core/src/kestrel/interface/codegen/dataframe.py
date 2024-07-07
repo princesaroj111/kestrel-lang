@@ -18,7 +18,6 @@ from kestrel.ir.filter import (
     MultiComp,
     NumCompOp,
     StrCompOp,
-    AbsoluteTrue,
 )
 from kestrel.ir.instructions import (
     Construct,
@@ -90,9 +89,7 @@ def _eval_Filter(instruction: Filter, dataframe: DataFrame) -> DataFrame:
 @typechecked
 def _eval_Filter_exp(exp: FExpression, dataframe: DataFrame) -> Series:
     # return: a series of boolean, same length as dataframe
-    if isinstance(exp, AbsoluteTrue):
-        bs = Series(True, index=dataframe.index)
-    elif isinstance(exp, BoolExp):
+    if isinstance(exp, BoolExp):
         bs = _eval_Filter_exp_BoolExp(exp, dataframe)
     elif isinstance(exp, MultiComp):
         bss = [xs for xs in _eval_Filter_exp(exp.comps, dataframe)]

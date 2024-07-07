@@ -40,7 +40,6 @@ from kestrel.ir.instructions import (
     IntermediateInstruction,
     ProjectAttrs,
     Reference,
-    ReferenceDataSource,
     Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
@@ -87,7 +86,7 @@ class IRGraph(networkx.DiGraph):
         Parameters:
             node: the instruction to add
             dependent_node: the dependent instruction if node is a TransformingInstruction
-            deref: whether to dereference Reference/ReferenceDataSource instruction (only useful for if node is Reference/ReferenceDataSource)
+            deref: whether to dereference Reference instruction
 
         Returns:
             The node added
@@ -419,7 +418,6 @@ class IRGraph(networkx.DiGraph):
             return ps[0], {}
         else:
             # TODO: x = y + z, which is trunk?
-            # Further check ReferenceDataSource deref in _add_node() for FIND
             raise NotImplementedError(f"unknown instruction type: {node}")
 
     def update(self, ng: IRGraph):
@@ -658,14 +656,13 @@ class IRGraph(networkx.DiGraph):
         """
         return json.dumps(self.to_dict())
 
-    def get_datasource_of_node(
+    def find_datasource_of_node(
         self, node: TransformingInstruction
     ) -> Union[DataSource, Construct]:
         """Search for the DataSource of the variable
 
-        Only two types could be returned. ReferenceDataSource is not the trunk
-        of Analytics node (defined in get_trunk_n_branches()), and it will not
-        be the source node returned by this method.
+        Note that AnalyticsInterface is not the trunk of the Analytic node, so
+        it should not be a return type here.
 
         Parameters:
             node: the node to start search
@@ -692,7 +689,7 @@ class IRGraph(networkx.DiGraph):
 
         Parameters:
             node: the node/instruction to add
-            deref: whether to deref a Reference/ReferenceDataSource node
+            deref: whether to deref a Reference node
 
         Returns:
             The node added or found or derefed
@@ -711,17 +708,6 @@ class IRGraph(networkx.DiGraph):
                         else:
                             # deref succeed, no need to add node
                             node = v
-                    else:
-                        node = self._add_singleton_instruction(node)
-                elif isinstance(node, ReferenceDataSource):
-                    if deref:
-                        try:
-                            v = self.get_variable(node.name)
-                        except VariableNotFound:
-                            # deref failed, add Reference node directly
-                            node = self._add_singleton_instruction(node)
-                        else:
-                            node = self.get_datasource_of_node(v)
                     else:
                         node = self._add_singleton_instruction(node)
                 else:

@@ -64,7 +64,7 @@ def get_keywords():
 
 
 @typechecked
-def parse_kestrel(stmts: str, entity_identifier_map: dict) -> IRGraph:
+def parse_kestrel(stmts: str, irgraph: IRGraph, entity_identifier_map: dict) -> IRGraph:
     """Parse Kestrel code block into IRGraph
 
     Parameters:
@@ -78,6 +78,7 @@ def parse_kestrel(stmts: str, entity_identifier_map: dict) -> IRGraph:
         load_data_file("kestrel.frontend", "kestrel.lark"),
         parser="lalr",
         transformer=_KestrelT(
+            irgraph,
             get_frontend_mapping("fields", True),
             get_frontend_mapping("types"),
             get_relation_table("entity"),

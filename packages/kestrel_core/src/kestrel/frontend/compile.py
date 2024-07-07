@@ -217,6 +217,7 @@ def _add_reference_branches_for_filter(graph: IRGraph, filter_node: Filter):
 class _KestrelT(Transformer):
     def __init__(
         self,
+        irgraph: IRGraph,
         field_map,
         type_map,
         entity_entity_relation_table,
@@ -226,6 +227,7 @@ class _KestrelT(Transformer):
         default_sort_order=DEFAULT_SORT_ORDER,
     ):
         # token_prefix is the modification by Lark when using `merge_transformers()`
+        self.irgraph = irgraph  # for reference use, do not modify
         self.default_sort_order = default_sort_order
         self.token_prefix = token_prefix
         self.type_map = type_map
@@ -357,11 +359,11 @@ class _KestrelT(Transformer):
     def find(self, args):
         return_entity_type = args[0].value
         relation = args[1].value
-        if_reverse, input_var = (
-            (True, args[3])
+        if_reverse, input_var_ref = (
+            (True, Reference(args[3].value))
             if hasattr(args[2], "type")
             and args[2].type == self.token_prefix + "REVERSED"
-            else (False, args[2])
+            else (False, Reference(args[2].value))
         )
         filter_node = Filter()
         if len(args) > 3:
