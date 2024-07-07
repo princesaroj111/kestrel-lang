@@ -15,12 +15,8 @@ from kestrel.display import GraphletExplanation
 from kestrel.interface import AbstractInterface
 from kestrel.interface.codegen.sql import SqlTranslator, comp2func
 from kestrel.ir.filter import (
-    BoolExp,
-    ExpOp,
     RefComparison,
     FBasicComparison,
-    MultiComp,
-    StrComparison,
     StrCompOp,
 )
 from kestrel.ir.graph import IRGraphEvaluable
