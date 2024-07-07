@@ -1,6 +1,6 @@
 import json
 
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.filter import (
     IntComparison, FloatComparison, StrComparison, ListComparison,
@@ -128,7 +128,8 @@ def test_filter_compound_exp():
 
 def test_filter_with_reference():
     stmt = "x = y WHERE foo = 'bar' OR baz = z.baz"
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     filter_nodes = graph.get_nodes_by_type(Filter)
     exp = filter_nodes[0].exp
     exp_dict = exp.to_dict()

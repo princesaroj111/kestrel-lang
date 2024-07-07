@@ -11,7 +11,7 @@ from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.config import load_kestrel_config
 from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import Explain, Instruction
@@ -61,12 +61,11 @@ class Session(AbstractContextManager):
         Yields:
             Evaluated result per Return instruction
         """
-        irgraph_new = parse_kestrel(
+        rets = parse_kestrel_and_update_irgraph(
             huntflow_block, self.irgraph, self.config["entity_identifier"]
         )
-        self.irgraph.update(irgraph_new)
 
-        for ret in irgraph_new.get_returns():
+        for ret in rets:
             yield self.evaluate_instruction(ret)
 
     def evaluate_instruction(self, ins: Instruction) -> Display:

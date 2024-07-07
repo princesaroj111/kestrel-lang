@@ -4,7 +4,7 @@ from uuid import uuid4
 from kestrel.cache import InMemoryCache
 from kestrel.cache.inmemory import InMemoryCacheVirtual
 from kestrel.ir.graph import IRGraph, IRGraphEvaluable
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 
 
 def test_inmemory_cache_set_get_del():
@@ -38,12 +38,13 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
 browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 DISP browsers ATTR name, pid
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt, IRGraph(), {}))
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = InMemoryCache()
     mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
-    rets = graph.get_returns()
     assert len(rets) == 1
     df = mapping[rets[0].id]
     assert df.to_dict("records") == [ {"name": "firefox.exe", "pid": 201}
@@ -75,12 +76,13 @@ specials = proclist WHERE pid IN [123, 201]
 p2 = proclist WHERE pid = browsers.pid and name = specials.name
 DISP p2 ATTR name, pid
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt, IRGraph(), {}))
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = InMemoryCache()
     mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
-    rets = graph.get_returns()
     assert len(rets) == 1
     df = mapping[rets[0].id]
     assert df.to_dict("records") == [ {"name": "firefox.exe", "pid": 201} ]
@@ -94,7 +96,9 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt, IRGraph(), {}))
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = InMemoryCache()
     mapping = c.evaluate_graph(graph, c)
     v = c.get_virtual_copy()

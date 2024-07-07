@@ -3,11 +3,12 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from functools import reduce
+from itertools import chain
 
 from dateutil.parser import parse as to_datetime
 from lark import Token, Transformer
 from typeguard import typechecked
-from typing import Union, List
+from typing import Union, List, Iterable
 
 from kestrel.exceptions import IRGraphMissingNode, InvalidComparison
 from kestrel.ir.filter import (
@@ -227,7 +228,7 @@ class _KestrelT(Transformer):
         default_sort_order=DEFAULT_SORT_ORDER,
     ):
         # token_prefix is the modification by Lark when using `merge_transformers()`
-        self.irgraph = irgraph  # for reference use, do not modify
+        self.irgraph = irgraph
         self.default_sort_order = default_sort_order
         self.token_prefix = token_prefix
         self.type_map = type_map
@@ -238,8 +239,16 @@ class _KestrelT(Transformer):
         self.entity_event_relation_table = entity_event_relation_table
         super().__init__()
 
-    def start(self, args):
-        return reduce(compose, args, IRGraph())
+    @typechecked
+    def start(self, args) -> Iterable[Return]:
+        """Parse/transform statement, and update IRGraph
+
+        Need to update the IRGraph so both variables in previous code block and
+        variables in current code block will be resolved correctly for commands
+        in current code block.
+        """
+        reduce(compose, args, self.irgraph)
+        return list(chain(*(arg.get_returns() for arg in args)))
 
     def statement(self, args):
         return args[0]

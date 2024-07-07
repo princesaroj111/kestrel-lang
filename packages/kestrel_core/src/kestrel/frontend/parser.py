@@ -6,11 +6,13 @@ from itertools import chain
 import yaml
 from lark import Lark
 from pandas import DataFrame
+from typing import Iterable
 from typeguard import typechecked
 
 from kestrel.frontend.compile import _KestrelT
 from kestrel.mapping.data_model import reverse_mapping
 from kestrel.ir.graph import IRGraph
+from kestrel.ir.instructions import Return
 from kestrel.utils import list_folder_files, load_data_file
 from kestrel.config.utils import load_relation_configs
 
@@ -64,15 +66,18 @@ def get_keywords():
 
 
 @typechecked
-def parse_kestrel(stmts: str, irgraph: IRGraph, entity_identifier_map: dict) -> IRGraph:
-    """Parse Kestrel code block into IRGraph
+def parse_kestrel_and_update_irgraph(
+    stmts: str, irgraph: IRGraph, entity_identifier_map: dict
+) -> Iterable[Return]:
+    """Parse Kestrel code block and update the input IRGraph
 
     Parameters:
         stmts: Kestrel code block (statements)
+        irgraph: existing IRGraph (used for reference resolution; will be updated)
         entity_identifier_map: identifiers for each entity, required by FIND
 
     Returns:
-        IRGraph
+        List of Return instructions in the current code block
     """
     lp = Lark(
         load_data_file("kestrel.frontend", "kestrel.lark"),

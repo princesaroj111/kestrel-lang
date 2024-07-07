@@ -4,7 +4,7 @@ from pandas import DataFrame
 from kestrel.cache import SqlCache
 from kestrel.cache.sql import SqlCacheVirtual
 from kestrel.ir.graph import IRGraph, IRGraphEvaluable
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 
 
 def test_sql_cache_set_get_del():
@@ -37,12 +37,13 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 DISP proclist ATTR name
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt, IRGraph(), {}))
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = SqlCache()
     mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
-    rets = graph.get_returns()
     assert len(rets) == 1
     df = mapping[rets[0].id]
     assert df.to_dict("records") == [ {"name": "cmd.exe"}
@@ -62,12 +63,13 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
 browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 DISP browsers ATTR name, pid
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt, IRGraph(), {}))
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = SqlCache()
     mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
-    rets = graph.get_returns()
     assert len(rets) == 1
     df = mapping[rets[0].id]
     assert df.to_dict("records") == [ {"name": "firefox.exe", "pid": 201}
@@ -86,9 +88,10 @@ browsers = proclist WHERE name != "cmd.exe"
 DISP browsers
 DISP browsers ATTR pid
 """
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = SqlCache()
-    rets = graph.get_returns()
 
     # first DISP
     gs = graph.find_dependent_subgraphs_of_node(rets[0], c)
@@ -125,7 +128,9 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 browsers = proclist WHERE name IN ("explorer.exe", "firefox.exe", "chrome.exe")
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt, IRGraph(), {}))
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = SqlCache()
     _ = c.evaluate_graph(graph, c)
 
@@ -142,12 +147,13 @@ specials = proclist WHERE pid IN [123, 201]
 p2 = proclist WHERE pid = browsers.pid and name = specials.name
 DISP p2 ATTR name, pid
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt, IRGraph(), {}))
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = SqlCache()
     mapping = c.evaluate_graph(graph, c)
 
     # check the return is correct
-    rets = graph.get_returns()
     assert len(rets) == 1
     df = mapping[rets[0].id]
     assert df.to_dict("records") == [ {"name": "firefox.exe", "pid": 201} ]
@@ -161,7 +167,9 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 """
-    graph = IRGraphEvaluable(parse_kestrel(stmt, IRGraph(), {}))
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
     c = SqlCache()
     mapping = c.evaluate_graph(graph, c)
     v = c.get_virtual_copy()

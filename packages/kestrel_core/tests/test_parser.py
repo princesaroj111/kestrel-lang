@@ -2,7 +2,7 @@ import pytest
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.ir.filter import ReferenceValue
 from kestrel.ir.instructions import (
     Construct,
@@ -39,7 +39,8 @@ def test_parser_get_statements(stmt):
     This will need to be updated as we build out the new Transformer
     """
 
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == 4
     assert len(graph.get_nodes_by_type(Variable)) == 1
     assert len(graph.get_nodes_by_type(ProjectEntity)) == 1
@@ -52,7 +53,8 @@ def test_parser_get_statements(stmt):
 
 def test_parser_get_timespan_relative():
     stmt = "x = GET url FROM if://ds WHERE url = 'http://example.com/' LAST 5h"
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     filt_list = graph.get_nodes_by_type(Filter)
     assert len(filt_list) == 1
     filt = filt_list[0]
@@ -63,7 +65,8 @@ def test_parser_get_timespan_relative():
 def test_parser_get_timespan_absolute():
     stmt = ("x = GET url FROM if://ds WHERE url = 'http://example.com/'"
             " START '2023-11-29T00:00:00Z' STOP '2023-11-29T05:00:00Z'")
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     filt_list = graph.get_nodes_by_type(Filter)
     assert len(filt_list) == 1
     filt = filt_list[0]
@@ -82,7 +85,8 @@ def test_parser_get_timespan_absolute():
     ]
 )
 def test_parser_get_with_limit(stmt, expected):
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     limits = graph.get_nodes_by_type(Limit)
     assert len(limits) == 1
     limit = limits[0]
@@ -90,8 +94,9 @@ def test_parser_get_with_limit(stmt, expected):
 
 
 def get_parsed_filter_exp(stmt):
-    parse_tree = parse_kestrel(stmt, IRGraph(), {})
-    filter_node = parse_tree.get_nodes_by_type(Filter).pop()
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
+    filter_node = graph.get_nodes_by_type(Filter).pop()
     return filter_node.exp
 
 
@@ -139,7 +144,8 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        , {"name": "chrome.exe", "pid": 205}
                        ]
 """
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     cs = graph.get_nodes_by_type(Construct)
     assert len(cs) == 1
     construct = cs[0]
@@ -173,7 +179,8 @@ def test_parser_expression(stmt, node_cnt):
     This will need to be updated as we build out the new Transformer
     """
 
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == node_cnt
     assert len(graph.get_nodes_by_type(Variable)) == 1
     assert len(graph.get_nodes_by_type(Reference)) == 1
@@ -193,7 +200,8 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
 browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 DISP browsers ATTR name, pid
 """
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == 6
     c = graph.get_nodes_by_type(Construct)[0]
     assert {"proclist", "browsers"} == {v.name for v in graph.get_variables()}
@@ -203,7 +211,7 @@ DISP browsers ATTR name, pid
     assert proj.attrs == ('name', 'pid')
     ft = graph.get_nodes_by_type(Filter)[0]
     assert ft.exp.to_dict() == {"lhs": {"field": "name", "op": "=", "value": "firefox.exe"}, "op": "OR", "rhs": {"field": "name", "op": "=", "value": "chrome.exe"}}
-    ret = graph.get_returns()[0]
+    ret = rets[0]
     assert len(graph.edges) == 5
     assert (c, proclist) in graph.edges
     assert (proclist, ft) in graph.edges
@@ -225,7 +233,8 @@ DISP browsers ATTR name, pid
     ]
 )
 def test_reference_branch(stmt, node_cnt, expected):
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == node_cnt
     filter_nodes = graph.get_nodes_by_type(Filter)
     assert len(filter_nodes) == 1
@@ -249,7 +258,8 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 DISP proclist ATTR name, pid LIMIT 2 OFFSET 3
 """
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == 6
     c = graph.get_nodes_by_type(Construct)[0]
     assert {"proclist"} == {v.name for v in graph.get_variables()}
@@ -260,7 +270,7 @@ DISP proclist ATTR name, pid LIMIT 2 OFFSET 3
     assert limit.num == 2
     offset = graph.get_nodes_by_type(Offset)[0]
     assert offset.num == 3
-    ret = graph.get_returns()[0]
+    ret = rets[0]
     assert len(graph.edges) == 5
     assert (c, proclist) in graph.edges
     assert (proclist, proj) in graph.edges
@@ -271,7 +281,8 @@ DISP proclist ATTR name, pid LIMIT 2 OFFSET 3
 
 def test_parser_explain_alone():
     stmt = "EXPLAIN abc"
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == 3
     assert len(graph.edges) == 2
     assert Counter(map(type, graph.nodes())) == Counter([Reference, Explain, Return])
@@ -286,7 +297,8 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
                        ]
 EXPLAIN proclist
 """
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == 4
     assert len(graph.edges) == 3
     assert Counter(map(type, graph.nodes())) == Counter([Construct, Variable, Explain, Return])
@@ -304,7 +316,8 @@ EXPLAIN proclist
     ]
 )
 def test_parser_entity_and_proj_and_field_mapping(stmt, entity, ocsf_proj_field, key):
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert graph.get_nodes_by_type(Variable)[0].entity_type == entity
     assert graph.get_nodes_by_type(ProjectEntity)[0].ocsf_field == ocsf_proj_field
     assert graph.get_nodes_by_type(Filter)[0].exp.field == key

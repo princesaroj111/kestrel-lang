@@ -16,7 +16,7 @@ from kestrel.ir.instructions import (
     CACHE_INTERFACE_IDENTIFIER,
 )
 from kestrel.ir.graph import IRGraph, IRGraphSimpleQuery
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.cache import InMemoryCache
 
 
@@ -220,9 +220,10 @@ browsers = p1 WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 
 DISP browsers ATTR name
 """
-    graph = parse_kestrel(huntflow, IRGraph(), {})
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(huntflow, graph, {})
     c = InMemoryCache()
-    ret = graph.get_returns()[0]
+    ret = rets[0]
     gs = graph.find_dependent_subgraphs_of_node(ret, c)
     assert len(gs) == 1
     assert len(gs[0]) == 6
@@ -232,7 +233,8 @@ DISP browsers ATTR name
 
 def test_get_trunk_n_branches_filter():
     stmt = "y = x WHERE name = z.name AND pid = w.pid"
-    graph = parse_kestrel(stmt, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
     trunk, r2n = graph.get_trunk_n_branches(graph.get_nodes_by_type(Filter)[0])
     assert trunk.name == "x"
     for r,n in r2n.items():
@@ -247,7 +249,8 @@ p1 = NEW process [ {"name": "cmd.exe", "pid": 123}
                  , {"name": "chrome.exe", "pid": 205}
                  ]
 """
-    graph = parse_kestrel(huntflow, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(huntflow, graph, {})
     trunk, r2n = graph.get_trunk_n_branches(graph.get_variable("p1"))
     assert isinstance(trunk, Construct)
     assert r2n == {}
@@ -280,7 +283,8 @@ p5 = GET process FROM stixshifter://edr5 WHERE pid = p4.pid
 
 DISP p5 ATTR pid, name, cmd_line
 """
-    graph = parse_kestrel(huntflow, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(huntflow, graph, {})
 
     p1 = graph.get_variable("p1")
     p2 = graph.get_variable("p2")
@@ -341,7 +345,8 @@ p4 = GET process FROM elastic://edr2 WHERE name = p3.name
 
 DISP p4
 """
-    graph = parse_kestrel(huntflow, IRGraph(), {})
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(huntflow, graph, {})
     c = InMemoryCache()
     gs = graph.find_dependent_subgraphs_of_node(graph.get_returns()[0], c)
     assert len(gs) == 1
