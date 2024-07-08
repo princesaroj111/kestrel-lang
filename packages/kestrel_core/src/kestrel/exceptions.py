@@ -46,6 +46,14 @@ class InvalidKestrelRelationTable(KestrelError):
     pass
 
 
+class UnsupportedObjectRelation(KestrelError):
+    pass
+
+
+class DuplicatedRelationMapping(KestrelError):
+    pass
+
+
 class VariableNotFound(KestrelError):
     pass
 

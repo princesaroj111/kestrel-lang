@@ -162,14 +162,14 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
 
 @pytest.mark.parametrize(
     "stmt, node_cnt", [
-        ("x = y WHERE foo = 'bar'", 3),
-        ("x = y WHERE foo > 1.5", 3),
-        (r"x = y WHERE foo = r'C:\TMP'", 3),
-        ("x = y WHERE foo = 'bar' OR baz != 42", 3),
-        ("x = y WHERE foo = 'bar' AND baz IN (1, 2, 3)", 3),
-        ("x = y WHERE foo = 'bar' AND baz IN (1)", 3),
-        ("x = y WHERE foo = 'bar' SORT BY foo ASC LIMIT 3", 5),
-        ("x = y WHERE foo = 'bar' SORT BY foo ASC LIMIT 3 OFFSET 9", 6),
+        ("x = y WHERE foo = 'bar'", 4),
+        ("x = y WHERE foo > 1.5", 4),
+        (r"x = y WHERE foo = r'C:\TMP'", 4),
+        ("x = y WHERE foo = 'bar' OR baz != 42", 4),
+        ("x = y WHERE foo = 'bar' AND baz IN (1, 2, 3)", 4),
+        ("x = y WHERE foo = 'bar' AND baz IN (1)", 4),
+        ("x = y WHERE foo = 'bar' SORT BY foo ASC LIMIT 3", 6),
+        ("x = y WHERE foo = 'bar' SORT BY foo ASC LIMIT 3 OFFSET 9", 7),
     ]
 )
 def test_parser_expression(stmt, node_cnt):
@@ -180,10 +180,10 @@ def test_parser_expression(stmt, node_cnt):
     """
 
     graph = IRGraph()
+    parse_kestrel_and_update_irgraph('y = NEW process [ {"asdf": "abc.exe"} ]', graph, {})
     parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == node_cnt
-    assert len(graph.get_nodes_by_type(Variable)) == 1
-    assert len(graph.get_nodes_by_type(Reference)) == 1
+    assert len(graph.get_nodes_by_type(Variable)) == 2
     assert len(graph.get_nodes_by_type(Filter)) == 1
     assert len(graph.get_nodes_by_type(Sort)) in (0, 1)
     assert len(graph.get_nodes_by_type(Limit)) in (0, 1)
@@ -211,36 +211,36 @@ DISP browsers ATTR name, pid
     assert proj.attrs == ('name', 'pid')
     ft = graph.get_nodes_by_type(Filter)[0]
     assert ft.exp.to_dict() == {"lhs": {"field": "name", "op": "=", "value": "firefox.exe"}, "op": "OR", "rhs": {"field": "name", "op": "=", "value": "chrome.exe"}}
-    ret = rets[0]
     assert len(graph.edges) == 5
     assert (c, proclist) in graph.edges
     assert (proclist, ft) in graph.edges
     assert (ft, browsers) in graph.edges
     assert (browsers, proj) in graph.edges
-    assert (proj, ret) in graph.edges
+    assert (proj, rets[0]) in graph.edges
 
 
 @pytest.mark.parametrize(
     "stmt, node_cnt, expected", [
-        ("x = y WHERE foo = z.foo", 5, [ReferenceValue("z", ("foo",))]),
-        ("x = y WHERE foo > 1.5", 3, []),
-        ("x = y WHERE foo = 'bar' OR baz = z.baz", 5, [ReferenceValue("z", ("baz",))]),
-        ("x = y WHERE (foo = 'bar' OR baz = z.baz) AND (fox = w.fox AND bbb = z.bbb)", 8, [ReferenceValue("z", ("baz",)), ReferenceValue("w", ("fox",)), ReferenceValue("z", ("bbb",))]),
-        ("x = GET process FROM s://x WHERE foo = z.foo", 6, [ReferenceValue("z", ("foo",))]),
-        ("x = GET file FROM s://y WHERE foo > 1.5", 4, []),
-        ("x = GET file FROM c://x WHERE foo = 'bar' OR baz = z.baz", 6, [ReferenceValue("z", ("baz",))]),
-        ("x = GET user FROM s://x WHERE (foo = 'bar' OR baz = z.baz) AND (fox = w.fox AND bbb = z.bbb)", 9, [ReferenceValue("z", ("baz",)), ReferenceValue("w", ("fox",)), ReferenceValue("z", ("bbb",))]),
+        ("x = y WHERE foo = y.foo", 5, [ReferenceValue("y", ("foo",))]),
+        ("x = y WHERE foo > 1.5", 4, []),
+        ("x = y WHERE foo = 'bar' OR baz = y.baz", 5, [ReferenceValue("y", ("baz",))]),
+        ("x = y WHERE (foo = 'bar' OR baz = y.baz) AND (fox = y.fox AND bbb = y.bbb)", 7, [ReferenceValue("y", ("baz",)), ReferenceValue("y", ("fox",)), ReferenceValue("y", ("bbb",))]),
+        ("x = GET process FROM s://x WHERE foo = y.foo", 7, [ReferenceValue("y", ("foo",))]),
+        ("x = GET file FROM s://y WHERE foo > 1.5", 6, []),
+        ("x = GET file FROM c://x WHERE foo = 'bar' OR baz = y.baz", 7, [ReferenceValue("y", ("baz",))]),
+        ("x = GET user FROM s://x WHERE (foo = 'bar' OR baz = y.baz) AND (fox = y.fox AND bbb = y.bbb)", 9, [ReferenceValue("y", ("baz",)), ReferenceValue("y", ("fox",)), ReferenceValue("y", ("bbb",))]),
     ]
 )
 def test_reference_branch(stmt, node_cnt, expected):
     graph = IRGraph()
+    parse_kestrel_and_update_irgraph('y = NEW process [ {"asdf": "abc.exe"} ]', graph, {})
     parse_kestrel_and_update_irgraph(stmt, graph, {})
     assert len(graph) == node_cnt
     filter_nodes = graph.get_nodes_by_type(Filter)
     assert len(filter_nodes) == 1
     filter_node = filter_nodes[0]
     for rv in expected:
-        r = graph.get_reference(rv.reference)
+        r = graph.get_variable(rv.reference)
         assert r
         projs = [p for p in graph.successors(r) if isinstance(p, ProjectAttrs) and p.attrs == rv.attributes]
         assert projs and len(projs) == 1
@@ -280,12 +280,12 @@ DISP proclist ATTR name, pid LIMIT 2 OFFSET 3
 
 
 def test_parser_explain_alone():
-    stmt = "EXPLAIN abc"
+    stmt = 'y = NEW process [ {"asdf": "abc.exe"} ] EXPLAIN y'
     graph = IRGraph()
     parse_kestrel_and_update_irgraph(stmt, graph, {})
-    assert len(graph) == 3
-    assert len(graph.edges) == 2
-    assert Counter(map(type, graph.nodes())) == Counter([Reference, Explain, Return])
+    assert len(graph) == 4
+    assert len(graph.edges) == 3
+    assert Counter(map(type, graph.nodes())) == Counter([Construct, Variable, Explain, Return])
 
 
 def test_parser_explain_dereferred():

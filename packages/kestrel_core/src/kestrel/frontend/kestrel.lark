@@ -15,8 +15,8 @@ statement: assignment
 // For assign or merge, the result variable is required
 // This eliminates meaningless huntflows like `var1 var2 var3`
 assignment: VARIABLE "=" expression
+          | VARIABLE "=" command_with_result
           | VARIABLE "=" VARIABLE ("+" VARIABLE)+
-          | (VARIABLE "=")? command_with_result
 
 // "?" at the beginning will inline command
 ?command_with_result: find

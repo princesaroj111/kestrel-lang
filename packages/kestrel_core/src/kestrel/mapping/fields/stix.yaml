@@ -9,27 +9,28 @@ file:
     created_time: file:created
     modified_time: file:modified
     # This "hashes" notation comes from jmespath (filter projection)
-    # It's much easier to use the ECS notation in this case
-    hashes[?algorithm_id == 1]:
-        value: file:hashes.MD5
-    hashes[?algorithm_id == 2]:
-        value: "file:hashes.'SHA-1'"
-    hashes[?algorithm_id == 3]:
-        value: "file:hashes.'SHA-256'"
-    hashes[?algorithm_id == 4]:
-        value: "file:hashes.'SHA-512'"
-    hashes[?algorithm_id == 5]:
-        value: file:hashes.SSDEEP
-    hashes[?algorithm_id == 6]:
-        value: file:hashes.TLSH
-    hashes[*]:
-        value:
-          - file:hashes.MD5
-          - "file:hashes.'SHA-1'"
-          - "file:hashes.'SHA-256'"
-          - "file:hashes.'SHA-512'"
-          - file:hashes.SSDEEP
-          - file:hashes.TLSH
+    # Disable for now: it's much easier to use the ECS notation in this case
+    #
+    #hashes[?algorithm_id == 1]:
+    #    value: file:hashes.MD5
+    #hashes[?algorithm_id == 2]:
+    #    value: "file:hashes.'SHA-1'"
+    #hashes[?algorithm_id == 3]:
+    #    value: "file:hashes.'SHA-256'"
+    #hashes[?algorithm_id == 4]:
+    #    value: "file:hashes.'SHA-512'"
+    #hashes[?algorithm_id == 5]:
+    #    value: file:hashes.SSDEEP
+    #hashes[?algorithm_id == 6]:
+    #    value: file:hashes.TLSH
+    #hashes[*]:
+    #    value:
+    #      - file:hashes.MD5
+    #      - "file:hashes.'SHA-1'"
+    #      - "file:hashes.'SHA-256'"
+    #      - "file:hashes.'SHA-512'"
+    #      - file:hashes.SSDEEP
+    #      - file:hashes.TLSH
 
 
 # https://schema.ocsf.io/1.1.0/objects/group

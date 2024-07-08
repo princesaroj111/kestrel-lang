@@ -232,7 +232,11 @@ DISP browsers ATTR name
 
 
 def test_get_trunk_n_branches_filter():
-    stmt = "y = x WHERE name = z.name AND pid = w.pid"
+    stmt = """
+x = NEW process [ {"name": "cmd.exe", "pid": 123} ]
+y = NEW process [ {"asdf": "abc.exe"} ]
+z = x WHERE foo = 'bar' OR baz = y.asdf
+"""
     graph = IRGraph()
     parse_kestrel_and_update_irgraph(stmt, graph, {})
     trunk, r2n = graph.get_trunk_n_branches(graph.get_nodes_by_type(Filter)[0])

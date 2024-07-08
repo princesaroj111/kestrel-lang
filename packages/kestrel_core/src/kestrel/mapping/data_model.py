@@ -319,8 +319,8 @@ def translate_entity_projection_to_ocsf(
 @typechecked
 def translate_attributes_projection_to_ocsf(
     to_ocsf_flattened_field_map: dict,
-    native_type: Optional[str],
-    entity_type: Optional[str],
+    native_type: str,
+    entity_type: str,
     attrs: Iterable[str],
 ) -> Tuple:
     _map = to_ocsf_flattened_field_map
@@ -331,20 +331,19 @@ def translate_attributes_projection_to_ocsf(
             mapping = _map.get(f"{native_type}:{attr}")
         if not mapping and native_type:  # try extend with ECS style
             mapping = _map.get(f"{native_type}.{attr}")
-        if not mapping:  # still not found; pass through
-            mapping = attr
-        ocsf_name = _get_from_mapping(mapping, "ocsf_field")
-        if isinstance(ocsf_name, list):
-            result.extend(ocsf_name)
-        else:
-            result.append(ocsf_name)
-    if entity_type:
-        # Need to prune the entity name
-        prefix = f"{entity_type}."
-        result = [
-            field[len(prefix) :] if field.startswith(prefix) else field
-            for field in result
-        ]
+        if mapping:
+            ocsf_fields = _get_from_mapping(mapping, "ocsf_field")
+            if entity_type and entity_type != "event":
+                # Need to restrict attributes of that entity type
+                prefix = f"{entity_type}."
+                ocsf_attrs = [
+                    field[len(prefix) :]
+                    for field in ocsf_fields
+                    if field.startswith(prefix)
+                ]
+                result += ocsf_attrs
+        else:  # not found; pass through
+            result.append(attr)
     return tuple(result)
 
 

@@ -753,6 +753,7 @@ class IRGraph(networkx.DiGraph):
         """Add node to graph with a dependent node
 
         Variable version and Return sequence are handled here.
+        Implicit dependencies (referred variable) of Filter are handled here.
 
         Parameters:
             node: the node/instruction to add
@@ -764,6 +765,7 @@ class IRGraph(networkx.DiGraph):
         if dependent_node not in self:
             raise InstructionNotFound(dependent_node)
         if node not in self:
+            # version control of Variable and Return
             if isinstance(node, Variable):
                 try:
                     ve = self.get_variable(node.name)
@@ -773,8 +775,16 @@ class IRGraph(networkx.DiGraph):
                     node.version = ve.version + 1
             if isinstance(node, Return):
                 node.sequence = self.get_max_return_sequence() + 1
+
             # add_edge will add node first
             self.add_edge(dependent_node, node)
+
+            # Reference handling for filter
+            if isinstance(node, Filter):
+                for refvalue in node.get_references():
+                    r = self.add_node(Reference(refvalue.reference))
+                    p = self.add_node(ProjectAttrs(refvalue.attributes), r)
+                    self.add_edge(p, node)
         return node
 
     def _from_dict(self, graph_in_dict: Mapping[str, Iterable[Mapping]]):

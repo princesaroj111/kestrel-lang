@@ -29,27 +29,28 @@ file:
     attributes: file.attributes
     created_time: file.created
     # This "hashes" notation comes from jmespath (filter projection)
-    # It's much easier to use the ECS notation in this case
-    hashes[?algorithm_id == 1]:
-        value: hash.md5
-    hashes[?algorithm_id == 2]:
-        value: hash.sha1
-    hashes[?algorithm_id == 3]:
-        value: hash.sha256
-    hashes[?algorithm_id == 4]:
-        value: hash.sha512
-    hashes[?algorithm_id == 5]:
-        value: hash.ssdeep
-    hashes[?algorithm_id == 6]:
-        value: hash.tlsh
-    hashes[*]:
-        value:
-          - hash.md5
-          - hash.sha1
-          - hash.sha256
-          - hash.sha512
-          - hash.ssdeep
-          - hash.tlsh
+    # Disable for now: it's much easier to use the ECS notation in this case
+    #
+    #hashes[?algorithm_id == 1]:
+    #    value: hash.md5
+    #hashes[?algorithm_id == 2]:
+    #    value: hash.sha1
+    #hashes[?algorithm_id == 3]:
+    #    value: hash.sha256
+    #hashes[?algorithm_id == 4]:
+    #    value: hash.sha512
+    #hashes[?algorithm_id == 5]:
+    #    value: hash.ssdeep
+    #hashes[?algorithm_id == 6]:
+    #    value: hash.tlsh
+    #hashes[*]:
+    #    value:
+    #      - hash.md5
+    #      - hash.sha1
+    #      - hash.sha256
+    #      - hash.sha512
+    #      - hash.ssdeep
+    #      - hash.tlsh
     modified_time: file.ctime
     mime_type: file.mime_type
     mode: file.mode

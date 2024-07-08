@@ -2,15 +2,19 @@
 
 import logging
 from datetime import datetime, timedelta, timezone
-from functools import reduce
 from itertools import chain
 
+from pandas import DataFrame
 from dateutil.parser import parse as to_datetime
 from lark import Token, Transformer
 from typeguard import typechecked
-from typing import Union, List, Iterable
+from typing import Union, List
 
-from kestrel.exceptions import IRGraphMissingNode, InvalidComparison
+from kestrel.exceptions import (
+    InvalidComparison,
+    UnsupportedObjectRelation,
+    DuplicatedRelationMapping,
+)
 from kestrel.ir.filter import (
     BoolExp,
     ExpOp,
@@ -28,7 +32,7 @@ from kestrel.ir.filter import (
     StrCompOp,
     TimeRange,
 )
-from kestrel.ir.graph import IRGraph, compose
+from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import (
     Analytic,
     AnalyticsInterface,
@@ -41,7 +45,6 @@ from kestrel.ir.instructions import (
     Offset,
     ProjectAttrs,
     ProjectEntity,
-    Reference,
     Return,
     Sort,
     Variable,
@@ -61,7 +64,7 @@ DEFAULT_SORT_ORDER = "DESC"
 
 
 @typechecked
-def _unescape_quoted_string(s: str):
+def _unescape_quoted_string(s: str) -> str:
     if s.startswith("r"):
         return s[2:-1]
     else:
@@ -69,18 +72,24 @@ def _unescape_quoted_string(s: str):
 
 
 @typechecked
-def _trim_ocsf_event_field(field: str) -> str:
+def _trim_ocsf_base_field(field: str, only_trim_event: bool) -> str:
     """Remove event name (as prefix) if the field starts with an event"""
     items = field.split(".")
-    if items[0].endswith("_event") or items[0].endswith("_activity"):
-        return ".".join(items[1:])
-    else:
-        return field
+    if (not only_trim_event) or (
+        only_trim_event
+        and (items[0].endswith("_event") or items[0].endswith("_activity"))
+    ):
+        items = items[1:]
+    field = ".".join(items)
+    return field
 
 
 @typechecked
 def _create_comp(
-    field: str, op_value: str, value: Union[str, int, float, List, ReferenceValue]
+    field: str,
+    op_value: str,
+    value: Union[str, int, float, List, ReferenceValue],
+    only_trim_event: bool,
 ) -> FComparison:
     # TODO: implement MultiComp
 
@@ -102,9 +111,11 @@ def _create_comp(
         compf = StrComparison
 
     if compf is RefComparison:
-        comp = compf([_trim_ocsf_event_field(field)], op(op_value), value)
+        comp = compf(
+            [_trim_ocsf_base_field(field, only_trim_event)], op(op_value), value
+        )
     else:
-        comp = compf(_trim_ocsf_event_field(field), op(op_value), value)
+        comp = compf(_trim_ocsf_base_field(field, only_trim_event), op(op_value), value)
 
     return comp
 
@@ -115,6 +126,7 @@ def _map_filter_exp(
     ocsf_projection_field: str,
     filter_exp: FExpression,
     field_map: dict,
+    only_trim_event: bool,
 ) -> FExpression:
     if isinstance(
         filter_exp,
@@ -131,11 +143,8 @@ def _map_filter_exp(
             field = filter_exp.fields[0]
         else:
             raise InvalidComparison(filter_exp)
-        # init map_result from direct mapping from field
-        map_result = set(
-            translate_comparison_to_ocsf(
-                field_map, field, filter_exp.op, filter_exp.value
-            )
+        map_result = translate_comparison_to_ocsf(
+            field_map, field, filter_exp.op, filter_exp.value
         )
         # there is a case that `field` omits the return entity (prefix)
         # this is only alloed when it refers to the return entity
@@ -144,26 +153,29 @@ def _map_filter_exp(
             f"{native_projection_field}:{field}",
             f"{native_projection_field}.{field}",
         ):
-            map_result |= set(
-                filter(
-                    lambda x: x[0].startswith(ocsf_projection_field + "."),
-                    translate_comparison_to_ocsf(
-                        field_map, full_field, filter_exp.op, filter_exp.value
-                    ),
-                )
-            )
+            for triple in translate_comparison_to_ocsf(
+                field_map, full_field, filter_exp.op, filter_exp.value
+            ):
+                if (
+                    triple[0].startswith(ocsf_projection_field + ".")
+                    and triple not in map_result
+                ):
+                    map_result.append(triple)
 
         # Build a MultiComp if field maps to several values
         if len(map_result) > 1:
             filter_exp = MultiComp(
                 ExpOp.OR,
-                [_create_comp(field, op, value) for field, op, value in map_result],
+                [
+                    _create_comp(field, op, value, only_trim_event)
+                    for field, op, value in map_result
+                ],
             )
         elif len(map_result) == 1:  # it maps to a single value
             mapping = map_result.pop()
             _logger.debug("mapping = %s", mapping)
             field = mapping[0]
-            filter_exp.field = _trim_ocsf_event_field(field)
+            filter_exp.field = _trim_ocsf_base_field(field, only_trim_event)
             filter_exp.op = mapping[1]
             filter_exp.value = mapping[2]
         else:  # pass-through
@@ -178,6 +190,7 @@ def _map_filter_exp(
                 ocsf_projection_field,
                 filter_exp.lhs,
                 field_map,
+                only_trim_event,
             ),
             filter_exp.op,
             _map_filter_exp(
@@ -185,6 +198,7 @@ def _map_filter_exp(
                 ocsf_projection_field,
                 filter_exp.rhs,
                 field_map,
+                only_trim_event,
             ),
         )
     elif isinstance(filter_exp, MultiComp):
@@ -196,7 +210,11 @@ def _map_filter_exp(
             filter_exp.op,
             [
                 _map_filter_exp(
-                    native_projection_field, ocsf_projection_field, x, field_map
+                    native_projection_field,
+                    ocsf_projection_field,
+                    x,
+                    field_map,
+                    only_trim_event,
                 )
                 for x in filter_exp.comps
             ],
@@ -205,27 +223,94 @@ def _map_filter_exp(
 
 
 @typechecked
-def _add_reference_branches_for_filter(graph: IRGraph, filter_node: Filter):
-    if filter_node not in graph:
-        raise IRGraphMissingNode("Internal error: filter node expected")
+def _get_entity_event_relation_projection(
+    table: DataFrame,
+    output_type: str,
+    relation: str,
+) -> str:
+    t1 = table[table["Output Type"] == output_type]
+    if t1.empty:
+        raise UnsupportedObjectRelation("event", output_type)
     else:
-        for refvalue in filter_node.get_references():
-            r = graph.add_node(Reference(refvalue.reference))
-            p = graph.add_node(ProjectAttrs(refvalue.attributes), r)
-            graph.add_edge(p, filter_node)
+        t2 = t1[t1["Relation"] == relation]
+        if t2.empty:
+            raise UnsupportedObjectRelation(
+                "event",
+                relation,
+                output_type,
+                f"Supported: {t1["Relation"].tolist()}",
+            )
+        else:
+            if df.shape[0] > 1:
+                raise DuplicatedRelationMapping(
+                    "event", relation, output_type, output_projections
+                )
+            else:
+                return t2["Output Projection"].iloc[0]
 
 
+@typechecked
+def _get_entity_entity_relation_specifier_projection(
+    table: DataFrame,
+    input_type: str,
+    output_type: str,
+    relation: str,
+) -> (str, str):
+    t1 = table[
+        (table["Output Type"] == output_type) & (table["Input Type"] == input_type)
+    ]
+    if t1.empty:
+        raise UnsupportedObjectRelation(input_type, output_type)
+    else:
+        t2 = t1[t1["Relation"] == relation]
+        if t2.empty:
+            raise UnsupportedObjectRelation(
+                input_type,
+                relation,
+                output_type,
+                f"Supported: {t1["Relation"].tolist()}",
+            )
+        else:
+            if df.shape[0] > 1:
+                raise DuplicatedRelationMapping(input_type, relation, output_type, df)
+            else:
+                return t2["Input Specifier"].iloc[0], t2["Output Projection"].iloc[0]
+
+
+@typechecked
+def _create_filter_for_find(
+    entity_identifier_map: dict,
+    input_var: Variable,
+    input_specifier: str,
+):
+    identifiers = entity_identifier_map[input_var.entity_type]
+    ref_val = ReferenceValue(input_var.name, tuple(identifiers))
+    comp_fields = [input_specifier + "." + x for x in identifiers]
+    return Filter(RefComparison(comp_fields, ListOp.IN, ref_val))
+
+
+@typechecked
 class _KestrelT(Transformer):
+    """Kestrel Lark Transformer
+
+    Returns for different methods:
+        - statement: [Return]
+        - assignment: [Return]
+        - command_no_result: [Return]
+        - expression: (Instruction(root), str(entity_type), str(native_type))
+        - command_with_result: (Instruction(root), str(entity_type), str(native_type))
+    """
+
     def __init__(
         self,
         irgraph: IRGraph,
-        field_map,
-        type_map,
-        entity_entity_relation_table,
-        entity_event_relation_table,
-        entity_identifier_map,
-        token_prefix="",
-        default_sort_order=DEFAULT_SORT_ORDER,
+        field_map: dict,
+        type_map: dict,
+        entity_entity_relation_table: DataFrame,
+        entity_event_relation_table: DataFrame,
+        entity_identifier_map: dict,
+        token_prefix: str = "",
+        default_sort_order: str = DEFAULT_SORT_ORDER,
     ):
         # token_prefix is the modification by Lark when using `merge_transformers()`
         self.irgraph = irgraph
@@ -234,70 +319,67 @@ class _KestrelT(Transformer):
         self.type_map = type_map
         self.field_map = field_map
         self.entity_identifier_map = entity_identifier_map
-        self.variable_map = {}  # To cache var type info
         self.entity_entity_relation_table = entity_entity_relation_table
         self.entity_event_relation_table = entity_event_relation_table
         super().__init__()
 
-    @typechecked
-    def start(self, args) -> Iterable[Return]:
+    def start(self, args) -> List[Return]:
         """Parse/transform statement, and update IRGraph
 
-        Need to update the IRGraph so both variables in previous code block and
-        variables in current code block will be resolved correctly for commands
-        in current code block.
-        """
-        reduce(compose, args, self.irgraph)
-        return list(chain(*(arg.get_returns() for arg in args)))
+        All statements should return a list of Return.
+        Merge and return all of them.
 
-    def statement(self, args):
+        self.irgraph is updated in each statement transformer. This is required
+        to search for a variable in previous IRGraph and graph generated in
+        this code block.
+        """
+        return list(chain(*args))
+
+    def statement(self, args) -> List[Return]:
         return args[0]
 
-    def assignment(self, args):
-        # TODO: move the var+var into expression in Lark
-        graph, root = args[1]
-        entity_type, native_type = self._get_type_from_predecessors(graph, root)
-        variable_node = Variable(args[0].value, entity_type, native_type)
-        self.variable_map[args[0].value] = (entity_type, native_type)
-        graph.add_node(variable_node, root)
-        return graph
+    def assignment(self, args) -> List[Return]:
+        # TODO: x = y + z
+        root, entity_type, native_type = args[1]
+        variable = Variable(args[0].value, entity_type, native_type)
+        self.irgraph.add_node(variable, root)
+        return []
 
-    def expression(self, args):
+    def expression(self, args) -> (Instruction, str, str):
         # TODO: add more clauses than WHERE and ATTR
         # TODO: think about order of clauses when turning into nodes
-        graph = IRGraph()
-        reference = graph.add_node(args[0])
-        root = reference
+        variable = args[0]
+        root = variable
         if len(args) > 1:
             for clause in args[1:]:
-                graph.add_node(clause, root)
-                root = clause
                 if isinstance(clause, Filter):
-                    # this is where_clause
-                    _add_reference_branches_for_filter(graph, clause)
-        return graph, root
+                    clause.exp = _map_filter_exp(
+                        variable.native_type,
+                        variable.native_type,
+                        clause.exp,
+                        self.field_map,
+                        False,
+                    )
+                root = self.irgraph.add_node(clause, root)
+        return root, variable.entity_type, variable.native_type
 
-    def vtrans(self, args):
+    def vtrans(self, args) -> Variable:
         if len(args) == 1:
-            return Reference(args[0].value)
+            return self.irgraph.get_variable(args[0].value)
         else:
             # TODO: transformer support
             ...
 
-    def new(self, args):
-        # TODO: use entity type
-
-        graph = IRGraph()
-        if len(args) == 1:
-            # Try to get entity type from first entity
-            entity_type = None
-            data = args[0]
-        else:
-            entity_type = args[0].value
+    def new(self, args) -> (Instruction, str, str):
+        native_type = None
+        if len(args) == 2:
+            native_type = args[0].value
             data = args[1]
-        data_node = Construct(data, entity_type)
-        graph.add_node(data_node)
-        return graph, data_node
+        data_node = self.irgraph.add_node(Construct(data, native_type))
+        if not native_type:
+            raise NotImplementedError("Infer type from NEW")
+        entity_type = self.type_map.get(native_type, native_type)
+        return data_node, entity_type, native_type
 
     def var_data(self, args):
         if isinstance(args[0], Token):
@@ -327,108 +409,175 @@ class _KestrelT(Transformer):
             v = float(v) if "." in v else int(v)
         return v
 
-    def variables(self, args):
-        return [Reference(arg.value) for arg in args]
+    def variables(self, args) -> List[Variable]:
+        return [self.irgraph.get_variable(arg.value) for arg in args]
 
-    def get(self, args):
-        graph = IRGraph()
+    def get(self, args) -> (Instruction, str, str):
+        # 0. get information of projection and return
         native_projection_field = args[0].value
         ocsf_projection_field = translate_entity_projection_to_ocsf(
             self.field_map, native_projection_field
         )
+        output_type = self.type_map.get(ocsf_projection_field, ocsf_projection_field)
 
-        # prepare Filter node
+        # 1. process DataSource
+        source_node = self.irgraph.add_node(args[1])
+
+        # 2. process Filter
         filter_node = args[2]
         filter_node.exp = _map_filter_exp(
             native_projection_field,
             ocsf_projection_field,
             filter_node.exp,
             self.field_map,
+            True,
         )
+        filter_node = self.irgraph.add_node(filter_node, source_node)
 
-        # add basic Source and Filter nodes
-        source_node = graph.add_node(args[1])
-        filter_node = graph.add_node(filter_node, source_node)
-
-        # add reference nodes if used in Filter
-        _add_reference_branches_for_filter(graph, filter_node)
-
-        projection_node = graph.add_node(
+        # 3. process ProjectEntity
+        projection_node = self.irgraph.add_node(
             ProjectEntity(ocsf_projection_field, native_projection_field), filter_node
         )
         root = projection_node
+
+        # 4. process additional instructions/nodes
         if len(args) > 3:
             for arg in args[3:]:
                 if isinstance(arg, TimeRange):
                     filter_node.timerange = arg
                 elif isinstance(arg, Limit):
-                    root = graph.add_node(arg, projection_node)
-        return graph, root
+                    root = self.irgraph.add_node(arg, projection_node)
 
-    def find(self, args):
-        return_entity_type = args[0].value
-        relation = args[1].value
-        if_reverse, input_var_ref = (
-            (True, Reference(args[3].value))
+        return root, output_type, native_projection_field
+
+    def find(self, args) -> (Instruction, str, str):
+        output_var_type = args[0].value
+        relation = args[1].value.upper()
+        if_reverse, input_var_name = (
+            (True, args[3].value)
             if hasattr(args[2], "type")
             and args[2].type == self.token_prefix + "REVERSED"
-            else (False, Reference(args[2].value))
+            else (False, args[2].value)
         )
-        filter_node = Filter()
+        input_var = self.irgraph.get_variable(input_var_name)
+        input_var_type = input_var.entity_type
+
+        if input_var_type == "event":  # event-to-entity relation
+            output_projection = _get_entity_event_relation_projection(
+                self.entity_event_relation_table,
+                output_var_type,
+                relation,
+            )
+            filter_node = self.irgraph.add_node(Filter(), input_var)
+            root = self.irgraph.add_node(
+                ProjectEntity(output_projection, output_projection), filter_node
+            )
+        elif output_var_type == "event":  # entity-to-event relation
+            if not if_reverse:  # this relation always require `BY`
+                raise UnsupportedObjectRelation(f'Missing "BY" after "{relation}"')
+            input_specifier = _get_entity_event_relation_projection(
+                self.entity_event_relation_table,
+                input_var_type,
+                relation,
+            )
+            filter_node = _create_filter_for_find(
+                self.entity_identifier_map,
+                input_var,
+                input_specifier,
+            )
+            ds = self.irgraph.find_datasource_of_node(input_var)
+            filter_node = self.irgraph.add_node(filter_node, ds)
+            # no projection since we output everything (event)
+            root = filter_node
+        else:  # entity-to-entity relation
+            lookup_input_type, lookup_output_type = (
+                (output_var_type, input_var_type)
+                if if_reverse
+                else (input_var_type, output_var_type)
+            )
+            input_specifier, output_projection = (
+                _get_entity_entity_relation_specifier_projection(
+                    self.entity_entity_relation_table,
+                    lookup_input_type,
+                    lookup_output_type,
+                    relation,
+                )
+            )
+            input_specifier, output_projection = (
+                (output_projection, input_specifier)
+                if if_reverse
+                else (input_specifier, output_projection)
+            )
+            filter_node = _create_filter_for_find(
+                self.entity_identifier_map,
+                input_var,
+                input_specifier,
+            )
+            ds = self.irgraph.find_datasource_of_node(input_var)
+            filter_node = self.irgraph.add_node(filter_node, ds)
+            root = self.irgraph.add_node(
+                ProjectEntity(output_projection, output_projection), filter_node
+            )
+
         if len(args) > 3:
             for arg in args[3:]:
                 if isinstance(arg, Filter):
-                    filter_node = arg
+                    # merge the user-specified filter (where clause)
+                    filter_node.exp = BoolExp(filter_node.exp, ExpOp.AND, arg.exp)
                 if isinstance(arg, TimeRange):
+                    # set user-specified time range
                     filter_node.timerange = arg
                 elif isinstance(arg, Limit):
-                    limit_node = arg
+                    root = self.irgraph.add_node(arg, root)
 
-    def apply(self, args):
+        return root, output_var_type, output_var_type
+
+    def apply(self, args) -> List[Return]:
         scheme, analytic_name = args[0]
-        refvar = args[1][0]  # TODO - this is a list of refs?
+        if len(args[1]) > 1:
+            raise NotImplementedError("Apply on multiple variables")
+        else:
+            refvar = args[1][0]
         params = args[2] if len(args) > 2 else {}
         vds = AnalyticsInterface(interface=scheme)
         analytic = Analytic(name=analytic_name, params=params)
         _logger.debug("apply: analytic: %s", analytic)
-        graph = IRGraph()
-        graph.add_node(refvar)
-        graph.add_node(analytic, refvar)
-        graph.add_node(vds)
-        graph.add_edge(vds, analytic)
-        entity_type, native_type = self.variable_map.get(refvar.name)
-        variable_node = Variable(refvar.name, entity_type, native_type)
-        graph.add_node(variable_node, analytic)
-        return graph
 
-    def where_clause(self, args):
+        output_var = Variable(refvar.name, refvar.entity_type, refvar.native_type)
+
+        self.irgraph.add_node(analytic, refvar)
+        self.irgraph.add_node(vds)
+        self.irgraph.add_edge(vds, analytic)
+        self.irgraph.add_node(output_var, analytic)
+        return []
+
+    def where_clause(self, args) -> Filter:
         exp = args[0]
         return Filter(exp)
 
-    def attr_clause(self, args):
+    def attr_clause(self, args) -> ProjectAttrs:
         attrs = args[0].split(",")
         attrs = tuple(attr.strip() for attr in attrs)
         return ProjectAttrs(attrs)
 
-    def sort_clause(self, args):
+    def sort_clause(self, args) -> Sort:
         # args[0] is Token('BY', 'BY')
         return Sort(*args[1:])
 
-    def expression_or(self, args):
+    def expression_or(self, args) -> BoolExp:
         return BoolExp(args[0], ExpOp.OR, args[1])
 
-    def expression_and(self, args):
+    def expression_and(self, args) -> BoolExp:
         return BoolExp(args[0], ExpOp.AND, args[1])
 
-    def comparison_std(self, args):
+    def comparison_std(self, args) -> FComparison:
         """Emit a Comparison object for a Filter"""
         field = args[0].value
         op = args[1]
         value = args[2]
-        comp = _create_comp(field, op, value)
-        return comp
+        return _create_comp(field, op, value, True)
 
-    def args(self, args):
+    def args(self, args) -> dict:
         return dict(args)
 
     def arg_kv_pair(self, args):
@@ -448,11 +597,11 @@ class _KestrelT(Transformer):
         return args[0].value
 
     # Literals
-    def advanced_string(self, args):
+    def advanced_string(self, args) -> str:
         value = _unescape_quoted_string(args[0].value)
         return value
 
-    def reference_or_simple_string(self, args):
+    def reference_or_simple_string(self, args) -> ReferenceValue:
         vname = args[0].value
         attr = args[1].value if len(args) > 1 else None
         return ReferenceValue(vname, (attr,))
@@ -473,16 +622,16 @@ class _KestrelT(Transformer):
     def literal(self, args):
         return args[0]
 
-    def datasource(self, args):
+    def datasource(self, args) -> DataSource:
         return DataSource(args[0].value)
 
-    def analytics_uri(self, args):
+    def analytics_uri(self, args) -> (str, str):
         scheme, _, analytic = args[0].value.partition("://")
         _logger.debug("analytics_uri: %s %s", scheme, analytic)
         return scheme, analytic
 
     # Timespans
-    def timespan_relative(self, args):
+    def timespan_relative(self, args) -> TimeRange:
         num = int(args[0])
         unit = args[1]
         if unit == "DAY":
@@ -497,7 +646,7 @@ class _KestrelT(Transformer):
         start = stop - delta
         return TimeRange(start, stop)
 
-    def timespan_absolute(self, args):
+    def timespan_absolute(self, args) -> TimeRange:
         start = to_datetime(args[0])
         stop = to_datetime(args[1])
         return TimeRange(start, stop)
@@ -514,55 +663,30 @@ class _KestrelT(Transformer):
     def second(self, _args):
         return "SECOND"
 
-    def timestamp(self, args):
+    def timestamp(self, args) -> str:
         return args[0]
 
     # Limit
-    def limit_clause(self, args):
+    def limit_clause(self, args) -> Limit:
         n = int(args[0])
         return Limit(n)
 
-    def offset_clause(self, args):
+    def offset_clause(self, args) -> Offset:
         n = int(args[0])
         return Offset(n)
 
-    def disp(self, args):
-        graph, root = args[0]
+    def disp(self, args) -> List[Return]:
+        root, entity_type, native_type = args[0]
         _logger.debug("disp: root = %s", root)
         if isinstance(root, ProjectAttrs):
-            # Map attrs to OCSF
-            entity_type, native_type = self._get_type_from_predecessors(graph, root)
-            _logger.debug(
-                "Map %s attrs to OCSF %s in %s", native_type, entity_type, root
-            )
             root.attrs = translate_attributes_projection_to_ocsf(
                 self.field_map, native_type, entity_type, root.attrs
             )
-        graph.add_node(Return(), root)
-        return graph
+        ret = self.irgraph.add_node(Return(), root)
+        return [ret]
 
-    def explain(self, args):
-        graph = IRGraph()
-        reference = graph.add_node(Reference(args[0].value))
-        explain = graph.add_node(Explain(), reference)
-        graph.add_node(Return(), explain)
-        return graph
-
-    def _get_type_from_predecessors(self, graph: IRGraph, root: Instruction):
-        stack = [root]
-        native_type = None
-        entity_type = None
-        while stack and not all((native_type, entity_type)):
-            curr = stack.pop()
-            _logger.debug("_get_type: curr = %s", curr)
-            stack.extend(graph.predecessors(curr))
-            if isinstance(curr, ProjectEntity):
-                native_type = curr.native_field
-                entity_type = self.type_map.get(curr.ocsf_field, curr.ocsf_field)
-            elif isinstance(curr, Variable):
-                native_type = curr.native_type
-                entity_type = curr.entity_type
-            elif isinstance(curr, Construct):
-                native_type = curr.entity_type
-                entity_type = self.type_map.get(native_type, native_type)
-        return entity_type, native_type
+    def explain(self, args) -> List[Return]:
+        variable = self.irgraph.get_variable(args[0].value)
+        explain = self.irgraph.add_node(Explain(), variable)
+        ret = self.irgraph.add_node(Return(), explain)
+        return [ret]

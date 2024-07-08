@@ -21,6 +21,7 @@ from kestrel.exceptions import (
 )
 from kestrel.ir.filter import (
     FExpression,
+    AbsoluteTrue,
     ReferenceValue,
     TimeRange,
     get_references_from_exp,
@@ -106,7 +107,7 @@ class Return(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class Filter(TransformingInstruction):
-    exp: FExpression
+    exp: FExpression = AbsoluteTrue()
     timerange: TimeRange = field(default_factory=TimeRange)
 
     # TODO: from_json() for self.exp
