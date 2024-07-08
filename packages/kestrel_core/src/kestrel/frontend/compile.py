@@ -285,7 +285,9 @@ def _create_filter_for_find(
     input_specifier: str,
 ):
     if input_var.entity_type not in entity_identifier_map:
-        raise MissingEntityIdentifierInConfig(input_var.entity_type, entity_identifier_map)
+        raise MissingEntityIdentifierInConfig(
+            input_var.entity_type, entity_identifier_map
+        )
     else:
         identifiers = entity_identifier_map[input_var.entity_type]
         ref_val = ReferenceValue(input_var.name, tuple(identifiers))
