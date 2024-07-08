@@ -64,13 +64,13 @@ class Session(AbstractContextManager):
 
         # Transcational huntflow block parsing/updating. If failed, roll back
         # all things done for this huntflow/code block
-        irgraph_backup = self.irgraph.copy()
+        irgraph_snapshot = self.irgraph.copy()
         try:
             rets = parse_kestrel_and_update_irgraph(
                 huntflow_block, self.irgraph, self.config["entity_identifier"]
             )
         except Exception as e:
-            self.irgraph = irgraph_backup
+            self.irgraph = irgraph_snapshot
             raise e
 
         for ret in rets:
