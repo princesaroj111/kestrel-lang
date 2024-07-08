@@ -265,11 +265,12 @@ def _get_entity_entity_relation_specifier_projection(
     else:
         t2 = t1[t1["Relation"] == relation]
         if t2.empty:
+            supported_relations = t1["Relation"].tolist()
             raise UnsupportedObjectRelation(
                 input_type,
                 relation,
                 output_type,
-                f"Supported: {t1["Relation"].tolist()}",
+                f"Supported: {supported_relations}",
             )
         else:
             if df.shape[0] > 1:
