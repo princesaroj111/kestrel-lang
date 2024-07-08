@@ -14,6 +14,7 @@ from kestrel.exceptions import (
     InvalidComparison,
     UnsupportedObjectRelation,
     DuplicatedRelationMapping,
+    MissingEntityIdentifierInConfig,
 )
 from kestrel.ir.filter import (
     BoolExp,
@@ -228,7 +229,7 @@ def _get_entity_event_relation_projection(
     output_type: str,
     relation: str,
 ) -> str:
-    t1 = table[table["Output Type"] == output_type]
+    t1 = table[table["OutputType"] == output_type]
     if t1.empty:
         raise UnsupportedObjectRelation("event", output_type)
     else:
@@ -241,13 +242,12 @@ def _get_entity_event_relation_projection(
                 output_type,
                 f"Supported: {supported_relations}",
             )
+        elif t2.shape[0] > 1:
+            raise DuplicatedRelationMapping(
+                "event", relation, output_type, output_projections, t2
+            )
         else:
-            if df.shape[0] > 1:
-                raise DuplicatedRelationMapping(
-                    "event", relation, output_type, output_projections
-                )
-            else:
-                return t2["Output Projection"].iloc[0]
+            return t2["OutputProjection"].iloc[0]
 
 
 @typechecked
@@ -258,7 +258,7 @@ def _get_entity_entity_relation_specifier_projection(
     relation: str,
 ) -> (str, str):
     t1 = table[
-        (table["Output Type"] == output_type) & (table["Input Type"] == input_type)
+        (table["OutputType"] == output_type) & (table["InputType"] == input_type)
     ]
     if t1.empty:
         raise UnsupportedObjectRelation(input_type, output_type)
@@ -272,11 +272,10 @@ def _get_entity_entity_relation_specifier_projection(
                 output_type,
                 f"Supported: {supported_relations}",
             )
+        elif t2.shape[0] > 1:
+            raise DuplicatedRelationMapping(input_type, relation, output_type, t2)
         else:
-            if df.shape[0] > 1:
-                raise DuplicatedRelationMapping(input_type, relation, output_type, df)
-            else:
-                return t2["Input Specifier"].iloc[0], t2["Output Projection"].iloc[0]
+            return t2["InputSpecifier"].iloc[0], t2["OutputProjection"].iloc[0]
 
 
 @typechecked
@@ -285,10 +284,13 @@ def _create_filter_for_find(
     input_var: Variable,
     input_specifier: str,
 ):
-    identifiers = entity_identifier_map[input_var.entity_type]
-    ref_val = ReferenceValue(input_var.name, tuple(identifiers))
-    comp_fields = [input_specifier + "." + x for x in identifiers]
-    return Filter(RefComparison(comp_fields, ListOp.IN, ref_val))
+    if input_var.entity_type not in entity_identifier_map:
+        raise MissingEntityIdentifierInConfig(input_var.entity_type, entity_identifier_map)
+    else:
+        identifiers = entity_identifier_map[input_var.entity_type]
+        ref_val = ReferenceValue(input_var.name, tuple(identifiers))
+        comp_fields = [input_specifier + "." + x for x in identifiers]
+        return Filter(RefComparison(comp_fields, ListOp.IN, ref_val))
 
 
 @typechecked

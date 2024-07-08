@@ -1,18 +1,18 @@
-Output Type, Input Type, Relation, Output Projection, Input Specifier, Activity type_uid
-process, process, CREATED, process.parent_process, process,
-user, process, OWNED, process.user, process,
-process, file, LOADED, process, process.file,
-process, file, CREATED, actor.process, file, 100101
-process, file, READ, actor.process, file, 100102
-process, file, UPDATED, actor.process, file, 100103
-process, file, DELETED, actor.process, file, 100104
-network_endpoint, email, CREATED, src_endpoint, email,
-network_endpoint, email, ACCEPTED, dst_endpoint, email,
-process, reg_key, CREATED, actor.process, reg_key, 20100101
-process, reg_key, READ, actor.process, reg_key, 20100102
-process, reg_key, UPDATED, actor.process, reg_key, 20100103
-process, reg_key, DELETED, actor.process, reg_key, 20100104
-process, reg_value, READ, actor.process, reg_value, 20100201
-process, reg_value, CREATED, actor.process, reg_value, 20100202
-process, reg_value, UPDATED, actor.process, reg_value, 20100203
-process, reg_value, DELETED, actor.process, reg_value, 20100204
+OutputType,InputType,Relation,OutputProjection,InputSpecifier,type_uid
+process,process,CREATED,process.parent_process,process,
+user,process,OWNED,process.user,process,
+process,file,LOADED,process,process.file,
+process,file,CREATED,actor.process,file,100101
+process,file,READ,actor.process,file,100102
+process,file,UPDATED,actor.process,file,100103
+process,file,DELETED,actor.process,file,100104
+network_endpoint,email,CREATED,src_endpoint,email,
+network_endpoint,email,ACCEPTED,dst_endpoint,email,
+process,reg_key,CREATED,actor.process,reg_key,20100101
+process,reg_key,READ,actor.process,reg_key,20100102
+process,reg_key,UPDATED,actor.process,reg_key,20100103
+process,reg_key,DELETED,actor.process,reg_key,20100104
+process,reg_value,READ,actor.process,reg_value,20100201
+process,reg_value,CREATED,actor.process,reg_value,20100202
+process,reg_value,UPDATED,actor.process,reg_value,20100203
+process,reg_value,DELETED,actor.process,reg_value,20100204

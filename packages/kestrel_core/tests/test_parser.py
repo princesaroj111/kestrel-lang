@@ -1,9 +1,11 @@
 import pytest
+import pandas
+import os
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
-from kestrel.ir.filter import ReferenceValue
+from kestrel.ir.filter import ReferenceValue, AbsoluteTrue, RefComparison
 from kestrel.ir.instructions import (
     Construct,
     DataSource,
@@ -19,6 +21,25 @@ from kestrel.ir.instructions import (
     Return,
 )
 from kestrel.ir.graph import IRGraph
+from kestrel.config import load_kestrel_config
+
+
+@pytest.fixture
+def process_creation_events():
+    # return a two-node graph:
+    #   - Construct: table from logs_ocsf_process_creation.csv
+    #   - Variable es: events pointing to the Construct
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
+    data_node = graph.get_nodes_by_type(Construct)[0]
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    data_node.data = pandas.read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv"))
+    return graph
+
+
+@pytest.fixture
+def kestrel_config():
+    return load_kestrel_config()
 
 
 @pytest.mark.parametrize(
@@ -321,3 +342,54 @@ def test_parser_entity_and_proj_and_field_mapping(stmt, entity, ocsf_proj_field,
     assert graph.get_nodes_by_type(Variable)[0].entity_type == entity
     assert graph.get_nodes_by_type(ProjectEntity)[0].ocsf_field == ocsf_proj_field
     assert graph.get_nodes_by_type(Filter)[0].exp.field == key
+
+
+def test_parser_find_event_to_entity(process_creation_events):
+    graph = process_creation_events
+    stmt = "procs = FIND process RESPONDED es"
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
+    assert Counter(map(type, graph.nodes())) == Counter([Construct, Variable, Filter, ProjectEntity, Variable])
+    filt = graph.get_nodes_by_type(Filter)[0]
+    assert isinstance(filt.exp, AbsoluteTrue)
+    projent = graph.get_nodes_by_type(ProjectEntity)[0]
+    assert projent.ocsf_field == projent.native_field == "process"
+
+
+def test_parser_find_entity_to_event(process_creation_events, kestrel_config):
+    graph = process_creation_events
+    stmt = """
+        procs = FIND process RESPONDED es
+        eves = FIND event ORIGINATED BY procs
+    """
+    parse_kestrel_and_update_irgraph(stmt, graph, kestrel_config["entity_identifier"])
+    assert Counter(map(type, graph.nodes())) == Counter([Construct, Variable, Filter, ProjectEntity, Variable, ProjectAttrs, Filter, Variable])
+    projattr = graph.get_nodes_by_type(ProjectAttrs)[0]
+    filt = [f for f in graph.get_nodes_by_type(Filter) if not isinstance(f.exp, AbsoluteTrue)][0]
+    assert (projattr, filt) in graph.edges
+    exp = filt.exp
+    assert isinstance(exp, RefComparison)
+    assert set(exp.fields) == set(['actor.process.uid', 'actor.process.endpoint.uid'])
+    assert exp.value.reference == 'procs'
+    assert set(exp.value.attributes) == set(['uid', 'endpoint.uid'])
+
+
+def test_parser_find_entity_to_entity(process_creation_events, kestrel_config):
+    graph = process_creation_events
+    stmt = """
+        procs = FIND process RESPONDED es
+        parents = FIND process CREATED procs
+    """
+    parse_kestrel_and_update_irgraph(stmt, graph, kestrel_config["entity_identifier"])
+    assert Counter(map(type, graph.nodes())) == Counter([Construct, Variable, Filter, ProjectEntity, Variable, ProjectAttrs, Filter, ProjectEntity, Variable])
+    projattr = graph.get_nodes_by_type(ProjectAttrs)[0]
+    filt = [f for f in graph.get_nodes_by_type(Filter) if not isinstance(f.exp, AbsoluteTrue)][0]
+    assert (projattr, filt) in graph.edges
+    exp = filt.exp
+    assert isinstance(exp, RefComparison)
+    assert set(exp.fields) == set(['process.uid', 'process.endpoint.uid'])
+    assert exp.value.reference == 'procs'
+    assert set(exp.value.attributes) == set(['uid', 'endpoint.uid'])
+    parents = graph.get_variable("parents")
+    projent = list(graph.predecessors(parents))[0]
+    assert projent.ocsf_field == "process.parent_process"
+    assert projent.native_field == "process.parent_process"

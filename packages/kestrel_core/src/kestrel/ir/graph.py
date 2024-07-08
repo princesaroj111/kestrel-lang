@@ -40,6 +40,7 @@ from kestrel.ir.instructions import (
     IntermediateInstruction,
     ProjectAttrs,
     Reference,
+    Construct,
     Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
@@ -657,7 +658,7 @@ class IRGraph(networkx.DiGraph):
         return json.dumps(self.to_dict())
 
     def find_datasource_of_node(
-        self, node: TransformingInstruction
+        self, start: TransformingInstruction
     ) -> Union[DataSource, Construct]:
         """Search for the DataSource of the variable
 
@@ -670,9 +671,8 @@ class IRGraph(networkx.DiGraph):
         Returns:
             DataSource of the node
         """
-        while isinstance(node, TransformingInstruction) and not isinstance(
-            node, SourceInstruction
-        ):
+        node = start
+        while isinstance(node, TransformingInstruction):
             node, _ = self.get_trunk_n_branches(node)
         if not isinstance(node, (DataSource, Construct)):
             raise SourceNotFound(v, node)

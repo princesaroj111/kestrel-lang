@@ -42,6 +42,10 @@ class InvalidKestrelConfig(KestrelError):
     pass
 
 
+class MissingEntityIdentifierInConfig(KestrelError):
+    pass
+
+
 class InvalidKestrelRelationTable(KestrelError):
     pass
 
