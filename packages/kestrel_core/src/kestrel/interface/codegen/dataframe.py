@@ -78,8 +78,11 @@ def _eval_ProjectAttrs(instruction: ProjectAttrs, dataframe: DataFrame) -> DataF
 
 @typechecked
 def _eval_ProjectEntity(instruction: ProjectEntity, dataframe: DataFrame) -> DataFrame:
-    # TODO
-    ...
+    # No translation/mapping, assuming the data is already in OCSF (Kestrel extension)
+    df = dataframe[[col for col in dataframe if col.startswith(instruction.ocsf_field)]]
+    df.rename(columns=lambda x: x[len(instruction.ocsf_field) + 1 :], inplace=True)
+    df = df.drop_duplicates()
+    return df
 
 
 @typechecked
@@ -167,14 +170,17 @@ def _eval_Filter_exp_Comparison(
                     functools.partial(comp2func[c.op], c.value)
                 )
             else:
-                if not isinstance(c.value, tuple) or len(c.fields) != len(c.value):
+                if not (
+                    isinstance(c.value, list)
+                    and isinstance(c.value[0], tuple)
+                    and len(c.fields) == len(c.value[0])
+                ):
                     raise MismatchedFieldValueInMultiColumnComparison(c)
 
                 # only support ListOp.IN and ListOp.NIN
                 if c.op not in (ListOp.IN, ListOp.NIN):
                     raise InvalidOperatorInMultiColumnComparison(c)
 
-                # TODO: to be tested in FIND with combined identifiers for an entity
                 bools = df.set_index(c.fields).index.isin(c.value)
                 # keep type consistent: from ndarray to Series
                 # flip boolean if the operator is "not in"
@@ -182,5 +188,6 @@ def _eval_Filter_exp_Comparison(
         else:
             bools = df[c.field].apply(functools.partial(comp2func[c.op], c.value))
         return bools
-    except KeyError:
+    except KeyError as e:
+        raise e
         raise NotImplementedError(f"unkown kestrel.ir.filter.*Op type: {c.op}")

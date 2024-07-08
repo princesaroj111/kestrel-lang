@@ -1,5 +1,5 @@
 OutputType,InputType,Relation,OutputProjection,InputSpecifier,type_uid
-process,process,CREATED,process.parent_process,process,
+process,process,CREATED,actor.process,process,100701
 user,process,OWNED,process.user,process,
 process,file,LOADED,process,process.file,
 process,file,CREATED,actor.process,file,100101

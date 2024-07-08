@@ -83,6 +83,7 @@ process: &process
     pid: process.pid
     uid: process.entity_id
     file:
+        endpoint: *endpoint
         name:
           - native_field: process.executable
             native_op: LIKE
@@ -104,33 +105,35 @@ process: &process
             ocsf_value: dirname
         # This "hashes" notation comes from jmespath (filter projection)
         # It's much easier to use the ECS notation in this case
-        hashes[?algorithm_id == 1]:
-            value: process.hash.md5
-        hashes[?algorithm_id == 2]:
-            value: process.hash.sha1
-        hashes[?algorithm_id == 3]:
-            value: process.hash.sha256
-        hashes[?algorithm_id == 4]:
-            value: process.hash.sha512
-        hashes[?algorithm_id == 5]:
-            value: process.hash.ssdeep
-        hashes[?algorithm_id == 6]:
-            value: process.hash.tlsh
-        hashes[*]:
-            value:
-              - process.hash.md5
-              - process.hash.sha1
-              - process.hash.sha256
-              - process.hash.sha512
-              - process.hash.ssdeep
-              - process.hash.tlsh
+        #hashes[?algorithm_id == 1]:
+        #    value: process.hash.md5
+        #hashes[?algorithm_id == 2]:
+        #    value: process.hash.sha1
+        #hashes[?algorithm_id == 3]:
+        #    value: process.hash.sha256
+        #hashes[?algorithm_id == 4]:
+        #    value: process.hash.sha512
+        #hashes[?algorithm_id == 5]:
+        #    value: process.hash.ssdeep
+        #hashes[?algorithm_id == 6]:
+        #    value: process.hash.tlsh
+        #hashes[*]:
+        #    value:
+        #      - process.hash.md5
+        #      - process.hash.sha1
+        #      - process.hash.sha256
+        #      - process.hash.sha512
+        #      - process.hash.ssdeep
+        #      - process.hash.tlsh
     parent_process:
         "*": process.parent.*
+        endpoint: *endpoint
         cmd_line: process.parent.command_line
         name: process.parent.name
         pid: process.parent.pid
         uid: process.parent.entity_id
         file:
+            endpoint: *endpoint
             name:
               - native_field: process.parent.executable
                 native_op: LIKE
@@ -152,6 +155,7 @@ process: &process
                 ocsf_value: dirname
         user:
             "*": process.parent.user.*
+            endpoint: *endpoint
             domain: process.parent.user.domain
             full_name: process.parent.user.full_name
             name: process.parent.user.name
@@ -159,6 +163,7 @@ process: &process
 
     user:
         "*": process.user.*
+        endpoint: *endpoint
         domain: process.user.domain
         full_name: process.user.full_name
         name: process.user.name

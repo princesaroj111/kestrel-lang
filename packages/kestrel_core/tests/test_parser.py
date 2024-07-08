@@ -391,5 +391,5 @@ def test_parser_find_entity_to_entity(process_creation_events, kestrel_config):
     assert set(exp.value.attributes) == set(['uid', 'endpoint.uid'])
     parents = graph.get_variable("parents")
     projent = list(graph.predecessors(parents))[0]
-    assert projent.ocsf_field == "process.parent_process"
-    assert projent.native_field == "process.parent_process"
+    assert projent.ocsf_field == "actor.process"
+    assert projent.native_field == "actor.process"
