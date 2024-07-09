@@ -30,6 +30,7 @@ from .config import load_config
 _logger = logging.getLogger(__name__)
 
 
+@typechecked
 class SQLAlchemyInterface(AbstractInterface):
     def __init__(
         self,
