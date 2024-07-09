@@ -1,10 +1,32 @@
+import os
+import pytest
 from uuid import uuid4
-from pandas import DataFrame
+from pandas import DataFrame, read_csv
 
 from kestrel.cache import SqlCache
 from kestrel.cache.sql import SqlCacheVirtual
 from kestrel.ir.graph import IRGraph, IRGraphEvaluable
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.ir.instructions import Construct
+from kestrel.config import load_kestrel_config
+
+
+@pytest.fixture
+def process_creation_events():
+    # return a two-node graph:
+    #   - Construct: table from logs_ocsf_process_creation.csv
+    #   - Variable es: events pointing to the Construct
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
+    data_node = graph.get_nodes_by_type(Construct)[0]
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    data_node.data = read_csv(os.path.join(test_dir, "logs_kestrelcache_process_creation.csv"))
+    return graph
+
+
+@pytest.fixture
+def kestrel_config():
+    return load_kestrel_config()
 
 
 def test_sql_cache_set_get_del():
@@ -158,6 +180,7 @@ DISP p2 ATTR name, pid
     df = mapping[rets[0].id]
     assert df.to_dict("records") == [ {"name": "firefox.exe", "pid": 201} ]
 
+
 def test_get_virtual_copy():
     stmt = """
 proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
@@ -189,3 +212,62 @@ browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
         del v[u]
     assert len(v) == 0
     assert len(c) == 1
+
+
+def test_eval_find_event_to_entity(process_creation_events):
+    graph = process_creation_events
+    stmt = "procs = FIND process RESPONDED es WHERE device.os = 'Linux' DISP procs"
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
+    c = SqlCache()
+    mapping = c.evaluate_graph(graph, c)
+    assert len(rets) == 1
+    df = mapping[rets[0].id]
+    assert list(df.columns) == ['cmd_line', 'name', 'pid', 'uid', 'endpoint.uid', 'endpoint.name',
+       'endpoint.os', 'file.name', 'file.path', 'user.uid', 'user.name',
+       'user.type_id', 'user.endpoint.uid', 'user.endpoint.name',
+       'user.endpoint.os', 'file.endpoint.uid', 'file.endpoint.name',
+       'file.endpoint.os']
+    assert df.shape[0] == 5  # WHERE clause filtered out 4 out of 9, so 5 remains
+
+
+def test_eval_find_entity_to_event(process_creation_events, kestrel_config):
+    graph = process_creation_events
+    stmt = """
+        procs = FIND process RESPONDED es WHERE device.os = 'Linux'
+        eves = FIND event ORIGINATED BY procs
+        DISP eves
+    """
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, kestrel_config["entity_identifier"])
+    graph = IRGraphEvaluable(graph)
+    c = SqlCache()
+    mapping = c.evaluate_graph(graph, c)
+    assert len(rets) == 1
+    df = mapping[rets[0].id]
+
+    # 1. WHERE clause filtered out 4 out of 9, so 5 remains
+    # 2. In the 5, 4 are not parent process of others, only the first is parent process
+    # 3. There are 4 lines of logs/events that uses the parent process
+    assert df.shape[0] == 4
+    assert df.shape[1] == 41  # full event: the number of columns in the csv
+
+
+def test_eval_find_entity_to_entity(process_creation_events, kestrel_config):
+    graph = process_creation_events
+    stmt = """
+        procs = FIND process RESPONDED es WHERE device.os = 'Linux'
+        parents = FIND process CREATED procs
+        DISP parents
+    """
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, kestrel_config["entity_identifier"])
+    graph = IRGraphEvaluable(graph)
+    c = SqlCache()
+    mapping = c.evaluate_graph(graph, c)
+    assert len(rets) == 1
+    df = mapping[rets[0].id]
+
+    # 1. WHERE clause filtered out 4 out of 9, so 5 remains
+    # 2. The last 4 share the same parent
+    # 3. So there are 2 processes returned/displayed after dedup
+    assert df.shape[0] == 2
+    assert list(df.columns) == ['cmd_line', 'name', 'pid', 'uid', 'endpoint.uid', 'endpoint.name', 'endpoint.os']

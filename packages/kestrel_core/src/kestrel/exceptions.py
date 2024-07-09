@@ -182,3 +182,7 @@ class InvalidAnalyticsOutput(KestrelError):
 
 class AnalyticsError(KestrelError):
     pass
+
+
+class SourceInstructionNotEvaluated(KestrelError):
+    pass

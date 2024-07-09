@@ -43,31 +43,31 @@ def _remove_nl(s):
     "iseq, sql", [
         # Try a simple filter
         ([Filter(IntComparison('foo', NumCompOp.GE, 0))],
-         "SELECT * FROM my_table WHERE foo >= ?"),
+         "SELECT DISTINCT * FROM my_table WHERE foo >= ?"),
         # Try a simple filter with sorting
         ([Filter(IntComparison('foo', NumCompOp.GE, 0)), Sort('bar')],
-         "SELECT * FROM my_table WHERE foo >= ? ORDER BY bar DESC"),
+         "SELECT DISTINCT * FROM my_table WHERE foo >= ? ORDER BY bar DESC"),
         # Simple filter plus time range
         ([Filter(IntComparison('foo', NumCompOp.GE, 0), timerange=TimeRange(_dt('2023-12-06T08:17:00Z'), _dt('2023-12-07T08:17:00Z')))],
-         "SELECT * FROM my_table WHERE foo >= ? AND timestamp >= ? AND timestamp < ?"),
+         "SELECT DISTINCT * FROM my_table WHERE foo >= ? AND timestamp >= ? AND timestamp < ?"),
         # sqlalchemy's sqlite dialect seems to always add the offset
         ([Limit(3), ProjectAttrs(['foo', 'bar', 'baz']), Filter(StrComparison('foo', StrCompOp.EQ, 'abc'))],
-         "SELECT foo, bar, baz FROM my_table WHERE foo = ? LIMIT ? OFFSET ?"),
+         "SELECT DISTINCT foo, bar, baz FROM my_table WHERE foo = ? LIMIT ? OFFSET ?"),
         # Same as above but reverse order
         ([Filter(StrComparison('foo', StrCompOp.EQ, 'abc')), ProjectAttrs(['foo', 'bar', 'baz']), Limit(3)],
-         "SELECT foo, bar, baz FROM my_table WHERE foo = ? LIMIT ? OFFSET ?"),
+         "SELECT DISTINCT foo, bar, baz FROM my_table WHERE foo = ? LIMIT ? OFFSET ?"),
         ([Filter(ListComparison('foo', ListOp.NIN, ['abc', 'def']))],
-         "SELECT * FROM my_table WHERE (foo NOT IN (__[POSTCOMPILE_foo_1]))"), # POSTCOMPILE is some SQLAlchemy-ism
+         "SELECT DISTINCT * FROM my_table WHERE (foo NOT IN (__[POSTCOMPILE_foo_1]))"), # POSTCOMPILE is some SQLAlchemy-ism
         ([Filter(StrComparison('foo', StrCompOp.MATCHES, '.*abc.*'))],
-         "SELECT * FROM my_table WHERE foo REGEXP ?"),
+         "SELECT DISTINCT * FROM my_table WHERE foo REGEXP ?"),
         ([Filter(StrComparison('foo', StrCompOp.NMATCHES, '.*abc.*'))],
-         "SELECT * FROM my_table WHERE foo NOT REGEXP ?"),
+         "SELECT DISTINCT * FROM my_table WHERE foo NOT REGEXP ?"),
         ([Filter(MultiComp(ExpOp.OR, [IntComparison('foo', NumCompOp.EQ, 1), IntComparison('bar', NumCompOp.EQ, 1)]))],
-         "SELECT * FROM my_table WHERE foo = ? OR bar = ?"),
+         "SELECT DISTINCT * FROM my_table WHERE foo = ? OR bar = ?"),
         ([Filter(MultiComp(ExpOp.AND, [IntComparison('foo', NumCompOp.EQ, 1), IntComparison('bar', NumCompOp.EQ, 1)]))],
-         "SELECT * FROM my_table WHERE foo = ? AND bar = ?"),
+         "SELECT DISTINCT * FROM my_table WHERE foo = ? AND bar = ?"),
         ([Limit(1000), Offset(2000)],
-         "SELECT * FROM my_table LIMIT ? OFFSET ?"),
+         "SELECT DISTINCT * FROM my_table LIMIT ? OFFSET ?"),
     ]
 )
 def test_sql_translator(iseq, sql):

@@ -1,6 +1,6 @@
 import logging
 from functools import reduce
-from typing import Callable, Optional
+from typing import Callable, Optional, List
 
 import sqlalchemy
 from sqlalchemy import FromClause, and_, asc, column, tuple_, desc, or_, select
@@ -73,7 +73,8 @@ class SqlTranslator:
         self.timestamp = timestamp
 
         # SQLAlchemy statement object
-        self.query: Select = select("*").select_from(from_obj)
+        # Auto-dedup by default
+        self.query: Select = select("*").select_from(from_obj).distinct()
 
     @typechecked
     def _render_comp(self, comp: FBasicComparison) -> BinaryExpression:
@@ -100,7 +101,7 @@ class SqlTranslator:
         return sqlalchemy.true()
 
     @typechecked
-    def _render_exp(self, exp: BoolExp) -> BooleanClauseList:
+    def _render_exp(self, exp: BoolExp) -> ColumnElement:
         if isinstance(exp.lhs, AbsoluteTrue):
             lhs = self._render_true()
         elif isinstance(exp.lhs, BoolExp):
@@ -109,7 +110,8 @@ class SqlTranslator:
             lhs = self._render_multi_comp(exp.lhs)
         else:
             lhs = self._render_comp(exp.lhs)
-        if isinstance(exp.lhs, AbsoluteTrue):
+
+        if isinstance(exp.rhs, AbsoluteTrue):
             rhs = self._render_true()
         elif isinstance(exp.rhs, BoolExp):
             rhs = self._render_exp(exp.rhs)
@@ -117,6 +119,7 @@ class SqlTranslator:
             rhs = self._render_multi_comp(exp.rhs)
         else:
             rhs = self._render_comp(exp.rhs)
+
         return and_(lhs, rhs) if exp.op == ExpOp.AND else or_(lhs, rhs)
 
     @typechecked
@@ -151,12 +154,18 @@ class SqlTranslator:
 
     def add_ProjectAttrs(self, proj: ProjectAttrs) -> None:
         cols = [column(col) for col in proj.attrs]
-        self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
+        self.query = self.query.with_only_columns(*cols)
 
-    def add_ProjectEntity(self, proj: ProjectEntity) -> None:
-        self.query = self.query.with_only_columns(
-            column(proj.ocsf_field + ".*")
-        )  # TODO: mapping?
+    def add_ProjectEntity(self, proj: ProjectEntity, table_schema: List[str]) -> None:
+        # this will only be called to project from events
+        # input the table_schema of the event table (irgraph.find_datasource_of_node())
+        prefix = proj.native_field + "."
+        pairs = {
+            col: col[len(prefix) :] for col in table_schema if col.startswith(prefix)
+        }
+        _logger.debug(f"column projection pairs: {pairs}")
+        cols = [sqlalchemy.column(i).label(j) for i, j in pairs.items()]
+        self.query = self.query.with_only_columns(*cols)
 
     def add_Limit(self, lim: Limit) -> None:
         self.query = self.query.limit(lim.num)
@@ -169,16 +178,15 @@ class SqlTranslator:
         order = asc(col) if sort.direction == SortDirection.ASC else desc(col)
         self.query = self.query.order_by(order)
 
-    def add_instruction(self, i: Instruction) -> None:
+    def add_instruction(self, i: Instruction, *args) -> None:
         inst_name = i.instruction
         method_name = f"add_{inst_name}"
         method = getattr(self, method_name)
         if not method:
             raise NotImplementedError(f"SqlTranslator.{method_name}")
-        method(i)
+        method(i, *args)
 
     def result(self) -> Compiled:
-        # TODO: two projections, e.g., ProjectAttrs after ProjectEntity
         return self.query.compile(dialect=self.dialect)
 
     def result_w_literal_binds(self) -> Compiled:

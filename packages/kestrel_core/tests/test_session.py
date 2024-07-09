@@ -188,7 +188,7 @@ EXPLAIN chrome
         construct = session.irgraph.get_nodes_by_type(Construct)[0]
         assert ge.query.language == "SQL"
         stmt = ge.query.statement.replace('"', '')
-        assert stmt == f"WITH proclist AS \n(SELECT * \nFROM {construct.id.hex}v), \nbrowsers AS \n(SELECT * \nFROM proclist \nWHERE name != 'cmd.exe'), \nchrome AS \n(SELECT * \nFROM browsers \nWHERE pid = 205)\n SELECT * \nFROM chrome"
+        assert stmt == f"WITH proclist AS \n(SELECT DISTINCT * \nFROM {construct.id.hex}v), \nbrowsers AS \n(SELECT DISTINCT * \nFROM proclist \nWHERE name != 'cmd.exe'), \nchrome AS \n(SELECT DISTINCT * \nFROM browsers \nWHERE pid = 205)\n SELECT DISTINCT * \nFROM chrome"
         with pytest.raises(StopIteration):
             next(ress)
 
@@ -265,28 +265,28 @@ DISP d2
         query = disp.graphlets[0].query.statement.replace('"', '')
         procs = session.irgraph.get_variable("procs")
         c1 = next(session.irgraph.predecessors(procs))
-        assert query == f"WITH procs AS \n(SELECT * \nFROM {c1.id.hex}), \np2 AS \n(SELECT * \nFROM procs \nWHERE name IN ('firefox.exe', 'chrome.exe'))\n SELECT pid \nFROM p2"
+        assert query == f"WITH procs AS \n(SELECT DISTINCT * \nFROM {c1.id.hex}), \np2 AS \n(SELECT DISTINCT * \nFROM procs \nWHERE name IN ('firefox.exe', 'chrome.exe'))\n SELECT DISTINCT pid \nFROM p2"
 
         # DISP nt
         assert len(disp.graphlets[1].graph["nodes"]) == 2
         query = disp.graphlets[1].query.statement.replace('"', '')
         nt = session.irgraph.get_variable("nt")
         c2 = next(session.irgraph.predecessors(nt))
-        assert query == f"WITH nt AS \n(SELECT * \nFROM {c2.id.hex})\n SELECT * \nFROM nt"
+        assert query == f"WITH nt AS \n(SELECT DISTINCT * \nFROM {c2.id.hex})\n SELECT DISTINCT * \nFROM nt"
 
         # DISP domain
         assert len(disp.graphlets[2].graph["nodes"]) == 2
         query = disp.graphlets[2].query.statement.replace('"', '')
         domain = session.irgraph.get_variable("domain")
         c3 = next(session.irgraph.predecessors(domain))
-        assert query == f"WITH domain AS \n(SELECT * \nFROM {c3.id.hex})\n SELECT * \nFROM domain"
+        assert query == f"WITH domain AS \n(SELECT DISTINCT * \nFROM {c3.id.hex})\n SELECT DISTINCT * \nFROM domain"
 
         # EXPLAIN d2
         assert len(disp.graphlets[3].graph["nodes"]) == 11
         query = disp.graphlets[3].query.statement.replace('"', '')
         p2 = session.irgraph.get_variable("p2")
         p2pa = next(session.irgraph.successors(p2))
-        assert query == f"WITH ntx AS \n(SELECT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT * \nFROM {domain.id.hex}v \nWHERE ip IN (SELECT destination \nFROM ntx))\n SELECT * \nFROM d2"
+        assert query == f"WITH ntx AS \n(SELECT DISTINCT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT DISTINCT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT DISTINCT * \nFROM {domain.id.hex}v \nWHERE ip IN (SELECT DISTINCT destination \nFROM ntx))\n SELECT DISTINCT * \nFROM d2"
 
         df_ref = DataFrame([{"ip": "1.1.1.2", "domain": "xyz.cloudflare.com"}])
         assert df_ref.equals(df_res)

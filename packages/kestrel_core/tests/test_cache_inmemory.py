@@ -202,5 +202,4 @@ def test_eval_find_entity_to_entity(process_creation_events, kestrel_config):
     # 2. The last 4 share the same parent
     # 3. So there are 2 processes returned/displayed after dedup
     assert df.shape[0] == 2
-    assert list(df.columns) == ['cmd_line', 'name', 'pid', 'uid', 'endpoint.uid', 'endpoint.name',
-       'endpoint.os']
+    assert list(df.columns) == ['cmd_line', 'name', 'pid', 'uid', 'endpoint.uid', 'endpoint.name', 'endpoint.os']
