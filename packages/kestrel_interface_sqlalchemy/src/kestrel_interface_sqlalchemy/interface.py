@@ -130,7 +130,7 @@ class SQLAlchemyInterface(AbstractInterface):
                 "_evaluate_instruction_in_graph", "instruction"
             ):
                 try:
-                    ds = graph.get_datasource_of_node(node)
+                    ds = graph.find_datasource_of_node(node)
                 except SourceNotFound:
                     continue
                 else:
