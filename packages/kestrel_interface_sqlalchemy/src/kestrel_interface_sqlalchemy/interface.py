@@ -1,5 +1,4 @@
 import logging
-import inspect
 from functools import reduce
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
