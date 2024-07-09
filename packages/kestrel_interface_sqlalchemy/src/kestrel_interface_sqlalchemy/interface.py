@@ -24,6 +24,7 @@ from kestrel.mapping.data_model import translate_dataframe
 from kestrel.exceptions import SourceNotFound
 
 from .translator import SQLAlchemyTranslator
+from .utils import iter_argument_from_function_in_callstack
 from .config import load_config
 
 
@@ -124,31 +125,28 @@ class SQLAlchemyInterface(AbstractInterface):
             subquery_memory = {}
 
         if instruction.id in cache:
-            # first get the datasource assocaited with the cached node
+            # 1. get the datasource assocaited with the cached node
             ds = None
-            x_layer_backed = 1
-            while not ds:
-                caller = inspect.stack()[x_layer_backed]
-                if caller[3] != "_evaluate_instruction_in_graph":
-                    # back tracked too far
-                    break
-                successor = caller[0].f_locals["instruction"]
+            for node in iter_argument_from_function_in_callstack("_evaluate_instruction_in_graph", "instruction"):
                 try:
-                    ds = graph.get_datasource_of_node(successor)
+                    ds = graph.get_datasource_of_node(node)
                 except SourceNotFound:
-                    x_layer_backed += 1
+                    continue
+                else:
+                    break
             if not ds:
                 _logger.error(
                     "backed tracked entire stack but still do not find source"
                 )
                 raise SourceNotFound(instruction)
 
-            # then check the datasource config to see if the datalake supports write
+            # 2. check the datasource config to see if the datalake supports write
             ds_config = self.config.datasources[ds.datasource]
             conn_config = self.config.connections[ds_config.connection]
 
+            # 3. perform table creation or in-memory cache
             if conn_config.table_creation_permission:
-                table_name = instruction.id
+                table_name = "kestrel_temp_" + instruction.id.hex
 
                 # create a new table for the cached DataFrame
                 cache[instruction.id].to_sql(
