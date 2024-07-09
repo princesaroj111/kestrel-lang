@@ -127,7 +127,9 @@ class SQLAlchemyInterface(AbstractInterface):
         if instruction.id in cache:
             # 1. get the datasource assocaited with the cached node
             ds = None
-            for node in iter_argument_from_function_in_callstack("_evaluate_instruction_in_graph", "instruction"):
+            for node in iter_argument_from_function_in_callstack(
+                "_evaluate_instruction_in_graph", "instruction"
+            ):
                 try:
                     ds = graph.get_datasource_of_node(node)
                 except SourceNotFound:

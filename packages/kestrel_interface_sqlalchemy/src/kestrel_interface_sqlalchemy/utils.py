@@ -2,7 +2,7 @@ import inspect
 
 
 def iter_argument_from_function_in_callstack(func_name: str, arg_name: str):
-    
+
     stack_height = len(inspect.stack())
 
     # search for the first func in callstack
