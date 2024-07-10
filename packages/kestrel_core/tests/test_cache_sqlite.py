@@ -20,7 +20,7 @@ def process_creation_events():
     parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
     data_node = graph.get_nodes_by_type(Construct)[0]
     test_dir = os.path.dirname(os.path.abspath(__file__))
-    data_node.data = read_csv(os.path.join(test_dir, "logs_kestrelcache_process_creation.csv"))
+    data_node.data = read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv"))
     return graph
 
 
@@ -225,7 +225,10 @@ def test_eval_find_event_to_entity(process_creation_events):
     df = mapping[rets[0].id]
     assert list(df.columns) == ['cmd_line', 'name', 'pid', 'uid', 'endpoint.uid', 'endpoint.name',
        'endpoint.os', 'file.name', 'file.path', 'user.uid', 'user.name',
-       'user.type_id', 'user.endpoint.uid', 'user.endpoint.name',
+       'user.type_id', 'parent_process.cmd_line', 'parent_process.name',
+       'parent_process.pid', 'parent_process.uid',
+       'parent_process.endpoint.uid', 'parent_process.endpoint.name',
+       'parent_process.endpoint.os', 'user.endpoint.uid', 'user.endpoint.name',
        'user.endpoint.os', 'file.endpoint.uid', 'file.endpoint.name',
        'file.endpoint.os']
     assert df.shape[0] == 5  # WHERE clause filtered out 4 out of 9, so 5 remains
