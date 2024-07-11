@@ -15,8 +15,8 @@ statement: assignment
 // For assign or merge, the result variable is required
 // This eliminates meaningless huntflows like `var1 var2 var3`
 assignment: VARIABLE "=" expression
+          | VARIABLE "=" command_with_result
           | VARIABLE "=" VARIABLE ("+" VARIABLE)+
-          | (VARIABLE "=")? command_with_result
 
 // "?" at the beginning will inline command
 ?command_with_result: find
@@ -40,7 +40,7 @@ assignment: VARIABLE "=" expression
 
 find: "FIND"i ENTITY_TYPE RELATION (REVERSED)? VARIABLE where_clause? timespan? limit_clause?
 
-get: "GET"i PROJECT_FIELD ("FROM"i datasource)? where_clause timespan? limit_clause?
+get: "GET"i PROJECT_FIELD "FROM"i datasource where_clause timespan? limit_clause?
 
 group: "GROUP"i VARIABLE BY grp_spec ("WITH"i agg_list)?
 

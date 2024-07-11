@@ -7,7 +7,7 @@ import sys
 import uuid
 from dataclasses import InitVar, dataclass, field, fields
 from enum import Enum
-from typing import Any, Callable, Iterable, List, Mapping, Optional, Type, Union
+from typing import Any, Callable, Iterable, Tuple, Mapping, Optional, Type, Union
 
 from mashumaro.mixins.json import DataClassJSONMixin
 from typeguard import typechecked
@@ -21,6 +21,7 @@ from kestrel.exceptions import (
 )
 from kestrel.ir.filter import (
     FExpression,
+    AbsoluteTrue,
     ReferenceValue,
     TimeRange,
     get_references_from_exp,
@@ -106,7 +107,7 @@ class Return(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class Filter(TransformingInstruction):
-    exp: FExpression
+    exp: FExpression = AbsoluteTrue()
     timerange: TimeRange = field(default_factory=TimeRange)
 
     # TODO: from_json() for self.exp
@@ -126,8 +127,8 @@ class ProjectEntity(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class ProjectAttrs(SolePredecessorTransformingInstruction):
-    # mashumaro does not support typing.Iterable, only List
-    attrs: List[str]
+    # mashumaro does not support typing.Iterable, only List/Tuple
+    attrs: Tuple[str]
 
 
 @dataclass(eq=False)
@@ -200,7 +201,7 @@ class Offset(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class Construct(SourceInstruction):
-    data: List[Mapping[str, Union[str, int, bool]]]
+    data: Tuple[Mapping[str, Union[str, int, bool]]]
     entity_type: Optional[str] = None
     interface: str = CACHE_INTERFACE_IDENTIFIER
 

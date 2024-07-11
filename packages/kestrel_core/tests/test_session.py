@@ -38,17 +38,17 @@ DISP cmd ATTR pid
 
 def test_execute_in_cache_stix_process():
     hf = """
-proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
-                       , {"binary_ref.name": "explorer.exe", "pid": 99}
-                       , {"binary_ref.name": "firefox.exe", "pid": 201}
-                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+proclist = NEW process [ {"file.name": "cmd.exe", "pid": 123}
+                       , {"file.name": "explorer.exe", "pid": 99}
+                       , {"file.name": "firefox.exe", "pid": 201}
+                       , {"file.name": "chrome.exe", "pid": 205}
                        ]
 DISP proclist ATTR binary_ref.name
 """
-    b1 = DataFrame([ {"binary_ref.name": "cmd.exe"}
-                   , {"binary_ref.name": "explorer.exe"}
-                   , {"binary_ref.name": "firefox.exe"}
-                   , {"binary_ref.name": "chrome.exe"}
+    b1 = DataFrame([ {"file.name": "cmd.exe"}
+                   , {"file.name": "explorer.exe"}
+                   , {"file.name": "firefox.exe"}
+                   , {"file.name": "chrome.exe"}
                    ])
     with Session() as session:
         res = session.execute_to_generate(hf)
@@ -81,30 +81,31 @@ DISP proclist ATTR file.name
 
 def test_execute_in_cache_stix_process_filtered():
     hf = """
-proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
-                       , {"binary_ref.name": "explorer.exe", "pid": 99}
-                       , {"binary_ref.name": "firefox.exe", "pid": 201}
-                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+proclist = NEW process [ {"file.name": "cmd.exe", "pid": 123}
+                       , {"file.name": "explorer.exe", "pid": 99}
+                       , {"file.name": "firefox.exe", "pid": 201}
+                       , {"file.name": "chrome.exe", "pid": 205}
                        ]
 browsers = proclist WHERE binary_ref.name in ('chrome.exe', 'firefox.exe')
 DISP browsers ATTR binary_ref.name, pid
 """
-    b1 = DataFrame([ {"binary_ref.name": "firefox.exe", "pid": 201}
-                   , {"binary_ref.name": "chrome.exe", "pid": 205}
+    b1 = DataFrame([ {"file.name": "firefox.exe", "pid": 201}
+                   , {"file.name": "chrome.exe", "pid": 205}
                    ])
     with Session() as session:
         res = session.execute_to_generate(hf)
-        assert b1.equals(next(res))
+        df = next(res)
+        assert b1.equals(df)
         with pytest.raises(StopIteration):
             next(res)
 
 
 def test_execute_in_cache_stix_process_with_ref_and_multi_returns():
     hf = """
-proclist = NEW process [ {"binary_ref.name": "cmd.exe", "pid": 123}
-                       , {"binary_ref.name": "explorer.exe", "pid": 99}
-                       , {"binary_ref.name": "firefox.exe", "pid": 201}
-                       , {"binary_ref.name": "chrome.exe", "pid": 205}
+proclist = NEW process [ {"file.name": "cmd.exe", "pid": 123}
+                       , {"file.name": "explorer.exe", "pid": 99}
+                       , {"file.name": "firefox.exe", "pid": 201}
+                       , {"file.name": "chrome.exe", "pid": 205}
                        ]
 newvar = proclist WHERE binary_ref.name = "cmd.exe"
 DISP proclist ATTR binary_ref.name
@@ -112,12 +113,12 @@ newvar2 = proclist WHERE binary_ref.name IN ("explorer.exe", "cmd.exe")
 newvar3 = newvar2 WHERE pid IN newvar.pid
 DISP newvar3 ATTR binary_ref.name
 """
-    b1 = DataFrame([ {"binary_ref.name": "cmd.exe"}
-                   , {"binary_ref.name": "explorer.exe"}
-                   , {"binary_ref.name": "firefox.exe"}
-                   , {"binary_ref.name": "chrome.exe"}
+    b1 = DataFrame([ {"file.name": "cmd.exe"}
+                   , {"file.name": "explorer.exe"}
+                   , {"file.name": "firefox.exe"}
+                   , {"file.name": "chrome.exe"}
                    ])
-    b2 = DataFrame([ {"binary_ref.name": "cmd.exe"}
+    b2 = DataFrame([ {"file.name": "cmd.exe"}
                    ])
     with Session() as session:
         res = session.execute_to_generate(hf)
@@ -187,7 +188,7 @@ EXPLAIN chrome
         construct = session.irgraph.get_nodes_by_type(Construct)[0]
         assert ge.query.language == "SQL"
         stmt = ge.query.statement.replace('"', '')
-        assert stmt == f"WITH proclist AS \n(SELECT * \nFROM {construct.id.hex}v), \nbrowsers AS \n(SELECT * \nFROM proclist \nWHERE name != 'cmd.exe'), \nchrome AS \n(SELECT * \nFROM browsers \nWHERE pid = 205)\n SELECT * \nFROM chrome"
+        assert stmt == f"WITH proclist AS \n(SELECT DISTINCT * \nFROM {construct.id.hex}v), \nbrowsers AS \n(SELECT DISTINCT * \nFROM proclist \nWHERE name != 'cmd.exe'), \nchrome AS \n(SELECT DISTINCT * \nFROM browsers \nWHERE pid = 205)\n SELECT DISTINCT * \nFROM chrome"
         with pytest.raises(StopIteration):
             next(ress)
 
@@ -264,28 +265,28 @@ DISP d2
         query = disp.graphlets[0].query.statement.replace('"', '')
         procs = session.irgraph.get_variable("procs")
         c1 = next(session.irgraph.predecessors(procs))
-        assert query == f"WITH procs AS \n(SELECT * \nFROM {c1.id.hex}), \np2 AS \n(SELECT * \nFROM procs \nWHERE name IN ('firefox.exe', 'chrome.exe'))\n SELECT pid \nFROM p2"
+        assert query == f"WITH procs AS \n(SELECT DISTINCT * \nFROM {c1.id.hex}), \np2 AS \n(SELECT DISTINCT * \nFROM procs \nWHERE name IN ('firefox.exe', 'chrome.exe'))\n SELECT DISTINCT pid \nFROM p2"
 
         # DISP nt
         assert len(disp.graphlets[1].graph["nodes"]) == 2
         query = disp.graphlets[1].query.statement.replace('"', '')
         nt = session.irgraph.get_variable("nt")
         c2 = next(session.irgraph.predecessors(nt))
-        assert query == f"WITH nt AS \n(SELECT * \nFROM {c2.id.hex})\n SELECT * \nFROM nt"
+        assert query == f"WITH nt AS \n(SELECT DISTINCT * \nFROM {c2.id.hex})\n SELECT DISTINCT * \nFROM nt"
 
         # DISP domain
         assert len(disp.graphlets[2].graph["nodes"]) == 2
         query = disp.graphlets[2].query.statement.replace('"', '')
         domain = session.irgraph.get_variable("domain")
         c3 = next(session.irgraph.predecessors(domain))
-        assert query == f"WITH domain AS \n(SELECT * \nFROM {c3.id.hex})\n SELECT * \nFROM domain"
+        assert query == f"WITH domain AS \n(SELECT DISTINCT * \nFROM {c3.id.hex})\n SELECT DISTINCT * \nFROM domain"
 
         # EXPLAIN d2
         assert len(disp.graphlets[3].graph["nodes"]) == 11
         query = disp.graphlets[3].query.statement.replace('"', '')
         p2 = session.irgraph.get_variable("p2")
         p2pa = next(session.irgraph.successors(p2))
-        assert query == f"WITH ntx AS \n(SELECT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT * \nFROM {domain.id.hex}v \nWHERE ip IN (SELECT destination \nFROM ntx))\n SELECT * \nFROM d2"
+        assert query == f"WITH ntx AS \n(SELECT DISTINCT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT DISTINCT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT DISTINCT * \nFROM {domain.id.hex}v \nWHERE ip IN (SELECT DISTINCT destination \nFROM ntx))\n SELECT DISTINCT * \nFROM d2"
 
         df_ref = DataFrame([{"ip": "1.1.1.2", "domain": "xyz.cloudflare.com"}])
         assert df_ref.equals(df_res)

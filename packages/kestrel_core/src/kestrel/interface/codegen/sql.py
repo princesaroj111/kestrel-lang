@@ -1,23 +1,26 @@
 import logging
 from functools import reduce
-from typing import Callable
+from typing import Callable, Optional, List
 
-from sqlalchemy import FromClause, and_, asc, column, desc, or_, select
+import sqlalchemy
+from sqlalchemy import FromClause, and_, asc, column, tuple_, desc, or_, select
 from sqlalchemy.engine import Compiled, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import ColumnClause, ColumnOperators
+from sqlalchemy.sql.expression import ColumnOperators, ColumnElement
 from sqlalchemy.sql.selectable import Select
 from typeguard import typechecked
 
 from kestrel.ir.filter import (
     BoolExp,
     ExpOp,
-    FComparison,
+    FBasicComparison,
+    RefComparison,
     ListOp,
     MultiComp,
     NumCompOp,
     StrComparison,
     StrCompOp,
+    AbsoluteTrue,
 )
 from kestrel.ir.instructions import (
     Filter,
@@ -56,9 +59,9 @@ class SqlTranslator:
     def __init__(
         self,
         dialect: default.DefaultDialect,
-        timefmt: Callable,
-        timestamp: str,
         from_obj: FromClause,
+        timefmt: Optional[Callable],  # CTE does not have time
+        timestamp: Optional[str],  # CTE does not have time
     ):
         # SQLAlchemy Dialect object (e.g. from sqlalchemy.dialects import sqlite; sqlite.dialect())
         self.dialect = dialect
@@ -70,11 +73,20 @@ class SqlTranslator:
         self.timestamp = timestamp
 
         # SQLAlchemy statement object
-        self.query: Select = select("*").select_from(from_obj)
+        # Auto-dedup by default
+        self.query: Select = select("*").select_from(from_obj).distinct()
 
     @typechecked
-    def _render_comp(self, comp: FComparison) -> BinaryExpression:
-        col: ColumnClause = column(comp.field)
+    def _render_comp(self, comp: FBasicComparison) -> BinaryExpression:
+        # most FBasicComparison has .field; RefComparison has .fields
+        # col: ColumnElement
+        if isinstance(comp, RefComparison):
+            if len(comp.fields) == 1:
+                col = column(comp.fields[0])
+            else:
+                col = tuple_(*[column(field) for field in comp.fields])
+        else:
+            col = column(comp.field)
         if comp.op == StrCompOp.NMATCHES:
             return ~comp2func[comp.op](col, comp.value)
         return comp2func[comp.op](col, comp.value)
@@ -85,22 +97,33 @@ class SqlTranslator:
         return reduce(op, map(self._render_comp, comps.comps))
 
     @typechecked
-    def _render_exp(self, exp: BoolExp) -> BooleanClauseList:
-        if isinstance(exp.lhs, BoolExp):
+    def _render_true(self) -> ColumnElement:
+        return sqlalchemy.true()
+
+    @typechecked
+    def _render_exp(self, exp: BoolExp) -> ColumnElement:
+        if isinstance(exp.lhs, AbsoluteTrue):
+            lhs = self._render_true()
+        elif isinstance(exp.lhs, BoolExp):
             lhs = self._render_exp(exp.lhs)
         elif isinstance(exp.lhs, MultiComp):
             lhs = self._render_multi_comp(exp.lhs)
         else:
             lhs = self._render_comp(exp.lhs)
-        if isinstance(exp.rhs, BoolExp):
+
+        if isinstance(exp.rhs, AbsoluteTrue):
+            rhs = self._render_true()
+        elif isinstance(exp.rhs, BoolExp):
             rhs = self._render_exp(exp.rhs)
         elif isinstance(exp.rhs, MultiComp):
             rhs = self._render_multi_comp(exp.rhs)
         else:
             rhs = self._render_comp(exp.rhs)
+
         return and_(lhs, rhs) if exp.op == ExpOp.AND else or_(lhs, rhs)
 
-    def add_Filter(self, filt: Filter) -> None:
+    @typechecked
+    def filter_to_selection(self, filt: Filter) -> ColumnElement:
         if filt.timerange.start:
             # Convert the timerange to the appropriate pair of comparisons
             start_comp = StrComparison(
@@ -115,22 +138,34 @@ class SqlTranslator:
             exp = BoolExp(filt.exp, ExpOp.AND, time_exp)
         else:
             exp = filt.exp
-        if isinstance(exp, BoolExp):
-            comp = self._render_exp(exp)
+        if isinstance(exp, AbsoluteTrue):
+            selection = self._render_true()
+        elif isinstance(exp, BoolExp):
+            selection = self._render_exp(exp)
         elif isinstance(exp, MultiComp):
-            comp = self._render_multi_comp(exp)
+            selection = self._render_multi_comp(exp)
         else:
-            comp = self._render_comp(exp)
-        self.query = self.query.where(comp)
+            selection = self._render_comp(exp)
+        return selection
+
+    def add_Filter(self, filt: Filter) -> None:
+        selection = self.filter_to_selection(filt)
+        self.query = self.query.where(selection)
 
     def add_ProjectAttrs(self, proj: ProjectAttrs) -> None:
         cols = [column(col) for col in proj.attrs]
-        self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
+        self.query = self.query.with_only_columns(*cols)
 
-    def add_ProjectEntity(self, proj: ProjectEntity) -> None:
-        self.query = self.query.with_only_columns(
-            column(proj.ocsf_field + ".*")
-        )  # TODO: mapping?
+    def add_ProjectEntity(self, proj: ProjectEntity, table_schema: List[str]) -> None:
+        # this will only be called to project from events
+        # input the table_schema of the event table (irgraph.find_datasource_of_node())
+        prefix = proj.native_field + "."
+        pairs = {
+            col: col[len(prefix) :] for col in table_schema if col.startswith(prefix)
+        }
+        _logger.debug(f"column projection pairs: {pairs}")
+        cols = [sqlalchemy.column(i).label(j) for i, j in pairs.items()]
+        self.query = self.query.with_only_columns(*cols)
 
     def add_Limit(self, lim: Limit) -> None:
         self.query = self.query.limit(lim.num)
@@ -143,16 +178,15 @@ class SqlTranslator:
         order = asc(col) if sort.direction == SortDirection.ASC else desc(col)
         self.query = self.query.order_by(order)
 
-    def add_instruction(self, i: Instruction) -> None:
+    def add_instruction(self, i: Instruction, *args) -> None:
         inst_name = i.instruction
         method_name = f"add_{inst_name}"
         method = getattr(self, method_name)
         if not method:
             raise NotImplementedError(f"SqlTranslator.{method_name}")
-        method(i)
+        method(i, *args)
 
     def result(self) -> Compiled:
-        # TODO: two projections, e.g., ProjectAttrs after ProjectEntity
         return self.query.compile(dialect=self.dialect)
 
     def result_w_literal_binds(self) -> Compiled:

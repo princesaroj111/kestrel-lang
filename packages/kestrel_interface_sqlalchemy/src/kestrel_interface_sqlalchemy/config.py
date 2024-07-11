@@ -24,6 +24,7 @@ _logger = logging.getLogger(__name__)
 @dataclass
 class Connection(DataClassJSONMixin):
     url: str  # SQLAlchemy "connection URL" or "connection string"
+    table_creation_permission: bool  # whether we are allowed to create a table
 
 
 @dataclass

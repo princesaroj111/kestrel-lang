@@ -8,9 +8,10 @@ from typeguard import typechecked
 from kestrel.analytics import PythonAnalyticsInterface
 from kestrel.cache import SqlCache
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.config import load_kestrel_config
 from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import Explain, Instruction
@@ -25,6 +26,7 @@ class Session(AbstractContextManager):
     def __init__(self):
         self.session_id = uuid4()
         self.irgraph = IRGraph()
+        self.config = load_kestrel_config()
 
         # load all interfaces; cache is a special interface
         cache = SqlCache()
@@ -59,10 +61,19 @@ class Session(AbstractContextManager):
         Yields:
             Evaluated result per Return instruction
         """
-        irgraph_new = parse_kestrel(huntflow_block)
-        self.irgraph.update(irgraph_new)
 
-        for ret in irgraph_new.get_returns():
+        # Transcational huntflow block parsing/updating. If failed, roll back
+        # all things done for this huntflow/code block
+        irgraph_snapshot = self.irgraph.copy()
+        try:
+            rets = parse_kestrel_and_update_irgraph(
+                huntflow_block, self.irgraph, self.config["entity_identifier"]
+            )
+        except Exception as e:
+            self.irgraph = irgraph_snapshot
+            raise e
+
+        for ret in rets:
             yield self.evaluate_instruction(ret)
 
     def evaluate_instruction(self, ins: Instruction) -> Display:
@@ -77,7 +88,7 @@ class Session(AbstractContextManager):
         if ins not in self.irgraph:
             raise InstructionNotFound(ins.to_dict())
 
-        pred = self.irgraph.get_trunk_n_branches(ins)[0]
+        pred, _ = self.irgraph.get_trunk_n_branches(ins)
         is_explain = isinstance(pred, Explain)
         display = GraphExplanation([])
 

@@ -218,7 +218,7 @@ class PythonAnalyticsInterface(AbstractInterface):
                 _logger.debug("python analytics: got iid = %s from cache", iid)
                 job = PythonAnalyticsJob(iid, cache)
             else:
-                trunk, _r2n = graph.get_trunk_n_branches(instruction)
+                trunk, _ = graph.get_trunk_n_branches(instruction)
                 job = self._evaluate_instruction_in_graph(graph, cache, trunk)
 
             if isinstance(instruction, Analytic):

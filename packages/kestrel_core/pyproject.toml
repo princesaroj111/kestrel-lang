@@ -61,4 +61,4 @@ ikestrel = "kestrel.cli:ikestrel"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"*" = ["*.lark", "*.yaml"]
+"*" = ["*.lark", "*.yaml", "*.csv"]

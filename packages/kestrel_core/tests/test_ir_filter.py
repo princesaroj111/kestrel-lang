@@ -1,13 +1,18 @@
 import json
+from collections import Counter
 
-from kestrel.frontend.parser import parse_kestrel
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.ir.graph import IRGraph
 from kestrel.ir.filter import (
     IntComparison, FloatComparison, StrComparison, ListComparison,
-    RefComparison, ReferenceValue, ListOp, NumCompOp, StrCompOp, ExpOp,
+    RefComparison, ReferenceValue, ListOp, NumCompOp, StrCompOp, ExpOp, AbsoluteTrue,
     BoolExp, MultiComp, get_references_from_exp, resolve_reference_with_function,
 )
 from kestrel.ir.instructions import (
     Filter,
+    Variable,
+    Construct,
+    ProjectAttrs,
     instruction_from_json,
 )
 
@@ -86,6 +91,7 @@ def test_multi_comparison():
 
 @pytest.mark.parametrize(
     "lhs, op, rhs", [
+        (StrComparison("foo", StrCompOp.EQ, "bar"), ExpOp.AND, AbsoluteTrue()),
         (StrComparison("foo", StrCompOp.EQ, "bar"), ExpOp.AND, IntComparison("baz", NumCompOp.EQ, 42)),
         (StrComparison("foo", StrCompOp.LIKE, "%bar%"), ExpOp.OR, IntComparison("baz", NumCompOp.LE, 42)),
         (IntComparison("baz", NumCompOp.GE, 42), ExpOp.AND, StrComparison("foo", StrCompOp.NEQ, "bar")),
@@ -126,17 +132,24 @@ def test_filter_compound_exp():
 
 
 def test_filter_with_reference():
-    stmt = "x = y WHERE foo = 'bar' OR baz = z.baz"
-    graph = parse_kestrel(stmt)
+    stmt = """
+x = NEW process [ {"name": "cmd.exe", "pid": 123} ]
+y = NEW process [ {"asdf": "abc.exe"} ]
+z = x WHERE foo = 'bar' OR baz = y.asdf
+"""
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(stmt, graph, {})
+    assert len(graph.nodes()) == 7
+    assert Counter(map(type, graph.nodes())) == Counter([Variable, Variable, Variable, ProjectAttrs, Filter, Construct, Construct])
     filter_nodes = graph.get_nodes_by_type(Filter)
     exp = filter_nodes[0].exp
     exp_dict = exp.to_dict()
-    assert exp_dict == {'lhs': {'field': 'foo', 'op': '=', 'value': 'bar'}, 'op': 'OR', 'rhs': {'field': 'baz', 'op': 'IN', 'value': {'reference': 'z', 'attribute': 'baz'}}}
+    assert exp_dict == {'lhs': {'field': 'foo', 'op': '=', 'value': 'bar'}, 'op': 'OR', 'rhs': {'fields': ['baz'], 'op': 'IN', 'value': {'reference': 'y', 'attributes': ['asdf']}}}
 
 
 def test_fill_references_in_exp():
     lhs = StrComparison("foo", StrCompOp.EQ, "bar")
-    rhs = RefComparison("baz", "=", ReferenceValue("var", "attr"))
+    rhs = RefComparison(["baz"], "=", ReferenceValue("var", ("attr",)))
     exp = BoolExp(lhs, ExpOp.AND, rhs)
     rs = get_references_from_exp(exp)
     assert len(list(rs)) == 1

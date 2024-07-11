@@ -12,10 +12,13 @@ from kestrel.ir.filter import (
     BoolExp,
     ExpOp,
     FExpression,
+    FBasicComparison,
+    RefComparison,
     ListOp,
     MultiComp,
     NumCompOp,
     StrCompOp,
+    AbsoluteTrue,
 )
 from kestrel.ir.instructions import (
     Construct,
@@ -25,6 +28,10 @@ from kestrel.ir.instructions import (
     ProjectEntity,
     SourceInstruction,
     TransformingInstruction,
+)
+from kestrel.exceptions import (
+    MismatchedFieldValueInMultiColumnComparison,
+    InvalidOperatorInMultiColumnComparison,
 )
 
 
@@ -66,13 +73,16 @@ def _eval_Limit(instruction: Limit, dataframe: DataFrame) -> DataFrame:
 
 @typechecked
 def _eval_ProjectAttrs(instruction: ProjectAttrs, dataframe: DataFrame) -> DataFrame:
-    return dataframe[instruction.attrs]
+    return dataframe[list(instruction.attrs)]
 
 
 @typechecked
 def _eval_ProjectEntity(instruction: ProjectEntity, dataframe: DataFrame) -> DataFrame:
-    # TODO
-    ...
+    # No translation/mapping, assuming the data is already in OCSF (Kestrel extension)
+    df = dataframe[[col for col in dataframe if col.startswith(instruction.ocsf_field)]]
+    df.rename(columns=lambda x: x[len(instruction.ocsf_field) + 1 :], inplace=True)
+    df = df.drop_duplicates()
+    return df
 
 
 @typechecked
@@ -82,7 +92,10 @@ def _eval_Filter(instruction: Filter, dataframe: DataFrame) -> DataFrame:
 
 @typechecked
 def _eval_Filter_exp(exp: FExpression, dataframe: DataFrame) -> Series:
-    if isinstance(exp, BoolExp):
+    # return: a series of boolean, same length as dataframe
+    if isinstance(exp, AbsoluteTrue):
+        bs = Series(True, index=dataframe.index)
+    elif isinstance(exp, BoolExp):
         bs = _eval_Filter_exp_BoolExp(exp, dataframe)
     elif isinstance(exp, MultiComp):
         bss = [xs for xs in _eval_Filter_exp(exp.comps, dataframe)]
@@ -99,6 +112,7 @@ def _eval_Filter_exp(exp: FExpression, dataframe: DataFrame) -> Series:
 
 @typechecked
 def _eval_Filter_exp_BoolExp(boolexp: BoolExp, dataframe: DataFrame) -> Series:
+    # return: a series of boolean, same length as dataframe
     if boolexp.op == ExpOp.AND:
         bs = _eval_Filter_exp(boolexp.lhs, dataframe) & _eval_Filter_exp(
             boolexp.rhs, dataframe
@@ -114,9 +128,10 @@ def _eval_Filter_exp_BoolExp(boolexp: BoolExp, dataframe: DataFrame) -> Series:
 
 @typechecked
 def _eval_Filter_exp_Comparison(
-    c: FExpression,
-    dataframe: DataFrame,
+    c: FBasicComparison,
+    df: DataFrame,
 ) -> Series:
+    # return: a series of boolean, same length as dataframe
     comp2func = {
         NumCompOp.EQ: operator.eq,
         NumCompOp.NEQ: operator.ne,
@@ -138,7 +153,41 @@ def _eval_Filter_exp_Comparison(
         ListOp.NIN: lambda w, x: x not in w,
     }
 
+    # if c.value is from previous subquery evaluation,
+    # turn it into Union[List[str], List[int], List[Tuple]]
+    # TODO: may upgrade from List to Set for faster IN test
+    if isinstance(c.value, DataFrame):
+        if len(c.value.columns) == 1:
+            c.value = list(c.value.iloc[:, 0])
+        else:
+            c.value = list(c.value.itertuples(index=False, name=None))
+
     try:
-        return dataframe[c.field].apply(functools.partial(comp2func[c.op], c.value))
-    except KeyError:
+        # RefComparison has .fields; others have .field
+        if isinstance(c, RefComparison):
+            if len(c.fields) == 1:
+                bools = df[c.fields[0]].apply(
+                    functools.partial(comp2func[c.op], c.value)
+                )
+            else:
+                if not (
+                    isinstance(c.value, list)
+                    and isinstance(c.value[0], tuple)
+                    and len(c.fields) == len(c.value[0])
+                ):
+                    raise MismatchedFieldValueInMultiColumnComparison(c)
+
+                # only support ListOp.IN and ListOp.NIN
+                if c.op not in (ListOp.IN, ListOp.NIN):
+                    raise InvalidOperatorInMultiColumnComparison(c)
+
+                bools = df.set_index(c.fields).index.isin(c.value)
+                # keep type consistent: from ndarray to Series
+                # flip boolean if the operator is "not in"
+                bools = Series(bools) if c.op == ListOp.IN else ~Series(bools)
+        else:
+            bools = df[c.field].apply(functools.partial(comp2func[c.op], c.value))
+        return bools
+    except KeyError as e:
+        raise e
         raise NotImplementedError(f"unkown kestrel.ir.filter.*Op type: {c.op}")

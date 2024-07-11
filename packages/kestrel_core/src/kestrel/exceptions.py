@@ -10,6 +10,18 @@ class InvalidInstruction(KestrelError):
     pass
 
 
+class InvalidComparison(KestrelError):
+    pass
+
+
+class MismatchedFieldValueInMultiColumnComparison(KestrelError):
+    pass
+
+
+class InvalidOperatorInMultiColumnComparison(KestrelError):
+    pass
+
+
 class InvalidSeralizedGraph(KestrelError):
     pass
 
@@ -30,7 +42,27 @@ class InvalidKestrelConfig(KestrelError):
     pass
 
 
+class MissingEntityIdentifierInConfig(KestrelError):
+    pass
+
+
+class InvalidKestrelRelationTable(KestrelError):
+    pass
+
+
+class UnsupportedObjectRelation(KestrelError):
+    pass
+
+
+class DuplicatedRelationMapping(KestrelError):
+    pass
+
+
 class VariableNotFound(KestrelError):
+    pass
+
+
+class SourceNotFound(KestrelError):
     pass
 
 
@@ -149,4 +181,8 @@ class InvalidAnalyticsOutput(KestrelError):
 
 
 class AnalyticsError(KestrelError):
+    pass
+
+
+class SourceInstructionNotEvaluated(KestrelError):
     pass

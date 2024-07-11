@@ -4,10 +4,15 @@ from pathlib import Path
 from typing import Mapping, Union
 
 import yaml
+import pandas
 from typeguard import typechecked
 
-from kestrel.exceptions import InvalidKestrelConfig, InvalidYamlInConfig
-from kestrel.utils import load_data_file, update_nested_dict
+from kestrel.exceptions import (
+    InvalidKestrelConfig,
+    InvalidYamlInConfig,
+    InvalidKestrelRelationTable,
+)
+from kestrel.utils import load_data_file, update_nested_dict, list_folder_files
 
 CONFIG_DIR_DEFAULT = Path.home() / ".config" / "kestrel"
 CONFIG_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "kestrel.yaml"
@@ -79,3 +84,25 @@ def load_kestrel_config() -> Mapping:
             raise InvalidKestrelConfig(f"Invalid entity_identifier for '{entity}'")
 
     return full_config
+
+
+@typechecked
+def load_relation_configs(table_name: str) -> pandas.DataFrame:
+    """Load relation tables
+
+    Parameters:
+        table_name: "entity" (entity-to-entity relation) or "event" (entity-to-event relation)
+
+    Returns:
+        Relation table in DataFrame, which has column names
+    """
+    filepaths = list(
+        list_folder_files("kestrel.config", "relations", table_name, "csv")
+    )
+    if len(filepaths) > 1:
+        _logger.error(f"More than one relation table found; will return the first one")
+    try:
+        table = pandas.read_csv(filepaths[0])
+    except:
+        raise InvalidKestrelRelationTable(filepaths[0])
+    return table

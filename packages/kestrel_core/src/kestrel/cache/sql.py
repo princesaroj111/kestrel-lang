@@ -4,6 +4,7 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional, Union
 from uuid import UUID
 
 import sqlalchemy
+from sqlalchemy.sql.expression import CTE
 from dateutil.parser import parse as dt_parser
 from pandas import DataFrame, read_sql
 from typeguard import typechecked
@@ -13,31 +14,32 @@ from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
-    Construct,
-    Explain,
-    Filter,
     Instruction,
-    Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
+    Construct,
     Variable,
+    Filter,
+    ProjectEntity,
+    Return,
+    Explain,
 )
+from kestrel.exceptions import SourceInstructionNotEvaluated
 
 _logger = logging.getLogger(__name__)
 
 
 @typechecked
 class SqlCacheTranslator(SqlTranslator):
-    def __init__(self, from_obj: Union[sqlalchemy.sql.expression.CTE, str]):
-        if isinstance(from_obj, sqlalchemy.sql.expression.CTE):
+    def __init__(self, from_obj: Union[CTE, str]):
+        if isinstance(from_obj, CTE):
             fc = from_obj
         else:  # str to represent table name
             fc = sqlalchemy.table(from_obj)
         super().__init__(
-            sqlalchemy.dialects.sqlite.dialect(), dt_parser, "time", fc
+            sqlalchemy.dialects.sqlite.dialect(), fc, dt_parser, "time"
         )  # FIXME: need mapping for timestamp?
-        self.associated_variable = None
 
 
 @typechecked
@@ -56,6 +58,10 @@ class SqlCache(AbstractCache):
         # for a relative path, it's also three slashes?
         self.engine = sqlalchemy.create_engine(f"sqlite:///{self.db_path}")
         self.connection = self.engine.connect()
+
+        # besides self.cache_catalog, which stores instruction.id to table name mapping
+        # we also stores instruction.id to table schema mapping for ProjectEntity use
+        self.cache_catalog_schemas = {}
 
         if initial_cache:
             for instruction_id, data in initial_cache.items():
@@ -78,8 +84,14 @@ class SqlCache(AbstractCache):
         data: DataFrame,
     ):
         table_name = instruction_id.hex
-        self.cache_catalog[instruction_id] = table_name
-        data.to_sql(table_name, con=self.connection, if_exists="replace", index=False)
+        if table_name not in self.cache_catalog:
+            self.cache_catalog[instruction_id] = table_name
+            data.to_sql(
+                table_name, con=self.connection, if_exists="replace", index=False
+            )
+            self.cache_catalog_schemas[instruction_id] = list(data)
+        else:
+            _logger.debug(f"instruction already cached: {instruction_id}, {data}")
 
     def get_virtual_copy(self) -> AbstractCache:
         v = copy(self)
@@ -124,7 +136,8 @@ class SqlCache(AbstractCache):
         self,
         graph: IRGraphEvaluable,
         instruction: Instruction,
-        cte_memory: Optional[Mapping[UUID, sqlalchemy.sql.expression.CTE]] = None,
+        graph_genuine_copy: Optional[IRGraphEvaluable] = None,
+        subquery_memory: Optional[Mapping[UUID, SqlCacheTranslator]] = None,
     ) -> SqlCacheTranslator:
         """Evaluate the instruction in the graph
 
@@ -144,15 +157,19 @@ class SqlCache(AbstractCache):
         We use `None` as default value instead of `{}`
 
         Parameters:
-            graph: the graph to traverse
+            graph: the graph to traverse, node of which will be modified during evaluation
             instruction: the instruction to evaluate/return
-            cte_memory: memorize the subgraph traversed/evaluated in CTE
+            graph_genuine_copy: the original graph, deep copy, no modification, for traversal use
+            subquery_memory: memorize the subgraph traversed/evaluated
 
         Returns:
             A translator (SQL statements) to be executed
         """
-        if cte_memory is None:
-            cte_memory = {}
+        if graph_genuine_copy is None:
+            graph_genuine_copy = graph.deepcopy()
+
+        if subquery_memory is None:
+            subquery_memory = {}
 
         if instruction.id in self:
             # cached in sqlite
@@ -170,23 +187,33 @@ class SqlCache(AbstractCache):
                 raise NotImplementedError(f"Unknown instruction type: {instruction}")
 
         elif isinstance(instruction, TransformingInstruction):
-            if instruction.id in cte_memory:
+            if instruction.id in subquery_memory:
                 # this is a Variable, already evaluated
                 # just create a new use/translator from this Variable
-                translator = SqlCacheTranslator(cte_memory[instruction.id])
+                translator = subquery_memory[instruction.id]
             else:
                 trunk, r2n = graph.get_trunk_n_branches(instruction)
                 translator = self._evaluate_instruction_in_graph(
-                    graph, trunk, cte_memory
+                    graph, trunk, graph_genuine_copy, subquery_memory
                 )
 
                 if isinstance(instruction, SolePredecessorTransformingInstruction):
                     if isinstance(instruction, (Return, Explain)):
                         pass
                     elif isinstance(instruction, Variable):
-                        cte = translator.query.cte(name=instruction.name)
-                        cte_memory[instruction.id] = cte
-                        translator = SqlCacheTranslator(cte)
+                        subquery_memory[instruction.id] = translator
+                        translator = SqlCacheTranslator(
+                            translator.query.cte(name=instruction.name)
+                        )
+                    elif isinstance(instruction, ProjectEntity):
+                        source_id = graph_genuine_copy.find_datasource_of_node(
+                            instruction
+                        ).id
+                        if source_id not in self.cache_catalog_schemas:
+                            raise SourceInstructionNotEvaluated(source, instruction)
+                        translator.add_instruction(
+                            instruction, self.cache_catalog_schemas[source_id]
+                        )
                     else:
                         translator.add_instruction(instruction)
 
@@ -199,7 +226,7 @@ class SqlCache(AbstractCache):
                     #   please pass a select() construct explicitly
                     instruction.resolve_references(
                         lambda x: self._evaluate_instruction_in_graph(
-                            graph, r2n[x], cte_memory
+                            graph, r2n[x], graph_genuine_copy, subquery_memory
                         ).query
                     )
                     translator.add_instruction(instruction)

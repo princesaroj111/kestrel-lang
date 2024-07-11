@@ -108,11 +108,7 @@ class InMemoryCache(AbstractCache):
                 if isinstance(instruction, Filter):
                     # replace each ReferenceValue with a list of values
                     instruction.resolve_references(
-                        lambda x: list(
-                            self._evaluate_instruction_in_graph(graph, r2n[x]).iloc[
-                                :, 0
-                            ]
-                        )
+                        lambda x: self._evaluate_instruction_in_graph(graph, r2n[x])
                     )
                 df = evaluate_transforming_instruction(instruction, df)
         else:

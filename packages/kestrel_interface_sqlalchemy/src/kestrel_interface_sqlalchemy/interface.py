@@ -1,135 +1,36 @@
 import logging
 from functools import reduce
-from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
-
-import sqlalchemy
-from kestrel_interface_sqlalchemy.config import load_config
-from pandas import DataFrame, read_sql
-from sqlalchemy import column, or_
-from sqlalchemy.sql.expression import ColumnClause
 from typeguard import typechecked
+import sqlalchemy
+from pandas import DataFrame, read_sql
 
 from kestrel.display import GraphletExplanation
 from kestrel.interface import AbstractInterface
-from kestrel.interface.codegen.sql import SqlTranslator, comp2func
-from kestrel.ir.filter import (
-    BoolExp,
-    ExpOp,
-    FComparison,
-    MultiComp,
-    StrComparison,
-    StrCompOp,
-)
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     DataSource,
     Filter,
     Instruction,
-    ProjectAttrs,
-    ProjectEntity,
     Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
     Variable,
 )
-from kestrel.mapping.data_model import (
-    translate_comparison_to_native,
-    translate_dataframe,
-    translate_projection_to_native,
-)
+from kestrel.mapping.data_model import translate_dataframe
+from kestrel.exceptions import SourceNotFound
+
+from .translator import SQLAlchemyTranslator
+from .utils import iter_argument_from_function_in_callstack
+from .config import load_config
+
 
 _logger = logging.getLogger(__name__)
 
 
 @typechecked
-class SQLAlchemyTranslator(SqlTranslator):
-    def __init__(
-        self,
-        dialect: sqlalchemy.engine.default.DefaultDialect,
-        timefmt: Callable,
-        timestamp: str,
-        from_obj: sqlalchemy.FromClause,
-        dmm: dict,
-    ):
-        super().__init__(dialect, timefmt, timestamp, from_obj)
-        self.dmm = dmm
-        self.proj = None
-        self.projection_base_field = None
-        self.filt = None
-
-    @typechecked
-    def _render_comp(self, comp: FComparison):
-        prefix = (
-            f"{self.projection_base_field}."
-            if (self.projection_base_field and comp.field != self.timestamp)
-            else ""
-        )
-        ocsf_field = f"{prefix}{comp.field}"
-        comps = translate_comparison_to_native(
-            self.dmm, ocsf_field, comp.op, comp.value
-        )
-        translated_comps = []
-        for i in comps:
-            field, op, value = i
-            col: ColumnClause = column(field)
-            if op == StrCompOp.NMATCHES:
-                tmp = ~comp2func[op](col, value)
-            else:
-                tmp = comp2func[op](col, value)
-            translated_comps.append(tmp)
-        return reduce(or_, translated_comps)
-
-    @typechecked
-    def _add_filter(self) -> Optional[str]:
-        if not self.filt:
-            return
-        filt = self.filt
-        if filt.timerange.start:
-            # Convert the timerange to the appropriate pair of comparisons
-            start_comp = StrComparison(
-                self.timestamp, ">=", self.timefmt(filt.timerange.start)
-            )
-            stop_comp = StrComparison(
-                self.timestamp, "<", self.timefmt(filt.timerange.stop)
-            )
-            # AND them together
-            time_exp = BoolExp(start_comp, ExpOp.AND, stop_comp)
-            # AND that with any existing filter expression
-            exp = BoolExp(filt.exp, ExpOp.AND, time_exp)
-        else:
-            exp = filt.exp
-        if isinstance(exp, BoolExp):
-            comp = self._render_exp(exp)
-        elif isinstance(exp, MultiComp):
-            comp = self._render_multi_comp(exp)
-        else:
-            comp = self._render_comp(exp)
-        self.query = self.query.where(comp)
-
-    def add_Filter(self, filt: Filter) -> None:
-        # Just save filter and compile it later
-        # Probably need the entity projection set first
-        self.filt = filt
-
-    def add_ProjectAttrs(self, proj: ProjectAttrs) -> None:
-        self.proj = proj
-
-    def add_ProjectEntity(self, proj: ProjectEntity) -> None:
-        self.projection_base_field = proj.ocsf_field
-
-    def result(self) -> sqlalchemy.Compiled:
-        proj = self.proj.attrs if self.proj else None
-        pairs = translate_projection_to_native(
-            self.dmm, self.projection_base_field, proj
-        )
-        cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
-        self._add_filter()
-        self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
-        return self.query.compile(dialect=self.dialect)
-
-
 class SQLAlchemyInterface(AbstractInterface):
     def __init__(
         self,
@@ -166,13 +67,14 @@ class SQLAlchemyInterface(AbstractInterface):
     def evaluate_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_evaluate: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, DataFrame]:
         mapping = {}
         if not instructions_to_evaluate:
             instructions_to_evaluate = graph.get_sink_nodes()
         for instruction in instructions_to_evaluate:
-            translator = self._evaluate_instruction_in_graph(graph, instruction)
+            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             # TODO: may catch error in case evaluation starts from incomplete SQL
             sql = translator.result()
             _logger.debug("SQL query generated: %s", sql)
@@ -198,7 +100,7 @@ class SQLAlchemyInterface(AbstractInterface):
         if not instructions_to_explain:
             instructions_to_explain = graph.get_sink_nodes()
         for instruction in instructions_to_explain:
-            translator = self._evaluate_instruction_in_graph(graph, instruction)
+            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
             graph_dict = dep_graph.to_dict()
             query_stmt = translator.result()
@@ -208,41 +110,111 @@ class SQLAlchemyInterface(AbstractInterface):
     def _evaluate_instruction_in_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instruction: Instruction,
+        subquery_memory: Optional[Mapping[UUID, SQLAlchemyTranslator]] = None,
     ) -> SQLAlchemyTranslator:
+        # if method name needs update/change, also update for the `inspect`
+        # if any parameter name needs update/change, also update for the `inspect`
+
         _logger.debug("instruction: %s", str(instruction))
-        translator = None
-        if isinstance(instruction, TransformingInstruction):
-            trunk, _r2n = graph.get_trunk_n_branches(instruction)
-            translator = self._evaluate_instruction_in_graph(graph, trunk)
 
-            if isinstance(instruction, SolePredecessorTransformingInstruction):
-                if isinstance(instruction, Return):
-                    pass
-                elif isinstance(instruction, Variable):
-                    pass
+        # same use as `subquery_memory` in `kestrel.cache.sql`
+        if subquery_memory is None:
+            subquery_memory = {}
+
+        if instruction.id in cache:
+            # 1. get the datasource assocaited with the cached node
+            ds = None
+            for node in iter_argument_from_function_in_callstack(
+                "_evaluate_instruction_in_graph", "instruction"
+            ):
+                try:
+                    ds = graph.find_datasource_of_node(node)
+                except SourceNotFound:
+                    continue
                 else:
-                    translator.add_instruction(instruction)
+                    break
+            if not ds:
+                _logger.error(
+                    "backed tracked entire stack but still do not find source"
+                )
+                raise SourceNotFound(instruction)
 
-            elif isinstance(instruction, Filter):
-                translator.add_instruction(instruction)
+            # 2. check the datasource config to see if the datalake supports write
+            ds_config = self.config.datasources[ds.datasource]
+            conn_config = self.config.connections[ds_config.connection]
+
+            # 3. perform table creation or in-memory cache
+            if conn_config.table_creation_permission:
+                table_name = "kestrel_temp_" + instruction.id.hex
+
+                # create a new table for the cached DataFrame
+                cache[instruction.id].to_sql(
+                    table_name,
+                    con=self.conns[ds_config.connection],
+                    if_exists="replace",
+                    index=False,
+                )
+
+                # SELECT * from the new table
+                translator = SQLAlchemyTranslator(
+                    self.engines[ds_config.connection].dialect,
+                    table_name,
+                    None,
+                    None,
+                    None,
+                )
 
             else:
-                raise NotImplementedError(f"Unknown instruction type: {instruction}")
+                raise NotImplementedError("Read-only data lake not handled")
+                # list(cache[instruction.id].itertuples(index=False, name=None))
 
-        elif isinstance(instruction, SourceInstruction):
+        if isinstance(instruction, SourceInstruction):
             if isinstance(instruction, DataSource):
-                ds = self.config.datasources[instruction.datasource]
-                connection = ds.connection
-                dialect = self.engines[connection].dialect
+                ds_config = self.config.datasources[instruction.datasource]
                 translator = SQLAlchemyTranslator(
-                    dialect,
-                    lambda dt: dt.strftime(ds.timestamp_format),
-                    ds.timestamp,
-                    sqlalchemy.table(ds.table),
-                    ds.data_model_map,
+                    self.engines[ds_config.connection].dialect,
+                    ds_config.table,
+                    ds_config.data_model_map,
+                    lambda dt: dt.strftime(ds_config.timestamp_format),
+                    ds_config.timestamp,
                 )
             else:
                 raise NotImplementedError(f"Unhandled instruction type: {instruction}")
+
+        elif isinstance(instruction, TransformingInstruction):
+            if instruction.id in subquery_memory:
+                translator = subquery_memory[instruction.id]
+            else:
+                trunk, r2n = graph.get_trunk_n_branches(instruction)
+                translator = self._evaluate_instruction_in_graph(
+                    graph, cache, trunk, subquery_memory
+                )
+
+                if isinstance(instruction, SolePredecessorTransformingInstruction):
+                    if isinstance(instruction, (Return, Explain)):
+                        pass
+                    elif isinstance(instruction, Variable):
+                        subquery_memory[instruction.id] = translator
+                        translator = SQLAlchemyTranslator(
+                            translator.dialect,
+                            translator.query.cte(name=instruction.name),
+                        )
+                    else:
+                        translator.add_instruction(instruction)
+
+                elif isinstance(instruction, Filter):
+                    instruction.resolve_references(
+                        lambda x: self._evaluate_instruction_in_graph(
+                            graph, cache, r2n[x], cte_memory
+                        ).query
+                    )
+                    translator.add_instruction(instruction)
+
+                else:
+                    raise NotImplementedError(
+                        f"Unknown instruction type: {instruction}"
+                    )
 
         return translator
