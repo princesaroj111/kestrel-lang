@@ -113,12 +113,16 @@ class SQLAlchemyInterface(AbstractInterface):
         graph: IRGraphEvaluable,
         cache: MutableMapping[UUID, Any],
         instruction: Instruction,
+        graph_genuine_copy: Optional[IRGraphEvaluable] = None,
         subquery_memory: Optional[Mapping[UUID, SQLAlchemyTranslator]] = None,
     ) -> SQLAlchemyTranslator:
         # if method name needs update/change, also update for the `inspect`
         # if any parameter name needs update/change, also update for the `inspect`
 
         _logger.debug("instruction: %s", str(instruction))
+
+        if graph_genuine_copy is None:
+            graph_genuine_copy = graph.deepcopy()
 
         # same use as `subquery_memory` in `kestrel.cache.sql`
         if subquery_memory is None:
@@ -190,7 +194,7 @@ class SQLAlchemyInterface(AbstractInterface):
             else:
                 trunk, r2n = graph.get_trunk_n_branches(instruction)
                 translator = self._evaluate_instruction_in_graph(
-                    graph, cache, trunk, subquery_memory
+                    graph, cache, trunk, graph_genuine_copy, subquery_memory
                 )
 
                 if isinstance(instruction, SolePredecessorTransformingInstruction):
@@ -208,7 +212,7 @@ class SQLAlchemyInterface(AbstractInterface):
                 elif isinstance(instruction, Filter):
                     instruction.resolve_references(
                         lambda x: self._evaluate_instruction_in_graph(
-                            graph, cache, r2n[x], cte_memory
+                            graph, cache, r2n[x], graph_genuine_copy, subquery_memory
                         ).query
                     )
                     translator.add_instruction(instruction)
