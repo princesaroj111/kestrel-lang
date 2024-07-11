@@ -14,6 +14,7 @@ from kestrel.ir.instructions import (
     Filter,
     Instruction,
     Return,
+    Explain,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
