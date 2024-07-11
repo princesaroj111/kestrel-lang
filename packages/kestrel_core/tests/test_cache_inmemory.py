@@ -155,7 +155,6 @@ def test_eval_find_event_to_entity(process_creation_events):
     mapping = c.evaluate_graph(graph, c)
     assert len(rets) == 1
     df = mapping[rets[0].id]
-    print(df.columns)
     assert list(df.columns) == ['cmd_line', 'name', 'pid', 'uid', 'endpoint.uid', 'endpoint.name',
        'endpoint.os', 'file.name', 'file.path', 'user.uid', 'user.name',
        'user.type_id', 'parent_process.cmd_line', 'parent_process.name',
