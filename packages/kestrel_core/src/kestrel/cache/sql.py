@@ -1,10 +1,9 @@
 import logging
 from copy import copy
-from typing import Any, Iterable, Mapping, MutableMapping, Optional, Union
+from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
 
 import sqlalchemy
-from sqlalchemy.sql.expression import CTE
 from dateutil.parser import parse as dt_parser
 from pandas import DataFrame, read_sql
 from typeguard import typechecked
@@ -25,20 +24,19 @@ from kestrel.ir.instructions import (
     Return,
     Explain,
 )
-from kestrel.exceptions import SourceInstructionNotEvaluated
 
 _logger = logging.getLogger(__name__)
 
 
-@typechecked
 class SqlCacheTranslator(SqlTranslator):
-    def __init__(self, from_obj: Union[CTE, str]):
-        if isinstance(from_obj, CTE):
-            fc = from_obj
-        else:  # str to represent table name
-            fc = sqlalchemy.table(from_obj)
+    def __init__(self, from_obj, from_obj_schema=None):
         super().__init__(
-            sqlalchemy.dialects.sqlite.dialect(), fc, dt_parser, "time"
+            sqlalchemy.dialects.sqlite.dialect(),
+            from_obj,
+            from_obj_schema,
+            None,
+            dt_parser,
+            "time",
         )  # FIXME: need mapping for timestamp?
 
 
@@ -174,7 +172,8 @@ class SqlCache(AbstractCache):
         if instruction.id in self:
             # cached in sqlite
             table_name = self.cache_catalog[instruction.id]
-            translator = SqlCacheTranslator(table_name)
+            source_schema = self.cache_catalog_schemas[instruction.id]
+            translator = SqlCacheTranslator(table_name, source_schema)
 
         elif isinstance(instruction, SourceInstruction):
             if isinstance(instruction, Construct):
@@ -182,7 +181,8 @@ class SqlCache(AbstractCache):
                 self[instruction.id] = DataFrame(instruction.data)
                 # pull the data to start a SqlCacheTranslator
                 table_name = self.cache_catalog[instruction.id]
-                translator = SqlCacheTranslator(table_name)
+                source_schema = self.cache_catalog_schemas[instruction.id]
+                translator = SqlCacheTranslator(table_name, source_schema)
             else:
                 raise NotImplementedError(f"Unknown instruction type: {instruction}")
 
@@ -202,18 +202,17 @@ class SqlCache(AbstractCache):
                         pass
                     elif isinstance(instruction, Variable):
                         subquery_memory[instruction.id] = translator
+                        # pass event schema (OCSF) from previous translator to next one
+                        source_schema = (
+                            translator.source_schema
+                            if instruction.entity_type == "event"
+                            else None
+                        )
                         translator = SqlCacheTranslator(
-                            translator.query.cte(name=instruction.name)
+                            translator.query.cte(name=instruction.name), source_schema
                         )
                     elif isinstance(instruction, ProjectEntity):
-                        source_id = graph_genuine_copy.find_datasource_of_node(
-                            instruction
-                        ).id
-                        if source_id not in self.cache_catalog_schemas:
-                            raise SourceInstructionNotEvaluated(source, instruction)
-                        translator.add_instruction(
-                            instruction, self.cache_catalog_schemas[source_id]
-                        )
+                        translator.add_instruction(instruction)
                     else:
                         translator.add_instruction(instruction)
 
@@ -252,6 +251,7 @@ class SqlCacheVirtual(SqlCache):
 
     def __setitem__(self, instruction_id: UUID, data: Any):
         self.cache_catalog[instruction_id] = instruction_id.hex + "v"
+        self.cache_catalog_schemas[instruction_id] = []  # TODO may need some data
 
     def __del__(self):
         pass

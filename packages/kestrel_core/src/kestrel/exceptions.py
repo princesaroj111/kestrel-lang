@@ -184,5 +184,5 @@ class AnalyticsError(KestrelError):
     pass
 
 
-class SourceInstructionNotEvaluated(KestrelError):
+class SourceSchemaNotFound(KestrelError):
     pass

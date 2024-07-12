@@ -1,12 +1,12 @@
 import logging
 from functools import reduce
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Union
 
 import sqlalchemy
-from sqlalchemy import FromClause, and_, asc, column, tuple_, desc, or_, select
+from sqlalchemy import and_, asc, column, tuple_, desc, or_, select
 from sqlalchemy.engine import Compiled, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import ColumnOperators, ColumnElement
+from sqlalchemy.sql.expression import ColumnOperators, ColumnElement, CTE
 from sqlalchemy.sql.selectable import Select
 from typeguard import typechecked
 
@@ -32,6 +32,7 @@ from kestrel.ir.instructions import (
     Sort,
     SortDirection,
 )
+from kestrel.exceptions import SourceSchemaNotFound
 
 _logger = logging.getLogger(__name__)
 
@@ -59,10 +60,19 @@ class SqlTranslator:
     def __init__(
         self,
         dialect: default.DefaultDialect,
-        from_obj: FromClause,
+        from_obj: Union[CTE, str],
+        from_obj_schema: Optional[List[str]],  # Entity CTE does not require this
+        ocsf_to_native_mapping: Optional[dict],  # CTE does not require this
         timefmt: Optional[Callable],  # CTE does not have time
         timestamp: Optional[str],  # CTE does not have time
     ):
+        # Specify the schema if not Entity CTE
+        # Event CTE and raw datasource need this for ProjectEntity
+        self.source_schema = from_obj_schema
+
+        # Store the mapping for translation from OCSF to native
+        self.data_mapping = ocsf_to_native_mapping
+
         # SQLAlchemy Dialect object (e.g. from sqlalchemy.dialects import sqlite; sqlite.dialect())
         self.dialect = dialect
 
@@ -72,9 +82,13 @@ class SqlTranslator:
         # Primary timestamp field in target table
         self.timestamp = timestamp
 
+        from_clause = (
+            from_obj if isinstance(from_obj, CTE) else sqlalchemy.table(from_obj)
+        )
+
         # SQLAlchemy statement object
         # Auto-dedup by default
-        self.query: Select = select("*").select_from(from_obj).distinct()
+        self.query: Select = select("*").select_from(from_clause).distinct()
 
     @typechecked
     def _render_comp(self, comp: FBasicComparison) -> BinaryExpression:
@@ -156,12 +170,16 @@ class SqlTranslator:
         cols = [column(col) for col in proj.attrs]
         self.query = self.query.with_only_columns(*cols)
 
-    def add_ProjectEntity(self, proj: ProjectEntity, table_schema: List[str]) -> None:
+    def add_ProjectEntity(self, proj: ProjectEntity) -> None:
         # this will only be called to project from events
-        # input the table_schema of the event table (irgraph.find_datasource_of_node())
+        if not self.source_schema:
+            raise SourceSchemaNotFound(self.result_w_literal_binds())
+
         prefix = proj.native_field + "."
         pairs = {
-            col: col[len(prefix) :] for col in table_schema if col.startswith(prefix)
+            col: col[len(prefix) :]
+            for col in self.source_schema
+            if col.startswith(prefix)
         }
         _logger.debug(f"column projection pairs: {pairs}")
         cols = [sqlalchemy.column(i).label(j) for i, j in pairs.items()]
@@ -178,13 +196,13 @@ class SqlTranslator:
         order = asc(col) if sort.direction == SortDirection.ASC else desc(col)
         self.query = self.query.order_by(order)
 
-    def add_instruction(self, i: Instruction, *args) -> None:
+    def add_instruction(self, i: Instruction) -> None:
         inst_name = i.instruction
         method_name = f"add_{inst_name}"
         method = getattr(self, method_name)
         if not method:
             raise NotImplementedError(f"SqlTranslator.{method_name}")
-        method(i, *args)
+        method(i)
 
     def result(self) -> Compiled:
         return self.query.compile(dialect=self.dialect)
