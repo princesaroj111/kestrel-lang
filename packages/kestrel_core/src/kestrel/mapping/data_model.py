@@ -260,27 +260,38 @@ def _get_from_mapping(mapping: Union[str, list, dict], key) -> list:
 
 @typechecked
 def translate_projection_to_native(
-    dmm: dict,
-    ocsf_base_field: Optional[str],
-    attrs: Optional[Iterable],
-    # TODO: optional str or callable for joining entity_type and attr?
+    to_native_nested_map: dict,  # mapping for translation
+    ocsf_base_field: Optional[str],  # translate this base field
+    attrs: Optional[Iterable] = None,  # known attributes (in OCSF) to project
+    native_table_schema: Optional[List[str]] = None,  # additional filter
 ) -> list:
     result = []
 
     if ocsf_base_field:
         try:
-            dmm = reduce(dict.__getitem__, ocsf_base_field.split("."), dmm)
+            base_map = reduce(
+                dict.__getitem__, ocsf_base_field.split("."), to_native_nested_map
+            )
         except KeyError:
             _logger.warning(f"No mapping for base projection field: {ocsf_base_field}")
-            dmm = {}
+            base_map = {}
+    else:
+        # event does not have ocsf_base_field
+        base_map = to_native_nested_map
 
     if attrs:
         # project specified attributes
         for attr in attrs:
             try:
-                mapping = reduce(dict.__getitem__, attr.split("."), dmm)
+                mapping = reduce(dict.__getitem__, attr.split("."), base_map)
                 result.extend(
-                    [(i, attr) for i in _get_from_mapping(mapping, "native_field")]
+                    [
+                        (i, attr)
+                        for i in _get_from_mapping(mapping, "native_field")
+                        if native_table_schema
+                        and i in native_table_schema
+                        or not native_table_schema
+                    ]
                 )
             except KeyError:
                 # TODO: think better way than pass-through, e.g., raise exception
@@ -289,11 +300,22 @@ def translate_projection_to_native(
                 )
                 result.append((attr, attr))
     else:
-        # project all attributes known for the entity (or event if no entity specified)
-        for native_field, mapping in reverse_mapping(dmm).items():
-            result.extend(
-                [(native_field, i) for i in _get_from_mapping(mapping, "ocsf_field")]
-            )
+        # project all attributes known for the entity
+        # or event if no ocsf_base_field specified
+        # filter by native_table_schema
+
+        # filter only the ocsf_base_field part of the map
+        for native_field, mapping in reverse_mapping(base_map).items():
+            if not native_field.endswith("*"):
+                result.extend(
+                    [
+                        (native_field, i)
+                        for i in _get_from_mapping(mapping, "ocsf_field")
+                        if native_table_schema
+                        and native_field in native_table_schema
+                        or not native_table_schema
+                    ]
+                )
 
     # De-duplicate list while maintaining order
     final_result = list(OrderedDict.fromkeys(result))
@@ -357,8 +379,17 @@ def translate_dataframe(df: DataFrame, dmm: dict) -> DataFrame:
         except KeyError:
             _logger.debug("No mapping for %s", col)
             mapping = None
-        if isinstance(mapping, dict):
-            transformer_name = mapping.get("ocsf_value")
-            df[col] = run_transformer_on_series(transformer_name, df[col].dropna())
+        if isinstance(mapping, list):
+            transformer_names = {
+                x.get("ocsf_value") for x in mapping if x.get("ocsf_value")
+            }
+            if len(transformer_names) > 0:
+                if len(transformer_names) > 1:
+                    raise NotImplementedError("Multiple to OCSF value transformers")
+                else:
+                    transformer_name = transformer_names.pop()
+                    df[col] = run_transformer_on_series(
+                        transformer_name, df[col].dropna()
+                    )
     df = df.replace({np.nan: None})
     return df

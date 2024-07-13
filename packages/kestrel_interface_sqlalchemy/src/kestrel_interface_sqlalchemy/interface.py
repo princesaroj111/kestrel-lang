@@ -23,9 +23,9 @@ from kestrel.ir.instructions import (
 from kestrel.mapping.data_model import translate_dataframe
 from kestrel.exceptions import SourceNotFound
 
-from .translator import SQLAlchemyTranslator
+from .translator import NativeTable, SubQuery, SQLAlchemyTranslator
 from .utils import iter_argument_from_function_in_callstack
-from .config import load_config
+from . import config
 
 
 _logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class SQLAlchemyInterface(AbstractInterface):
     ):
         _logger.debug("SQLAlchemyInterface: loading config")
         super().__init__(serialized_cache_catalog, session_id)
-        self.config = load_config()
+        self.config = config.load_config()
         self.schemas: dict = {}  # Schema per table (index)
         self.engines: dict = {}  # Map of conn name -> engine
         self.conns: dict = {}  # Map of conn name -> connection
@@ -80,13 +80,14 @@ class SQLAlchemyInterface(AbstractInterface):
             sql = translator.result()
             _logger.debug("SQL query generated: %s", sql)
             # Get the "from" table for this query
-            tables = translator.query.selectable.get_final_froms()
-            table = tables[0].name  # TODO: what if there's more than 1?
-            # Get the data source's SQLAlchemy connection object
-            conn = self.conns[self.config.datasources[table].connection]
+            conn = self.conns[translator.datasource_config.connection]
             df = read_sql(sql, conn)
+
+            # value translation
             entity_dmm = reduce(
-                dict.__getitem__, translator.projection_base_field.split("."), dmm
+                dict.__getitem__,
+                translator.projection_base_field.split("."),
+                translator.datasource_config.data_model_map,
             )
             mapping[instruction.id] = translate_dataframe(df, entity_dmm)
         return mapping
@@ -164,11 +165,15 @@ class SQLAlchemyInterface(AbstractInterface):
 
                 # SELECT * from the new table
                 translator = SQLAlchemyTranslator(
-                    self.engines[ds_config.connection].dialect,
-                    table_name,
-                    None,
-                    None,
-                    None,
+                    NativeTable(
+                        self.engines[ds_config.connection].dialect,
+                        table_name,
+                        ds_config,
+                        list(cache[instruction.id]),
+                        None,
+                        None,
+                        None,
+                    )
                 )
 
             else:
@@ -178,12 +183,23 @@ class SQLAlchemyInterface(AbstractInterface):
         if isinstance(instruction, SourceInstruction):
             if isinstance(instruction, DataSource):
                 ds_config = self.config.datasources[instruction.datasource]
+                columns = list(
+                    self.conns[ds_config.connection]
+                    .execute(
+                        sqlalchemy.text(f"SELECT * FROM {ds_config.table} LIMIT 1")
+                    )
+                    .keys()
+                )
                 translator = SQLAlchemyTranslator(
-                    self.engines[ds_config.connection].dialect,
-                    ds_config.table,
-                    ds_config.data_model_map,
-                    lambda dt: dt.strftime(ds_config.timestamp_format),
-                    ds_config.timestamp,
+                    NativeTable(
+                        self.engines[ds_config.connection].dialect,
+                        ds_config.table,
+                        ds_config,
+                        columns,
+                        ds_config.data_model_map,
+                        lambda dt: dt.strftime(ds_config.timestamp_format),
+                        ds_config.timestamp,
+                    )
                 )
             else:
                 raise NotImplementedError(f"Unhandled instruction type: {instruction}")
@@ -203,8 +219,7 @@ class SQLAlchemyInterface(AbstractInterface):
                     elif isinstance(instruction, Variable):
                         subquery_memory[instruction.id] = translator
                         translator = SQLAlchemyTranslator(
-                            translator.dialect,
-                            translator.query.cte(name=instruction.name),
+                            SubQuery(translator, instruction.name)
                         )
                     else:
                         translator.add_instruction(instruction)

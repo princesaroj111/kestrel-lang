@@ -71,7 +71,7 @@ def _remove_nl(s):
     ]
 )
 def test_sql_translator(iseq, sql):
-    trans = SqlTranslator(sqlalchemy.dialects.sqlite.dialect(), "my_table", None, None, _time2string, "timestamp")
+    trans = SqlTranslator(sqlalchemy.dialects.sqlite.dialect(), "my_table", None, None, None, _time2string, "timestamp")
     for i in iseq:
         trans.add_instruction(i)
     result = trans.result()

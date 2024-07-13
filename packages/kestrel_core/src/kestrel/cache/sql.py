@@ -20,7 +20,6 @@ from kestrel.ir.instructions import (
     Construct,
     Variable,
     Filter,
-    ProjectEntity,
     Return,
     Explain,
 )
@@ -29,11 +28,12 @@ _logger = logging.getLogger(__name__)
 
 
 class SqlCacheTranslator(SqlTranslator):
-    def __init__(self, from_obj, from_obj_schema=None):
+    def __init__(self, from_obj, from_obj_schema=None, projection_base_field=None):
         super().__init__(
             sqlalchemy.dialects.sqlite.dialect(),
             from_obj,
             from_obj_schema,
+            projection_base_field,
             None,
             dt_parser,
             "time",
@@ -209,10 +209,10 @@ class SqlCache(AbstractCache):
                             else None
                         )
                         translator = SqlCacheTranslator(
-                            translator.query.cte(name=instruction.name), source_schema
+                            translator.query.cte(name=instruction.name),
+                            source_schema,
+                            translator.projection_base_field,
                         )
-                    elif isinstance(instruction, ProjectEntity):
-                        translator.add_instruction(instruction)
                     else:
                         translator.add_instruction(instruction)
 

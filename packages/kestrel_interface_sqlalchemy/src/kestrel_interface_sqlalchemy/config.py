@@ -31,8 +31,8 @@ class Connection(DataClassJSONMixin):
 class DataSource(DataClassJSONMixin):
     connection: str
     table: str
-    timestamp: str
-    timestamp_format: str
+    timestamp: Optional[str]
+    timestamp_format: Optional[str]
     data_model_map: Optional[Dict] = None
     entity_identifier: Optional[Dict] = None
 

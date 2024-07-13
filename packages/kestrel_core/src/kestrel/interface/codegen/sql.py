@@ -32,6 +32,10 @@ from kestrel.ir.instructions import (
     Sort,
     SortDirection,
 )
+from kestrel.mapping.data_model import (
+    translate_comparison_to_native,
+    translate_projection_to_native,
+)
 from kestrel.exceptions import SourceSchemaNotFound
 
 _logger = logging.getLogger(__name__)
@@ -62,6 +66,7 @@ class SqlTranslator:
         dialect: default.DefaultDialect,
         from_obj: Union[CTE, str],
         from_obj_schema: Optional[List[str]],  # Entity CTE does not require this
+        from_obj_projection_base_field: Optional[str],
         ocsf_to_native_mapping: Optional[dict],  # CTE does not require this
         timefmt: Optional[Callable],  # CTE does not have time
         timestamp: Optional[str],  # CTE does not have time
@@ -75,6 +80,9 @@ class SqlTranslator:
 
         # SQLAlchemy Dialect object (e.g. from sqlalchemy.dialects import sqlite; sqlite.dialect())
         self.dialect = dialect
+
+        # inherit projection_base_field from subquery
+        self.projection_base_field = from_obj_projection_base_field
 
         # Time formatting function for datasource
         self.timefmt = timefmt
@@ -92,18 +100,35 @@ class SqlTranslator:
 
     @typechecked
     def _render_comp(self, comp: FBasicComparison) -> BinaryExpression:
-        # most FBasicComparison has .field; RefComparison has .fields
-        # col: ColumnElement
-        if isinstance(comp, RefComparison):
+        if isinstance(comp, RefComparison):  # no translation for subquery
+            # most FBasicComparison has .field; RefComparison has .fields
+            # col: ColumnElement
             if len(comp.fields) == 1:
                 col = column(comp.fields[0])
             else:
                 col = tuple_(*[column(field) for field in comp.fields])
-        else:
-            col = column(comp.field)
-        if comp.op == StrCompOp.NMATCHES:
-            return ~comp2func[comp.op](col, comp.value)
-        return comp2func[comp.op](col, comp.value)
+            rendered_comp = comp2func[comp.op](col, comp.value)
+        elif self.data_mapping:  # translation needed
+            comps = translate_comparison_to_native(
+                self.data_mapping, comp.field, comp.op, comp.value
+            )
+            translated_comps = (
+                (
+                    ~comp2func[op](column(field), value)
+                    if op == StrCompOp.NMATCHES
+                    else comp2func[op](column(field), value)
+                )
+                for field, op, value in comps
+            )
+            rendered_comp = reduce(or_, translated_comps)
+        else:  # no translation
+            rendered_comp = (
+                ~comp2func[comp.op](column(comp.field), comp.value)
+                if comp.op == StrCompOp.NMATCHES
+                else comp2func[comp.op](column(comp.field), comp.value)
+            )
+
+        return rendered_comp
 
     @typechecked
     def _render_multi_comp(self, comps: MultiComp) -> BooleanClauseList:
@@ -171,18 +196,31 @@ class SqlTranslator:
         self.query = self.query.with_only_columns(*cols)
 
     def add_ProjectEntity(self, proj: ProjectEntity) -> None:
+        # TODO: Project Event
+
+        if self.projection_base_field:
+            raise NotImplementedError("Dual Entity Projection In Path")
+
+        self.projection_base_field = proj.ocsf_field
+
         # this will only be called to project from events
         if not self.source_schema:
             raise SourceSchemaNotFound(self.result_w_literal_binds())
 
-        prefix = proj.native_field + "."
-        pairs = {
-            col: col[len(prefix) :]
-            for col in self.source_schema
-            if col.startswith(prefix)
-        }
+        if self.data_mapping:
+            pairs = translate_projection_to_native(
+                self.data_mapping, proj.ocsf_field, None, self.source_schema
+            )
+        else:
+            prefix = proj.ocsf_field + "."
+            pairs = [
+                (col, col[len(prefix) :])
+                for col in self.source_schema
+                if col.startswith(prefix)
+            ]
+
         _logger.debug(f"column projection pairs: {pairs}")
-        cols = [sqlalchemy.column(i).label(j) for i, j in pairs.items()]
+        cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
         self.query = self.query.with_only_columns(*cols)
 
     def add_Limit(self, lim: Limit) -> None:

@@ -1,122 +1,75 @@
+from __future__ import annotations
+
 import logging
-from functools import reduce
-from typing import Callable, Optional, Union
+from dataclasses import dataclass
+from typing import Callable, Optional, Union, List
 from typeguard import typechecked
+from sqlalchemy.engine.default import DefaultDialect
 
-import sqlalchemy
-from sqlalchemy import column, or_, tuple_
-from sqlalchemy.sql.expression import CTE
+from kestrel.interface.codegen.sql import SqlTranslator
 
-from kestrel.interface.codegen.sql import SqlTranslator, comp2func
-from kestrel.ir.filter import (
-    RefComparison,
-    FBasicComparison,
-    StrCompOp,
-)
-from kestrel.ir.instructions import (
-    Filter,
-    ProjectAttrs,
-    ProjectEntity,
-)
-from kestrel.mapping.data_model import (
-    translate_comparison_to_native,
-    translate_projection_to_native,
-)
-
+from .config import DataSource
 
 _logger = logging.getLogger(__name__)
+
+
+@dataclass
+class NativeTable:
+    dialect: DefaultDialect
+    table_name: str
+    table_config: Optional[DataSource]
+    table_schema: Optional[List[str]]  # column names
+    data_model_map: Optional[dict]
+    timefmt: Optional[Callable]
+    timestamp: Optional[str]
+
+
+@dataclass
+class SubQuery:
+    translator: SqlTranslator
+    name: str
 
 
 @typechecked
 class SQLAlchemyTranslator(SqlTranslator):
     def __init__(
         self,
-        dialect: sqlalchemy.engine.default.DefaultDialect,
-        from_obj: Union[CTE, str],
-        dmm: Optional[dict] = None,  # CTE does not have dmm
-        timefmt: Optional[Callable] = None,  # CTE does not have timefmt
-        timestamp: Optional[str] = None,  # CTE does not have timestamp
+        obj: Union[NativeTable, SubQuery],
     ):
-        if isinstance(from_obj, CTE):
-            fc = from_obj
-        else:  # str to represent table name
-            fc = sqlalchemy.table(from_obj)
-        super().__init__(dialect, fc, timefmt, timestamp)
-        self.dmm = dmm
-        self.projection_attributes = None
-        self.projection_base_field = None
-        self.filt: Filter = None
+        if isinstance(obj, SubQuery):
+            # SqlTranslator specific attribute
+            self.datasource_config = obj.translator.datasource_config
 
-    @typechecked
-    def _render_comp(self, comp: FBasicComparison):
-        if isinstance(comp, RefComparison):
-            # no translation for CTE/subquery (RefComparison)
-            # the results should already be in OCSF in a variable (CTE)
-            if len(comp.fields) == 1:
-                col = column(comp.fields[0])
-            else:
-                col = tuple_(*[column(field) for field in comp.fields])
-            rendered_comp = comp2func[comp.op](col, comp.value)
+            # SqlTranslator generic arguments
+            dialect = obj.translator.dialect
+            from_obj = obj.translator.query.cte(name=obj.name)
+            from_obj_schema = None
+            from_obj_projection_base_field = obj.translator.projection_base_field
+            ocsf_to_native_mapping = None
+            timefmt = None
+            timestamp = None
+
+        elif isinstance(obj, NativeTable):
+            # SqlTranslator specific attribute
+            self.datasource_config = obj.table_config
+
+            dialect = obj.dialect
+            from_obj = obj.table_name
+            from_obj_schema = obj.table_schema
+            from_obj_projection_base_field = None
+            ocsf_to_native_mapping = obj.data_model_map
+            timefmt = obj.timefmt
+            timestamp = obj.timestamp
+
         else:
-            # do translation from a raw database table
-            prefix = (
-                f"{self.projection_base_field}."
-                if (self.projection_base_field and comp.field != self.timestamp)
-                else ""
-            )
-            ocsf_field = f"{prefix}{comp.field}"
-            comps = translate_comparison_to_native(
-                self.dmm, ocsf_field, comp.op, comp.value
-            )
-            translated_comps = (
-                (
-                    ~comp2func[op](column(field), value)
-                    if op == StrCompOp.NMATCHES
-                    else comp2func[op](column(field), value)
-                )
-                for field, op, value in comps
-            )
-            rendered_comp = reduce(or_, translated_comps)
-        return rendered_comp
+            raise NotImplementedError("Type not defined in argument")
 
-    def add_Filter(self, filt: Filter) -> None:
-        # Just save filter and compile it later
-        # Probably need the entity projection set first
-        self.filt = filt
-
-    def add_ProjectAttrs(self, proj: ProjectAttrs) -> None:
-        self.projection_attributes = proj.attrs
-
-    def add_ProjectEntity(self, proj: ProjectEntity) -> None:
-        self.projection_base_field = proj.ocsf_field
-
-    def result(self) -> sqlalchemy.Compiled:
-
-        # 1. process the filter
-        if self.filt:
-            selection = self.filter_to_selection(self.filt)
-            self.query = self.query.where(selection)
-
-        # 2. process projections
-        if self.dmm:
-            # translation required
-            # basically this is not from a subquery/CTE (already normalized)
-            # it is possible: self.projection_base_field is None (will use root)
-            # it is possible: self.projection_attributes is None (will translate all)
-            pairs = translate_projection_to_native(
-                self.dmm, self.projection_base_field, self.projection_attributes
-            )
-            cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
-        elif self.projection_attributes:
-            cols = [sqlalchemy.column(i) for i in self.projection_attributes]
-        else:
-            # if projection_attributes not specified, `SELECT *` (default option)
-            # this can happen if the table is loaded cached ProjectAttrs
-            # or just a Kestrel expression on a varaible (Filter only)
-            cols = None
-
-        if cols is not None:
-            self.query = self.query.with_only_columns(*cols)  # TODO: mapping?
-
-        # 3. return compiled result
-        return self.query.compile(dialect=self.dialect)
+        super().__init__(
+            dialect,
+            from_obj,
+            from_obj_schema,
+            from_obj_projection_base_field,
+            ocsf_to_native_mapping,
+            timefmt,
+            timestamp,
+        )
