@@ -43,7 +43,7 @@ class SQLAlchemyTranslator(SqlTranslator):
             # SqlTranslator generic arguments
             dialect = obj.translator.dialect
             from_obj = obj.translator.query.cte(name=obj.name)
-            from_obj_schema = None
+            from_obj_schema = obj.translator.projected_schema
             from_obj_projection_base_field = obj.translator.projection_base_field
             ocsf_to_native_mapping = None
             timefmt = None

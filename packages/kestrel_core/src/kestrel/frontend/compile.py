@@ -493,8 +493,11 @@ class _KestrelT(Transformer):
             )
             ds = self.irgraph.find_datasource_of_node(input_var)
             filter_node = self.irgraph.add_node(filter_node, ds)
-            # no projection since we output everything (event)
-            root = filter_node
+
+            # still need projection for translation/mapping to take place
+            root = self.irgraph.add_node(
+                ProjectEntity(output_var_type, output_var_type), filter_node
+            )
         else:  # entity-to-entity relation
             lookup_input_type, lookup_output_type = (
                 (output_var_type, input_var_type)

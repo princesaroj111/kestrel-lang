@@ -79,6 +79,7 @@ class SQLAlchemyInterface(AbstractInterface):
             # TODO: may catch error in case evaluation starts from incomplete SQL
             sql = translator.result()
             _logger.debug("SQL query generated: %s", sql)
+
             # Get the "from" table for this query
             conn = self.conns[translator.datasource_config.connection]
             df = read_sql(sql, conn)

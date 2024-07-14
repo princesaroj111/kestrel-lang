@@ -36,7 +36,11 @@ from kestrel.mapping.data_model import (
     translate_comparison_to_native,
     translate_projection_to_native,
 )
-from kestrel.exceptions import SourceSchemaNotFound, InvalidProjectEntityFromEntity
+from kestrel.exceptions import (
+    SourceSchemaNotFound,
+    InvalidProjectEntityFromEntity,
+    InvalidMappingWithMultipleIdentifierFields,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -75,6 +79,10 @@ class SqlTranslator:
         # Event CTE and raw datasource need this for ProjectEntity
         self.source_schema = from_obj_schema
 
+        # schema after projection
+        # pass through the schema if no add_ProjectEntity()
+        self.projected_schema = from_obj_schema
+
         # Store the mapping for translation from OCSF to native
         self.data_mapping = ocsf_to_native_mapping
 
@@ -99,14 +107,28 @@ class SqlTranslator:
         self.query: Select = select("*").select_from(from_clause).distinct()
 
     @typechecked
+    def _map_identifier_field(self, field) -> ColumnElement:
+        if self.data_mapping:
+            comps = translate_comparison_to_native(self.data_mapping, field, "", None)
+            if len(comps) > 1:
+                raise InvalidMappingWithMultipleIdentifierFields(comps)
+            else:
+                col = column(comps[0][0])
+        else:
+            col = column(field)
+        return col
+
+    @typechecked
     def _render_comp(self, comp: FBasicComparison) -> BinaryExpression:
-        if isinstance(comp, RefComparison):  # no translation for subquery
+        if isinstance(comp, RefComparison):
             # most FBasicComparison has .field; RefComparison has .fields
             # col: ColumnElement
             if len(comp.fields) == 1:
-                col = column(comp.fields[0])
+                col = self._map_identifier_field(comp.fields[0])
             else:
-                col = tuple_(*[column(field) for field in comp.fields])
+                col = tuple_(
+                    *[self._map_identifier_field(field) for field in comp.fields]
+                )
             rendered_comp = comp2func[comp.op](col, comp.value)
         elif self.data_mapping:  # translation needed
             comps = translate_comparison_to_native(
@@ -196,7 +218,7 @@ class SqlTranslator:
         self.query = self.query.with_only_columns(*cols)
 
     def add_ProjectEntity(self, proj: ProjectEntity) -> None:
-        if self.projection_base_field:
+        if self.projection_base_field and self.projection_base_field != "event":
             raise InvalidProjectEntityFromEntity(proj, self.projection_base_field)
         else:
             self.projection_base_field = proj.ocsf_field
@@ -214,7 +236,6 @@ class SqlTranslator:
                 _logger.debug("no data mapping, no translation for projection (event)")
 
         else:  # project to entity
-            # this will only be called to project from events
             if not self.source_schema:
                 raise SourceSchemaNotFound(self.result_w_literal_binds())
 
@@ -231,6 +252,7 @@ class SqlTranslator:
                 ]
 
         if pairs:
+            self.projected_schema = [ocsf_field for _, ocsf_field in pairs]
             _logger.debug(f"column projection pairs: {pairs}")
             cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
             self.query = self.query.with_only_columns(*cols)

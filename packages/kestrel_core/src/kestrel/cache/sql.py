@@ -202,15 +202,9 @@ class SqlCache(AbstractCache):
                         pass
                     elif isinstance(instruction, Variable):
                         subquery_memory[instruction.id] = translator
-                        # pass event schema (OCSF) from previous translator to next one
-                        source_schema = (
-                            translator.source_schema
-                            if instruction.entity_type == "event"
-                            else None
-                        )
                         translator = SqlCacheTranslator(
                             translator.query.cte(name=instruction.name),
-                            source_schema,
+                            translator.projected_schema,
                             translator.projection_base_field,
                         )
                     else:

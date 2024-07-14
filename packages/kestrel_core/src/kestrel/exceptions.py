@@ -190,3 +190,7 @@ class SourceSchemaNotFound(KestrelError):
 
 class InvalidProjectEntityFromEntity(KestrelError):
     pass
+
+
+class InvalidMappingWithMultipleIdentifierFields(KestrelError):
+    pass

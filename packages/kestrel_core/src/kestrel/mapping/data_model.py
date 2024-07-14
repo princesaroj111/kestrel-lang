@@ -104,12 +104,14 @@ def _get_map_triple(d: dict, prefix: str, op: str, value) -> tuple:
 
 
 @typechecked
-def translate_comparison_to_native(dmm: dict, field: str, op: str, value: Any) -> list:
-    """Translate the (`field`, `op`, `value`) triple using data model map `dmm`
+def translate_comparison_to_native(
+    to_native_nested_map: dict, field: str, op: str, value: Any
+) -> list:
+    """Translate the (`field`, `op`, `value`) triple using data model map
 
     This function may be used in datasource interfaces to translate a comparison
     in the OCSF data model to the native data model, according to the data model
-    mapping in `dmm`.
+    mapping in `to_native_nested_map`.
 
     This function translates the (`field`, `op`, `value`) triple into a list of
     translated triples based on the provided data model map. The data model map
@@ -119,7 +121,7 @@ def translate_comparison_to_native(dmm: dict, field: str, op: str, value: Any) -
     the data model map to translate the field name.
 
     Parameters:
-        dmm: A dictionary that maps fields from one data model to another.
+        to_native_nested_map: OCSF to native nested mapping (directly from the YAML)
         field: The field name to be translated.
         op: The comparison operator.
         value: The value to be compared against.
@@ -132,29 +134,22 @@ def translate_comparison_to_native(dmm: dict, field: str, op: str, value: Any) -
     """
     _logger.debug("comp_to_native: %s %s %s", field, op, value)
     result = []
-    mapping = dmm.get(field)
-    if mapping:
-        if isinstance(mapping, str):
-            # Simple 1:1 field name mapping
-            result.append((mapping, op, value))
-        else:
-            raise NotImplementedError("complex native mapping")
-    else:
-        try:
-            node = reduce(dict.__getitem__, field.split("."), dmm)
-            if isinstance(node, list):
-                for i in node:
-                    if isinstance(i, dict):
-                        result.append(_get_map_triple(i, "native", op, value))
-                    else:
-                        result.append((i, op, value))
-            elif isinstance(node, dict):
-                result.append(_get_map_triple(node, "native", op, value))
-            elif isinstance(node, str):
-                result.append((node, op, value))
-        except KeyError:
-            # Pass-through
-            result.append((field, op, value))
+    try:
+        node = reduce(dict.__getitem__, field.split("."), to_native_nested_map)
+        if isinstance(node, list):
+            for i in node:
+                if isinstance(i, dict):
+                    result.append(_get_map_triple(i, "native", op, value))
+                else:
+                    result.append((i, op, value))
+        elif isinstance(node, dict):
+            result.append(_get_map_triple(node, "native", op, value))
+        elif isinstance(node, str):
+            result.append((node, op, value))
+    except KeyError:
+        # Pass-through
+        _logger.debug(f"no mapping for {field}, pass through")
+        result.append((field, op, value))
     _logger.debug("comp_to_native: return %s", result)
     return result
 
@@ -370,12 +365,12 @@ def translate_attributes_projection_to_ocsf(
 
 
 @typechecked
-def translate_dataframe(df: DataFrame, dmm: dict) -> DataFrame:
+def translate_dataframe(df: DataFrame, to_native_nested_map: dict) -> DataFrame:
     # Translate results into Kestrel OCSF data model
     # The column names of df are already mapped
     for col in df.columns:
         try:
-            mapping = reduce(dict.__getitem__, col.split("."), dmm)
+            mapping = reduce(dict.__getitem__, col.split("."), to_native_nested_map)
         except KeyError:
             _logger.debug("No mapping for %s", col)
             mapping = None

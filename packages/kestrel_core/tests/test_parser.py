@@ -362,7 +362,7 @@ def test_parser_find_entity_to_event(process_creation_events, kestrel_config):
         eves = FIND event ORIGINATED BY procs
     """
     parse_kestrel_and_update_irgraph(stmt, graph, kestrel_config["entity_identifier"])
-    assert Counter(map(type, graph.nodes())) == Counter([Construct, Variable, Filter, ProjectEntity, Variable, ProjectAttrs, Filter, Variable])
+    assert Counter(map(type, graph.nodes())) == Counter([Construct, Variable, Filter, ProjectEntity, Variable, ProjectAttrs, Filter, Variable, ProjectEntity])
     projattr = graph.get_nodes_by_type(ProjectAttrs)[0]
     filt = [f for f in graph.get_nodes_by_type(Filter) if not isinstance(f.exp, AbsoluteTrue)][0]
     assert (projattr, filt) in graph.edges
