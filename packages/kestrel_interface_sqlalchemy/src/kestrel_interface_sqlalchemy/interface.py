@@ -84,12 +84,20 @@ class SQLAlchemyInterface(AbstractInterface):
             df = read_sql(sql, conn)
 
             # value translation
-            entity_dmm = reduce(
-                dict.__getitem__,
-                translator.projection_base_field.split("."),
-                translator.datasource_config.data_model_map,
-            )
-            mapping[instruction.id] = translate_dataframe(df, entity_dmm)
+            if translator.projection_base_field == "event":
+                dmm = translator.datasource_config.data_model_map
+            else:
+                try:
+                    dmm = reduce(
+                        dict.__getitem__,
+                        translator.projection_base_field.split("."),
+                        translator.datasource_config.data_model_map,
+                    )
+                except KeyError:
+                    # pass through
+                    _logger.debug("No result/value translation")
+                    dmm = None
+            mapping[instruction.id] = translate_dataframe(df, dmm) if dmm else df
         return mapping
 
     def explain_graph(

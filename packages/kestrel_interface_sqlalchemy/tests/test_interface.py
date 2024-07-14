@@ -6,6 +6,7 @@ from collections import Counter
 from pandas import read_csv
 
 from kestrel import Session
+from kestrel.ir.filter import MultiComp
 from kestrel.ir.instructions import DataSource, Variable, Filter, ProjectEntity
 from kestrel_interface_sqlalchemy.config import PROFILE_PATH_ENV_VAR
 
@@ -76,3 +77,35 @@ def test_get_sinple_ecs_process(setup_sqlite_ecs_process_creation, where, ocsf_f
         # "/usr/bin/bash" -> "bash"
         # this also tests the passing of `from_obj_projection_base_field` along with CTE
         assert list(df["file.name"]) == ["bash"]
+
+
+@pytest.mark.parametrize(
+    "where, ocsf_fields", [
+        ("process.name = 'bash'", ["process.name", "actor.process.name"]),
+        ("process.parent.pid = 1022", ["process.parent_process.pid", "actor.process.parent_process.pid"]),
+    ]
+)
+def test_get_sinple_event(setup_sqlite_ecs_process_creation, where, ocsf_fields):
+    with Session() as session:
+        stmt = f"evs = GET event FROM sqlalchemy://events WHERE {where}"
+        session.execute(stmt)
+
+        # first check the parsing is correct
+        assert Counter(map(type, session.irgraph.nodes())) == Counter([DataSource, Variable, Filter, ProjectEntity])
+        filt = session.irgraph.get_nodes_by_type(Filter)[0]
+        # normalized to OCSF in IRGraph
+        if isinstance(filt.exp, MultiComp):
+            assert {x.field for x in filt.exp.comps} == set(ocsf_fields)
+        else:
+            assert filt.exp.field == ocsf_fields[0]
+
+        # now check for execution
+        # - query translation to native
+        # - result columns translation back to OCSF
+        stmt = "DISP evs"
+        df = session.execute(stmt)[0]
+        assert len(df) == 1
+        assert len(list(df)) == 74
+
+        # test value mapping: see previous test for more details
+        assert list(df["process.file.name"]) == ["bash"]

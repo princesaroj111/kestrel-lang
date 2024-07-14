@@ -36,7 +36,7 @@ from kestrel.mapping.data_model import (
     translate_comparison_to_native,
     translate_projection_to_native,
 )
-from kestrel.exceptions import SourceSchemaNotFound
+from kestrel.exceptions import SourceSchemaNotFound, InvalidProjectEntityFromEntity
 
 _logger = logging.getLogger(__name__)
 
@@ -196,32 +196,44 @@ class SqlTranslator:
         self.query = self.query.with_only_columns(*cols)
 
     def add_ProjectEntity(self, proj: ProjectEntity) -> None:
-        # TODO: Project Event
-
         if self.projection_base_field:
-            raise NotImplementedError("Dual Entity Projection In Path")
-
-        self.projection_base_field = proj.ocsf_field
-
-        # this will only be called to project from events
-        if not self.source_schema:
-            raise SourceSchemaNotFound(self.result_w_literal_binds())
-
-        if self.data_mapping:
-            pairs = translate_projection_to_native(
-                self.data_mapping, proj.ocsf_field, None, self.source_schema
-            )
+            raise InvalidProjectEntityFromEntity(proj, self.projection_base_field)
         else:
-            prefix = proj.ocsf_field + "."
-            pairs = [
-                (col, col[len(prefix) :])
-                for col in self.source_schema
-                if col.startswith(prefix)
-            ]
+            self.projection_base_field = proj.ocsf_field
 
-        _logger.debug(f"column projection pairs: {pairs}")
-        cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
-        self.query = self.query.with_only_columns(*cols)
+        if proj.ocsf_field == "event":  # project to event
+            if self.data_mapping:
+                if not self.source_schema:
+                    raise SourceSchemaNotFound(self.result_w_literal_binds())
+                else:
+                    pairs = translate_projection_to_native(
+                        self.data_mapping, None, None, self.source_schema
+                    )
+            else:
+                pairs = None
+                _logger.debug("no data mapping, no translation for projection (event)")
+
+        else:  # project to entity
+            # this will only be called to project from events
+            if not self.source_schema:
+                raise SourceSchemaNotFound(self.result_w_literal_binds())
+
+            if self.data_mapping:
+                pairs = translate_projection_to_native(
+                    self.data_mapping, proj.ocsf_field, None, self.source_schema
+                )
+            else:
+                prefix = proj.ocsf_field + "."
+                pairs = [
+                    (col, col[len(prefix) :])
+                    for col in self.source_schema
+                    if col.startswith(prefix)
+                ]
+
+        if pairs:
+            _logger.debug(f"column projection pairs: {pairs}")
+            cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
+            self.query = self.query.with_only_columns(*cols)
 
     def add_Limit(self, lim: Limit) -> None:
         self.query = self.query.limit(lim.num)

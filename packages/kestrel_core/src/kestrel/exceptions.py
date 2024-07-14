@@ -186,3 +186,7 @@ class AnalyticsError(KestrelError):
 
 class SourceSchemaNotFound(KestrelError):
     pass
+
+
+class InvalidProjectEntityFromEntity(KestrelError):
+    pass
