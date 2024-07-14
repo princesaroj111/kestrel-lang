@@ -17,7 +17,7 @@ _logger = logging.getLogger(__name__)
 class NativeTable:
     dialect: DefaultDialect
     table_name: str
-    table_config: Optional[DataSource]
+    table_config: Optional[DataSource]  # for testing purpose, can provide None
     table_schema: Optional[List[str]]  # column names
     data_model_map: Optional[dict]
     timefmt: Optional[Callable]

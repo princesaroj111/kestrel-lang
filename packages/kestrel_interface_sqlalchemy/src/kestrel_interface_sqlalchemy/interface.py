@@ -25,7 +25,7 @@ from kestrel.exceptions import SourceNotFound
 
 from .translator import NativeTable, SubQuery, SQLAlchemyTranslator
 from .utils import iter_argument_from_function_in_callstack
-from . import config
+from .config import load_config
 
 
 _logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class SQLAlchemyInterface(AbstractInterface):
     ):
         _logger.debug("SQLAlchemyInterface: loading config")
         super().__init__(serialized_cache_catalog, session_id)
-        self.config = config.load_config()
+        self.config = load_config()
         self.schemas: dict = {}  # Schema per table (index)
         self.engines: dict = {}  # Map of conn name -> engine
         self.conns: dict = {}  # Map of conn name -> connection
