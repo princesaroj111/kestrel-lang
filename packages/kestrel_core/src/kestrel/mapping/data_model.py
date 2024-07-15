@@ -104,12 +104,14 @@ def _get_map_triple(d: dict, prefix: str, op: str, value) -> tuple:
 
 
 @typechecked
-def translate_comparison_to_native(dmm: dict, field: str, op: str, value: Any) -> list:
-    """Translate the (`field`, `op`, `value`) triple using data model map `dmm`
+def translate_comparison_to_native(
+    to_native_nested_map: dict, field: str, op: str, value: Any
+) -> list:
+    """Translate the (`field`, `op`, `value`) triple using data model map
 
     This function may be used in datasource interfaces to translate a comparison
     in the OCSF data model to the native data model, according to the data model
-    mapping in `dmm`.
+    mapping in `to_native_nested_map`.
 
     This function translates the (`field`, `op`, `value`) triple into a list of
     translated triples based on the provided data model map. The data model map
@@ -119,7 +121,7 @@ def translate_comparison_to_native(dmm: dict, field: str, op: str, value: Any) -
     the data model map to translate the field name.
 
     Parameters:
-        dmm: A dictionary that maps fields from one data model to another.
+        to_native_nested_map: OCSF to native nested mapping (directly from the YAML)
         field: The field name to be translated.
         op: The comparison operator.
         value: The value to be compared against.
@@ -132,29 +134,22 @@ def translate_comparison_to_native(dmm: dict, field: str, op: str, value: Any) -
     """
     _logger.debug("comp_to_native: %s %s %s", field, op, value)
     result = []
-    mapping = dmm.get(field)
-    if mapping:
-        if isinstance(mapping, str):
-            # Simple 1:1 field name mapping
-            result.append((mapping, op, value))
-        else:
-            raise NotImplementedError("complex native mapping")
-    else:
-        try:
-            node = reduce(dict.__getitem__, field.split("."), dmm)
-            if isinstance(node, list):
-                for i in node:
-                    if isinstance(i, dict):
-                        result.append(_get_map_triple(i, "native", op, value))
-                    else:
-                        result.append((i, op, value))
-            elif isinstance(node, dict):
-                result.append(_get_map_triple(node, "native", op, value))
-            elif isinstance(node, str):
-                result.append((node, op, value))
-        except KeyError:
-            # Pass-through
-            result.append((field, op, value))
+    try:
+        node = reduce(dict.__getitem__, field.split("."), to_native_nested_map)
+        if isinstance(node, list):
+            for i in node:
+                if isinstance(i, dict):
+                    result.append(_get_map_triple(i, "native", op, value))
+                else:
+                    result.append((i, op, value))
+        elif isinstance(node, dict):
+            result.append(_get_map_triple(node, "native", op, value))
+        elif isinstance(node, str):
+            result.append((node, op, value))
+    except KeyError:
+        # Pass-through
+        _logger.debug(f"no mapping for {field}, pass through")
+        result.append((field, op, value))
     _logger.debug("comp_to_native: return %s", result)
     return result
 
@@ -260,27 +255,38 @@ def _get_from_mapping(mapping: Union[str, list, dict], key) -> list:
 
 @typechecked
 def translate_projection_to_native(
-    dmm: dict,
-    ocsf_base_field: Optional[str],
-    attrs: Optional[Iterable],
-    # TODO: optional str or callable for joining entity_type and attr?
+    to_native_nested_map: dict,  # mapping for translation
+    ocsf_base_field: Optional[str],  # translate this base field
+    attrs: Optional[Iterable] = None,  # known attributes (in OCSF) to project
+    native_table_schema: Optional[List[str]] = None,  # additional filter
 ) -> list:
     result = []
 
     if ocsf_base_field:
         try:
-            dmm = reduce(dict.__getitem__, ocsf_base_field.split("."), dmm)
+            base_map = reduce(
+                dict.__getitem__, ocsf_base_field.split("."), to_native_nested_map
+            )
         except KeyError:
             _logger.warning(f"No mapping for base projection field: {ocsf_base_field}")
-            dmm = {}
+            base_map = {}
+    else:
+        # event does not have ocsf_base_field
+        base_map = to_native_nested_map
 
     if attrs:
         # project specified attributes
         for attr in attrs:
             try:
-                mapping = reduce(dict.__getitem__, attr.split("."), dmm)
+                mapping = reduce(dict.__getitem__, attr.split("."), base_map)
                 result.extend(
-                    [(i, attr) for i in _get_from_mapping(mapping, "native_field")]
+                    [
+                        (i, attr)
+                        for i in _get_from_mapping(mapping, "native_field")
+                        if native_table_schema
+                        and i in native_table_schema
+                        or not native_table_schema
+                    ]
                 )
             except KeyError:
                 # TODO: think better way than pass-through, e.g., raise exception
@@ -289,11 +295,22 @@ def translate_projection_to_native(
                 )
                 result.append((attr, attr))
     else:
-        # project all attributes known for the entity (or event if no entity specified)
-        for native_field, mapping in reverse_mapping(dmm).items():
-            result.extend(
-                [(native_field, i) for i in _get_from_mapping(mapping, "ocsf_field")]
-            )
+        # project all attributes known for the entity
+        # or event if no ocsf_base_field specified
+        # filter by native_table_schema
+
+        # filter only the ocsf_base_field part of the map
+        for native_field, mapping in reverse_mapping(base_map).items():
+            if not native_field.endswith("*"):
+                result.extend(
+                    [
+                        (native_field, i)
+                        for i in _get_from_mapping(mapping, "ocsf_field")
+                        if native_table_schema
+                        and native_field in native_table_schema
+                        or not native_table_schema
+                    ]
+                )
 
     # De-duplicate list while maintaining order
     final_result = list(OrderedDict.fromkeys(result))
@@ -348,17 +365,26 @@ def translate_attributes_projection_to_ocsf(
 
 
 @typechecked
-def translate_dataframe(df: DataFrame, dmm: dict) -> DataFrame:
+def translate_dataframe(df: DataFrame, to_native_nested_map: dict) -> DataFrame:
     # Translate results into Kestrel OCSF data model
     # The column names of df are already mapped
     for col in df.columns:
         try:
-            mapping = reduce(dict.__getitem__, col.split("."), dmm)
+            mapping = reduce(dict.__getitem__, col.split("."), to_native_nested_map)
         except KeyError:
             _logger.debug("No mapping for %s", col)
             mapping = None
-        if isinstance(mapping, dict):
-            transformer_name = mapping.get("ocsf_value")
-            df[col] = run_transformer_on_series(transformer_name, df[col].dropna())
+        if isinstance(mapping, list):
+            transformer_names = {
+                x.get("ocsf_value") for x in mapping if x.get("ocsf_value")
+            }
+            if len(transformer_names) > 0:
+                if len(transformer_names) > 1:
+                    raise NotImplementedError("Multiple to OCSF value transformers")
+                else:
+                    transformer_name = transformer_names.pop()
+                    df[col] = run_transformer_on_series(
+                        transformer_name, df[col].dropna()
+                    )
     df = df.replace({np.nan: None})
     return df

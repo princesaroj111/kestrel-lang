@@ -78,10 +78,15 @@ def _eval_ProjectAttrs(instruction: ProjectAttrs, dataframe: DataFrame) -> DataF
 
 @typechecked
 def _eval_ProjectEntity(instruction: ProjectEntity, dataframe: DataFrame) -> DataFrame:
-    # No translation/mapping, assuming the data is already in OCSF (Kestrel extension)
-    df = dataframe[[col for col in dataframe if col.startswith(instruction.ocsf_field)]]
-    df.rename(columns=lambda x: x[len(instruction.ocsf_field) + 1 :], inplace=True)
-    df = df.drop_duplicates()
+    if instruction.ocsf_field == "event":
+        df = dataframe.drop_duplicates()
+    else:
+        # No translation/mapping, assuming the data is already in OCSF (Kestrel extension)
+        df = dataframe[
+            [col for col in dataframe if col.startswith(instruction.ocsf_field)]
+        ]
+        df.rename(columns=lambda x: x[len(instruction.ocsf_field) + 1 :], inplace=True)
+        df = df.drop_duplicates()
     return df
 
 

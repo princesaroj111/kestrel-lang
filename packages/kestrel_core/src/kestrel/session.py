@@ -14,7 +14,7 @@ from kestrel.exceptions import InstructionNotFound
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
-from kestrel.ir.instructions import Explain, Instruction
+from kestrel.ir.instructions import Explain, Instruction, Return
 
 _logger = logging.getLogger(__name__)
 
@@ -52,16 +52,15 @@ class Session(AbstractContextManager):
         """
         return list(self.execute_to_generate(huntflow_block))
 
-    def execute_to_generate(self, huntflow_block: str) -> Iterable[Display]:
-        """Execute a Kestrel huntflow and put results in a generator.
+    def parse_and_update_graph(self, huntflow_block: str) -> Iterable[Return]:
+        """Parse a Kestrel huntflow and update the IRGraph
 
         Parameters:
             huntflow_block: the new huntflow block to be executed
 
-        Yields:
-            Evaluated result per Return instruction
+        Returns:
+            Return instructions from the huntflow_block
         """
-
         # Transcational huntflow block parsing/updating. If failed, roll back
         # all things done for this huntflow/code block
         irgraph_snapshot = self.irgraph.copy()
@@ -72,6 +71,19 @@ class Session(AbstractContextManager):
         except Exception as e:
             self.irgraph = irgraph_snapshot
             raise e
+
+        return rets
+
+    def execute_to_generate(self, huntflow_block: str) -> Iterable[Display]:
+        """Execute a Kestrel huntflow and put results in a generator.
+
+        Parameters:
+            huntflow_block: the new huntflow block to be executed
+
+        Yields:
+            Evaluated result per Return instruction
+        """
+        rets = self.parse_and_update_graph(huntflow_block)
 
         for ret in rets:
             yield self.evaluate_instruction(ret)

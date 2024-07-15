@@ -184,5 +184,13 @@ class AnalyticsError(KestrelError):
     pass
 
 
-class SourceInstructionNotEvaluated(KestrelError):
+class SourceSchemaNotFound(KestrelError):
+    pass
+
+
+class InvalidProjectEntityFromEntity(KestrelError):
+    pass
+
+
+class InvalidMappingWithMultipleIdentifierFields(KestrelError):
     pass

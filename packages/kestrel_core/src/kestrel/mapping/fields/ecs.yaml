@@ -10,6 +10,7 @@ endpoint: &endpoint
     hostname: host.hostname
     ip: host.ip
     mac: host.mac
+    os: os.name
 
 
 # https://schema.ocsf.io/1.1.0/objects/user

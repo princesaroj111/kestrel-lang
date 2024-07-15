@@ -1,12 +1,12 @@
 import logging
 from functools import reduce
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Union
 
 import sqlalchemy
-from sqlalchemy import FromClause, and_, asc, column, tuple_, desc, or_, select
+from sqlalchemy import and_, asc, column, tuple_, desc, or_, select
 from sqlalchemy.engine import Compiled, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import ColumnOperators, ColumnElement
+from sqlalchemy.sql.expression import ColumnOperators, ColumnElement, CTE
 from sqlalchemy.sql.selectable import Select
 from typeguard import typechecked
 
@@ -31,6 +31,15 @@ from kestrel.ir.instructions import (
     ProjectEntity,
     Sort,
     SortDirection,
+)
+from kestrel.mapping.data_model import (
+    translate_comparison_to_native,
+    translate_projection_to_native,
+)
+from kestrel.exceptions import (
+    SourceSchemaNotFound,
+    InvalidProjectEntityFromEntity,
+    InvalidMappingWithMultipleIdentifierFields,
 )
 
 _logger = logging.getLogger(__name__)
@@ -59,12 +68,29 @@ class SqlTranslator:
     def __init__(
         self,
         dialect: default.DefaultDialect,
-        from_obj: FromClause,
+        from_obj: Union[CTE, str],
+        from_obj_schema: Optional[List[str]],  # Entity CTE does not require this
+        from_obj_projection_base_field: Optional[str],
+        ocsf_to_native_mapping: Optional[dict],  # CTE does not require this
         timefmt: Optional[Callable],  # CTE does not have time
         timestamp: Optional[str],  # CTE does not have time
     ):
+        # Specify the schema if not Entity CTE
+        # Event CTE and raw datasource need this for ProjectEntity
+        self.source_schema = from_obj_schema
+
+        # schema after projection
+        # pass through the schema if no add_ProjectEntity()
+        self.projected_schema = from_obj_schema
+
+        # Store the mapping for translation from OCSF to native
+        self.data_mapping = ocsf_to_native_mapping
+
         # SQLAlchemy Dialect object (e.g. from sqlalchemy.dialects import sqlite; sqlite.dialect())
         self.dialect = dialect
+
+        # inherit projection_base_field from subquery
+        self.projection_base_field = from_obj_projection_base_field
 
         # Time formatting function for datasource
         self.timefmt = timefmt
@@ -72,24 +98,59 @@ class SqlTranslator:
         # Primary timestamp field in target table
         self.timestamp = timestamp
 
+        from_clause = (
+            from_obj if isinstance(from_obj, CTE) else sqlalchemy.table(from_obj)
+        )
+
         # SQLAlchemy statement object
         # Auto-dedup by default
-        self.query: Select = select("*").select_from(from_obj).distinct()
+        self.query: Select = select("*").select_from(from_clause).distinct()
+
+    @typechecked
+    def _map_identifier_field(self, field) -> ColumnElement:
+        if self.data_mapping:
+            comps = translate_comparison_to_native(self.data_mapping, field, "", None)
+            if len(comps) > 1:
+                raise InvalidMappingWithMultipleIdentifierFields(comps)
+            else:
+                col = column(comps[0][0])
+        else:
+            col = column(field)
+        return col
 
     @typechecked
     def _render_comp(self, comp: FBasicComparison) -> BinaryExpression:
-        # most FBasicComparison has .field; RefComparison has .fields
-        # col: ColumnElement
         if isinstance(comp, RefComparison):
+            # most FBasicComparison has .field; RefComparison has .fields
+            # col: ColumnElement
             if len(comp.fields) == 1:
-                col = column(comp.fields[0])
+                col = self._map_identifier_field(comp.fields[0])
             else:
-                col = tuple_(*[column(field) for field in comp.fields])
-        else:
-            col = column(comp.field)
-        if comp.op == StrCompOp.NMATCHES:
-            return ~comp2func[comp.op](col, comp.value)
-        return comp2func[comp.op](col, comp.value)
+                col = tuple_(
+                    *[self._map_identifier_field(field) for field in comp.fields]
+                )
+            rendered_comp = comp2func[comp.op](col, comp.value)
+        elif self.data_mapping:  # translation needed
+            comps = translate_comparison_to_native(
+                self.data_mapping, comp.field, comp.op, comp.value
+            )
+            translated_comps = (
+                (
+                    ~comp2func[op](column(field), value)
+                    if op == StrCompOp.NMATCHES
+                    else comp2func[op](column(field), value)
+                )
+                for field, op, value in comps
+            )
+            rendered_comp = reduce(or_, translated_comps)
+        else:  # no translation
+            rendered_comp = (
+                ~comp2func[comp.op](column(comp.field), comp.value)
+                if comp.op == StrCompOp.NMATCHES
+                else comp2func[comp.op](column(comp.field), comp.value)
+            )
+
+        return rendered_comp
 
     @typechecked
     def _render_multi_comp(self, comps: MultiComp) -> BooleanClauseList:
@@ -156,16 +217,45 @@ class SqlTranslator:
         cols = [column(col) for col in proj.attrs]
         self.query = self.query.with_only_columns(*cols)
 
-    def add_ProjectEntity(self, proj: ProjectEntity, table_schema: List[str]) -> None:
-        # this will only be called to project from events
-        # input the table_schema of the event table (irgraph.find_datasource_of_node())
-        prefix = proj.native_field + "."
-        pairs = {
-            col: col[len(prefix) :] for col in table_schema if col.startswith(prefix)
-        }
-        _logger.debug(f"column projection pairs: {pairs}")
-        cols = [sqlalchemy.column(i).label(j) for i, j in pairs.items()]
-        self.query = self.query.with_only_columns(*cols)
+    def add_ProjectEntity(self, proj: ProjectEntity) -> None:
+        if self.projection_base_field and self.projection_base_field != "event":
+            raise InvalidProjectEntityFromEntity(proj, self.projection_base_field)
+        else:
+            self.projection_base_field = proj.ocsf_field
+
+        if proj.ocsf_field == "event":  # project to event
+            if self.data_mapping:
+                if not self.source_schema:
+                    raise SourceSchemaNotFound(self.result_w_literal_binds())
+                else:
+                    pairs = translate_projection_to_native(
+                        self.data_mapping, None, None, self.source_schema
+                    )
+            else:
+                pairs = None
+                _logger.debug("no data mapping, no translation for projection (event)")
+
+        else:  # project to entity
+            if not self.source_schema:
+                raise SourceSchemaNotFound(self.result_w_literal_binds())
+
+            if self.data_mapping:
+                pairs = translate_projection_to_native(
+                    self.data_mapping, proj.ocsf_field, None, self.source_schema
+                )
+            else:
+                prefix = proj.ocsf_field + "."
+                pairs = [
+                    (col, col[len(prefix) :])
+                    for col in self.source_schema
+                    if col.startswith(prefix)
+                ]
+
+        if pairs:
+            self.projected_schema = [ocsf_field for _, ocsf_field in pairs]
+            _logger.debug(f"column projection pairs: {pairs}")
+            cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
+            self.query = self.query.with_only_columns(*cols)
 
     def add_Limit(self, lim: Limit) -> None:
         self.query = self.query.limit(lim.num)
@@ -178,13 +268,13 @@ class SqlTranslator:
         order = asc(col) if sort.direction == SortDirection.ASC else desc(col)
         self.query = self.query.order_by(order)
 
-    def add_instruction(self, i: Instruction, *args) -> None:
+    def add_instruction(self, i: Instruction) -> None:
         inst_name = i.instruction
         method_name = f"add_{inst_name}"
         method = getattr(self, method_name)
         if not method:
             raise NotImplementedError(f"SqlTranslator.{method_name}")
-        method(i, *args)
+        method(i)
 
     def result(self) -> Compiled:
         return self.query.compile(dialect=self.dialect)
