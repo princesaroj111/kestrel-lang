@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import copy
 import logging
 from collections import defaultdict
 from itertools import combinations
@@ -153,7 +154,7 @@ class IRGraph(networkx.DiGraph):
         Support subclass of IRGraph to be deep copied.
         """
         g = IRGraph()
-        o2n = {n: n.deepcopy() for n in self.nodes()}
+        o2n = {n: copy.deepcopy(n) for n in self.nodes()}
         for u, v in self.edges():
             g.add_edge(o2n[u], o2n[v])
         g.add_nodes_from([o2n[n] for n in self.nodes() if self.degree(n) == 0])

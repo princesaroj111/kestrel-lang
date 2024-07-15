@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-import copy
 import inspect
 import json
 import sys
 import uuid
+from pandas import DataFrame, read_json
+from io import StringIO
 from dataclasses import InitVar, dataclass, field, fields
 from enum import Enum
 from typing import Any, Callable, Iterable, Tuple, Mapping, Optional, Type, Union
 
 from mashumaro.mixins.json import DataClassJSONMixin
+from mashumaro.types import SerializableType
 from typeguard import typechecked
 
 from kestrel.__future__ import is_python_older_than_minor_version
@@ -33,6 +35,21 @@ if is_python_older_than_minor_version(11):
     InitVar.__call__ = lambda *args: None
 
 
+class MashDataFrame(DataFrame, SerializableType):
+    def _serialize(self):
+        return self.to_json()
+
+    @classmethod
+    def _deserialize(cls, json_str):
+        return read_json(StringIO(json_str))
+
+    def __copy__(self):
+        return MashDataFrame(super().__copy__())
+
+    def __deepcopy__(self, *args):
+        return MashDataFrame(super().__deepcopy__(*args))
+
+
 @dataclass
 class Instruction(DataClassJSONMixin):
     id: uuid.UUID = field(init=False)
@@ -50,20 +67,17 @@ class Instruction(DataClassJSONMixin):
         # stable hash during Instruction lifetime
         return self.id.int
 
-    def copy(self):
-        return copy.copy(self)
-
-    def deepcopy(self):
-        return copy.deepcopy(self)
-
     def has_same_content_as(self, instruction: Instruction) -> bool:
         if self.instruction == instruction.instruction:
             flag = True
             for f in fields(self):
-                if f.name != "id" and getattr(self, f.name) != getattr(
-                    instruction, f.name
-                ):
-                    flag = False
+                if f.name not in ("id", "instruction"):
+                    self_data = getattr(self, f.name)
+                    other_data = getattr(instruction, f.name)
+                    if isinstance(self_data, DataFrame):
+                        flag &= self_data.equals(other_data)
+                    else:
+                        flag &= self_data == other_data
         else:
             flag = False
         return flag
@@ -201,9 +215,14 @@ class Offset(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class Construct(SourceInstruction):
-    data: Tuple[Mapping[str, Union[str, int, bool]]]
+    data: MashDataFrame
     entity_type: Optional[str] = None
     interface: str = CACHE_INTERFACE_IDENTIFIER
+
+    def __post_init__(self):
+        if type(self.data) in (list, DataFrame):
+            self.data = MashDataFrame(self.data)
+        super().__post_init__()
 
 
 class SortDirection(str, Enum):

@@ -7,7 +7,7 @@ from kestrel.cache import SqlCache
 from kestrel.cache.sql import SqlCacheVirtual
 from kestrel.ir.graph import IRGraph, IRGraphEvaluable
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
-from kestrel.ir.instructions import Construct
+from kestrel.ir.instructions import Construct, MashDataFrame
 from kestrel.config import load_kestrel_config
 
 
@@ -20,7 +20,7 @@ def process_creation_events():
     parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
     data_node = graph.get_nodes_by_type(Construct)[0]
     test_dir = os.path.dirname(os.path.abspath(__file__))
-    data_node.data = read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv"))
+    data_node.data = MashDataFrame(read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv")))
     return graph
 
 
@@ -274,3 +274,24 @@ def test_eval_find_entity_to_entity(process_creation_events, kestrel_config):
     # 3. So there are 2 processes returned/displayed after dedup
     assert df.shape[0] == 2
     assert list(df.columns) == ['cmd_line', 'name', 'pid', 'uid', 'endpoint.uid', 'endpoint.name', 'endpoint.os']
+
+
+def test_explain_find_event_to_entity(process_creation_events):
+    graph = process_creation_events
+    stmt = "procs = FIND process RESPONDED es WHERE device.os = 'Linux' EXPLAIN procs"
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
+    c = SqlCache()
+    mapping = c.explain_graph(graph, c)
+    assert len(rets) == 1
+    explanation = mapping[rets[0].id]
+    construct = graph.get_nodes_by_type(Construct)[0]
+    assert explanation.query.statement == f"""WITH es AS 
+(SELECT DISTINCT * 
+FROM "{construct.id.hex}"), 
+procs AS 
+(SELECT DISTINCT "process.cmd_line" AS cmd_line, "process.name" AS name, "process.pid" AS pid, "process.uid" AS uid, "process.endpoint.uid" AS "endpoint.uid", "process.endpoint.name" AS "endpoint.name", "process.endpoint.os" AS "endpoint.os", "process.file.name" AS "file.name", "process.file.path" AS "file.path", "process.user.uid" AS "user.uid", "process.user.name" AS "user.name", "process.user.type_id" AS "user.type_id", "process.parent_process.cmd_line" AS "parent_process.cmd_line", "process.parent_process.name" AS "parent_process.name", "process.parent_process.pid" AS "parent_process.pid", "process.parent_process.uid" AS "parent_process.uid", "process.parent_process.endpoint.uid" AS "parent_process.endpoint.uid", "process.parent_process.endpoint.name" AS "parent_process.endpoint.name", "process.parent_process.endpoint.os" AS "parent_process.endpoint.os", "process.user.endpoint.uid" AS "user.endpoint.uid", "process.user.endpoint.name" AS "user.endpoint.name", "process.user.endpoint.os" AS "user.endpoint.os", "process.file.endpoint.uid" AS "file.endpoint.uid", "process.file.endpoint.name" AS "file.endpoint.name", "process.file.endpoint.os" AS "file.endpoint.os" 
+FROM es 
+WHERE "device.os" = 'Linux')
+ SELECT DISTINCT * 
+FROM procs"""

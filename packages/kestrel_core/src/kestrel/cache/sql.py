@@ -245,7 +245,7 @@ class SqlCacheVirtual(SqlCache):
 
     def __setitem__(self, instruction_id: UUID, data: Any):
         self.cache_catalog[instruction_id] = instruction_id.hex + "v"
-        self.cache_catalog_schemas[instruction_id] = []  # TODO may need some data
+        self.cache_catalog_schemas[instruction_id] = ["*"]
 
     def __del__(self):
         pass

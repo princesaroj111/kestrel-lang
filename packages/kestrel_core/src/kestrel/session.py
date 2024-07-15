@@ -84,7 +84,6 @@ class Session(AbstractContextManager):
             Evaluated result per Return instruction
         """
         rets = self.parse_and_update_graph(huntflow_block)
-
         for ret in rets:
             yield self.evaluate_instruction(ret)
 
