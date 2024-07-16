@@ -2,13 +2,28 @@ import json
 import pytest
 import os
 from kestrel import Session
-from pandas import DataFrame
+from pandas import DataFrame, read_csv
 from uuid import uuid4
 
 from kestrel.display import GraphExplanation
-from kestrel.ir.instructions import Construct
+from kestrel.ir.instructions import Construct, MashDataFrame
+from kestrel.ir.graph import IRGraph
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.cache import SqlCache
+
+
+@pytest.fixture
+def process_creation_events():
+    # return a two-node graph:
+    #   - Construct: table from logs_ocsf_process_creation.csv
+    #   - Variable es: events pointing to the Construct
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
+    data_node = graph.get_nodes_by_type(Construct)[0]
+    test_dir = os.path.dirname(os.path.abspath(__file__))
+    data_node.data = MashDataFrame(read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv")))
+    return graph
 
 
 def test_execute_in_cache():
@@ -351,3 +366,14 @@ DISP proclist ATTR name, foo
         assert b1.equals(disp)
         with pytest.raises(StopIteration):
             next(res)
+
+
+def test_explain_find_event_to_entity(process_creation_events):
+    with Session() as session:
+        session.irgraph = process_creation_events
+        res = session.execute("procs = FIND process RESPONDED es WHERE device.os = 'Linux' EXPLAIN procs")[0]
+        construct = session.irgraph.get_nodes_by_type(Construct)[0]
+        stmt = res.graphlets[0].query.statement.replace('"', '')
+        # cache.sql will use "*" as columns for __setitem__ in virtual cache
+        # so the result is different from test_cache_sqlite::test_explain_find_event_to_entity
+        assert stmt == f"WITH es AS \n(SELECT DISTINCT * \nFROM {construct.id.hex}v), \nprocs AS \n(SELECT DISTINCT * \nFROM es \nWHERE device.os = \'Linux\')\n SELECT DISTINCT * \nFROM procs"
