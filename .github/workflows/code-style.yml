@@ -29,6 +29,7 @@ jobs:
         run: |
           pip install --upgrade pip setuptools wheel
           pip install black isort
-      - name: Code style check (please black your code)
+      - name: Import order check
         run: isort --profile black --check-only packages/*/src/
+      - name: Code style check (please black your code)
         run: black --check packages/*/src/
