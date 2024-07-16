@@ -2,7 +2,6 @@ import re
 import sys
 
 from IPython.core.magic import Magics, line_cell_magic, magics_class
-
 from kestrel.session import Session
 
 

@@ -4,9 +4,6 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
 
 import sqlalchemy
-from pandas import DataFrame, read_sql
-from typeguard import typechecked
-
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.exceptions import SourceNotFound
 from kestrel.interface import AbstractInterface
@@ -23,6 +20,8 @@ from kestrel.ir.instructions import (
     Variable,
 )
 from kestrel.mapping.data_model import translate_dataframe
+from pandas import DataFrame, read_sql
+from typeguard import typechecked
 
 from .config import load_config
 from .translator import NativeTable, SQLAlchemyTranslator, SubQuery

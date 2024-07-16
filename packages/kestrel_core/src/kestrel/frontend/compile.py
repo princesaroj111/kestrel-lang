@@ -6,10 +6,6 @@ from itertools import chain
 from typing import List, Union
 
 from dateutil.parser import parse as to_datetime
-from lark import Token, Transformer
-from pandas import DataFrame
-from typeguard import typechecked
-
 from kestrel.exceptions import (
     DuplicatedRelationMapping,
     InvalidComparison,
@@ -56,6 +52,9 @@ from kestrel.mapping.data_model import (
     translate_entity_projection_to_ocsf,
 )
 from kestrel.utils import unescape_quoted_string
+from lark import Token, Transformer
+from pandas import DataFrame
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 

@@ -1,15 +1,9 @@
 import logging
+from collections import OrderedDict
 from functools import reduce
 from typing import Callable, List, Optional, Union
 
 import sqlalchemy
-from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
-from sqlalchemy.engine import Compiled, default
-from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
-from sqlalchemy.sql.selectable import Select
-from typeguard import typechecked
-
 from kestrel.exceptions import (
     InvalidMappingWithMultipleIdentifierFields,
     InvalidProjectEntityFromEntity,
@@ -41,6 +35,12 @@ from kestrel.mapping.data_model import (
     translate_comparison_to_native,
     translate_projection_to_native,
 )
+from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
+from sqlalchemy.engine import Compiled, default
+from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
+from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
+from sqlalchemy.sql.selectable import Select
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 
@@ -149,13 +149,23 @@ class SqlTranslator:
                 if comp.op == StrCompOp.NMATCHES
                 else comp2func[comp.op](column(comp.field), comp.value)
             )
-
         return rendered_comp
 
     @typechecked
     def _render_multi_comp(self, comps: MultiComp) -> BooleanClauseList:
         op = and_ if comps.op == ExpOp.AND else or_
-        return reduce(op, map(self._render_comp, comps.comps))
+        binary_expressions = list(map(self._render_comp, comps.comps))
+
+        # dedup using the SQLAlchemy's .compare() method; __eq__ does not work
+        final_result = []
+        for be in binary_expressions:
+            for ue in final_result:
+                if ue.compare(be):
+                    break
+            else:
+                final_result.append(be)
+
+        return reduce(op, final_result)
 
     @typechecked
     def _render_true(self) -> ColumnElement:

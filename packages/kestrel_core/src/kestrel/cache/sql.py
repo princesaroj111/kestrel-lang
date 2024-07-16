@@ -5,9 +5,6 @@ from uuid import UUID
 
 import sqlalchemy
 from dateutil.parser import parse as dt_parser
-from pandas import DataFrame, read_sql
-from typeguard import typechecked
-
 from kestrel.cache.base import AbstractCache
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
@@ -23,6 +20,8 @@ from kestrel.ir.instructions import (
     TransformingInstruction,
     Variable,
 )
+from pandas import DataFrame, read_sql
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 

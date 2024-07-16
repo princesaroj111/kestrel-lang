@@ -4,10 +4,9 @@ import logging
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Union
 
+from kestrel.interface.codegen.sql import SqlTranslator
 from sqlalchemy.engine.default import DefaultDialect
 from typeguard import typechecked
-
-from kestrel.interface.codegen.sql import SqlTranslator
 
 from .config import DataSource
 
