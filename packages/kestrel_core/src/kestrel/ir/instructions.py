@@ -220,7 +220,7 @@ class Construct(SourceInstruction):
     interface: str = CACHE_INTERFACE_IDENTIFIER
 
     def __post_init__(self):
-        if type(self.data) in (list, DataFrame):
+        if type(self.data) != MashDataFrame:
             self.data = MashDataFrame(self.data)
         super().__post_init__()
 
