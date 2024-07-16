@@ -5,9 +5,6 @@ import re
 import sys
 from typing import Callable
 
-from pandas import DataFrame, Series
-from typeguard import typechecked
-
 from kestrel.exceptions import (
     InvalidOperatorInMultiColumnComparison,
     MismatchedFieldValueInMultiColumnComparison,
@@ -33,6 +30,8 @@ from kestrel.ir.instructions import (
     SourceInstruction,
     TransformingInstruction,
 )
+from pandas import DataFrame, Series
+from typeguard import typechecked
 
 
 @typechecked

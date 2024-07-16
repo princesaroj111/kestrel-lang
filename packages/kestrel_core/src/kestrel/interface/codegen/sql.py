@@ -3,15 +3,6 @@ from functools import reduce
 from typing import Callable, List, Optional, Union
 
 import sqlalchemy
-from pandas import DataFrame
-from pandas.io.sql import SQLTable, pandasSQL_builder
-from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
-from sqlalchemy.engine import Compiled, Connection, default
-from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
-from sqlalchemy.sql.selectable import Select
-from typeguard import typechecked
-
 from kestrel.exceptions import (
     InvalidMappingWithMultipleIdentifierFields,
     InvalidProjectEntityFromEntity,
@@ -43,6 +34,14 @@ from kestrel.mapping.data_model import (
     translate_comparison_to_native,
     translate_projection_to_native,
 )
+from pandas import DataFrame
+from pandas.io.sql import SQLTable, pandasSQL_builder
+from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
+from sqlalchemy.engine import Compiled, Connection, default
+from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
+from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
+from sqlalchemy.sql.selectable import Select
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 

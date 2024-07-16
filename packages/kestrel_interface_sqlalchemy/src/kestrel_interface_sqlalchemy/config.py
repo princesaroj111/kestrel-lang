@@ -2,8 +2,6 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-from mashumaro.mixins.json import DataClassJSONMixin
-
 from kestrel.config.utils import (
     CONFIG_DIR_DEFAULT,
     load_kestrel_config,
@@ -14,6 +12,7 @@ from kestrel.mapping.data_model import (
     check_entity_identifier_existence_in_mapping,
     load_default_mapping,
 )
+from mashumaro.mixins.json import DataClassJSONMixin
 
 PROFILE_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "sqlalchemy.yaml"
 PROFILE_PATH_ENV_VAR = "KESTREL_SQLALCHEMY_CONFIG"

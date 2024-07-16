@@ -2,10 +2,9 @@ import json
 import os
 import pkgutil
 
+import kestrel
 import nbclassic
 import notebook
-
-import kestrel
 
 
 def update_codemirror_mode():

@@ -9,8 +9,6 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple, Unio
 from uuid import UUID
 
 import networkx
-from typeguard import typechecked
-
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.exceptions import (
     DanglingFilter,
@@ -49,6 +47,7 @@ from kestrel.ir.instructions import (
     Variable,
     instruction_from_dict,
 )
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 
