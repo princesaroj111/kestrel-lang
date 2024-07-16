@@ -192,6 +192,19 @@ def test_find_entity_to_event(setup_sqlite_ecs_process_creation):
         assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
 
 
+def test_find_entity_to_event_2(setup_sqlite_ecs_process_creation):
+    with Session() as session:
+        huntflow = """
+        procs = GET process FROM sqlalchemy://events WHERE os.name = "Linux"
+        e2 = FIND event ORIGINATED BY procs
+        DISP e2
+        """
+        e2 = session.execute(huntflow)[0]
+        assert e2.shape[0] == 4
+        assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
+        assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
+
+
 def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
     with Session() as session:
         huntflow = """
@@ -210,5 +223,17 @@ def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
             result = h.read()
         assert stmt == result
 
+        assert parents.shape[0] == 2
+        assert list(parents) == ['endpoint.uid', 'file.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid']
+
+
+def test_find_entity_to_entity_2(setup_sqlite_ecs_process_creation):
+    with Session() as session:
+        huntflow = """
+        procs = GET process FROM sqlalchemy://events WHERE os.name = "Linux"
+        parents = FIND process CREATED procs
+        DISP parents
+        """
+        parents = session.execute(huntflow)[0]
         assert parents.shape[0] == 2
         assert list(parents) == ['endpoint.uid', 'file.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid']
