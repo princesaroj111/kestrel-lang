@@ -134,10 +134,19 @@ def test_find_event_to_entity(setup_sqlite_ecs_process_creation):
         evs = GET event FROM sqlalchemy://events WHERE os.name IN ('Linux', 'Windows')
         DISP evs
         procs = FIND process RESPONDED evs WHERE endpoint.os = 'Linux'
+        EXPLAIN procs
         DISP procs
         """
-        evs, procs = session.execute(huntflow)
+        evs, explain, procs = session.execute(huntflow)
         assert evs.shape[0] == 9  # all events
+
+        stmt = explain.graphlets[0].query.statement
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        result_file = os.path.join(test_dir, "result_interface_find_event_to_entity.txt")
+        with open(result_file) as h:
+            result = h.read()
+        assert stmt == result
+
         assert list(procs) == ['endpoint.uid', 'file.endpoint.uid', 'parent_process.endpoint.uid', 'parent_process.file.endpoint.uid', 'parent_process.user.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'parent_process.endpoint.name', 'parent_process.file.endpoint.name', 'parent_process.user.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'parent_process.endpoint.os', 'parent_process.file.endpoint.os', 'parent_process.user.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid', 'file.name', 'file.path', 'file.parent_folder', 'parent_process.cmd_line', 'parent_process.name', 'parent_process.pid', 'parent_process.uid']
         assert procs.shape[0] == 5  # 5 Linux events -> 5 processes
 
@@ -148,9 +157,18 @@ def test_find_entity_to_event(setup_sqlite_ecs_process_creation):
         evs = GET event FROM sqlalchemy://events WHERE os.name IN ('Linux', 'Windows')
         procs = FIND process RESPONDED evs WHERE endpoint.os = 'Linux'
         e2 = FIND event ORIGINATED BY procs
+        EXPLAIN e2
         DISP e2
         """
-        e2 = session.execute(huntflow)[0]
+        explain, e2 = session.execute(huntflow)
+
+        stmt = explain.graphlets[0].query.statement
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        result_file = os.path.join(test_dir, "result_interface_find_entity_to_event.txt")
+        with open(result_file) as h:
+            result = h.read()
+        assert stmt == result
+
         assert e2.shape[0] == 4
         assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
         assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
@@ -162,8 +180,17 @@ def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
         evs = GET event FROM sqlalchemy://events WHERE os.name IN ('Linux', 'Windows')
         procs = FIND process RESPONDED evs WHERE endpoint.os = 'Linux'
         parents = FIND process CREATED procs
+        EXPLAIN parents
         DISP parents
         """
-        parents = session.execute(huntflow)[0]
+        explain, parents = session.execute(huntflow)
+
+        stmt = explain.graphlets[0].query.statement
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        result_file = os.path.join(test_dir, "result_interface_find_entity_to_entity.txt")
+        with open(result_file) as h:
+            result = h.read()
+        assert stmt == result
+
         assert parents.shape[0] == 2
         assert list(parents) == ['endpoint.uid', 'file.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid']

@@ -117,6 +117,7 @@ class SqlCache(AbstractCache):
     def explain_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_explain: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, GraphletExplanation]:
         mapping = {}

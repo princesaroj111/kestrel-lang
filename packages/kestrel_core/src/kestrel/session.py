@@ -120,7 +120,7 @@ class Session(AbstractContextManager):
                 _logger.debug("eval: subgraph: %s", [i.instruction for i in g.nodes()])
                 _logger.debug("eval: interface = %s", interface)
                 for iid, _display in (
-                    interface.explain_graph(g)
+                    interface.explain_graph(g, _cache)
                     if is_explain
                     else interface.evaluate_graph(g, _cache)
                 ).items():

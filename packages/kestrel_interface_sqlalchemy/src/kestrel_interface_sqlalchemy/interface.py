@@ -6,7 +6,7 @@ from typeguard import typechecked
 import sqlalchemy
 from pandas import DataFrame, read_sql
 
-from kestrel.display import GraphletExplanation
+from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface import AbstractInterface
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
@@ -111,11 +111,11 @@ class SQLAlchemyInterface(AbstractInterface):
         if not instructions_to_explain:
             instructions_to_explain = graph.get_sink_nodes()
         for instruction in instructions_to_explain:
-            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
             graph_dict = dep_graph.to_dict()
-            query_stmt = translator.result()
-            mapping[instruction.id] = GraphletExplanation(graph_dict, query_stmt)
+            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
+            query = NativeQuery("SQL", str(translator.result_w_literal_binds()))
+            mapping[instruction.id] = GraphletExplanation(graph_dict, query)
         return mapping
 
     def _evaluate_instruction_in_graph(
