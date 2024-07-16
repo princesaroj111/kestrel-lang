@@ -1,14 +1,15 @@
 import os
+from uuid import uuid4
+
 import pytest
 from pandas import DataFrame, read_csv
-from uuid import uuid4
 
 from kestrel.cache import InMemoryCache
 from kestrel.cache.inmemory import InMemoryCacheVirtual
-from kestrel.ir.graph import IRGraph, IRGraphEvaluable
-from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
-from kestrel.ir.instructions import Construct
 from kestrel.config import load_kestrel_config
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.ir.graph import IRGraph, IRGraphEvaluable
+from kestrel.ir.instructions import Construct, SerializableDataFrame
 
 
 @pytest.fixture
@@ -20,7 +21,7 @@ def process_creation_events():
     parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
     data_node = graph.get_nodes_by_type(Construct)[0]
     test_dir = os.path.dirname(os.path.abspath(__file__))
-    data_node.data = read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv"))
+    data_node.data = SerializableDataFrame(read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv")))
     return graph
 
 

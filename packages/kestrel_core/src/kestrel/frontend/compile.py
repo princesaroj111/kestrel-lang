@@ -3,18 +3,14 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from itertools import chain
+from typing import List, Union
 
-from pandas import DataFrame
 from dateutil.parser import parse as to_datetime
-from lark import Token, Transformer
-from typeguard import typechecked
-from typing import Union, List
-
 from kestrel.exceptions import (
-    InvalidComparison,
-    UnsupportedObjectRelation,
     DuplicatedRelationMapping,
+    InvalidComparison,
     MissingEntityIdentifierInConfig,
+    UnsupportedObjectRelation,
 )
 from kestrel.ir.filter import (
     BoolExp,
@@ -51,11 +47,14 @@ from kestrel.ir.instructions import (
     Variable,
 )
 from kestrel.mapping.data_model import (
+    translate_attributes_projection_to_ocsf,
     translate_comparison_to_ocsf,
     translate_entity_projection_to_ocsf,
-    translate_attributes_projection_to_ocsf,
 )
 from kestrel.utils import unescape_quoted_string
+from lark import Token, Transformer
+from pandas import DataFrame
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 

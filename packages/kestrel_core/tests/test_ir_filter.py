@@ -1,22 +1,18 @@
 import json
 from collections import Counter
 
-from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
-from kestrel.ir.graph import IRGraph
-from kestrel.ir.filter import (
-    IntComparison, FloatComparison, StrComparison, ListComparison,
-    RefComparison, ReferenceValue, ListOp, NumCompOp, StrCompOp, ExpOp, AbsoluteTrue,
-    BoolExp, MultiComp, get_references_from_exp, resolve_reference_with_function,
-)
-from kestrel.ir.instructions import (
-    Filter,
-    Variable,
-    Construct,
-    ProjectAttrs,
-    instruction_from_json,
-)
-
 import pytest
+
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.ir.filter import (AbsoluteTrue, BoolExp, ExpOp, FloatComparison,
+                               IntComparison, ListComparison, ListOp,
+                               MultiComp, NumCompOp, RefComparison,
+                               ReferenceValue, StrComparison, StrCompOp,
+                               get_references_from_exp,
+                               resolve_reference_with_function)
+from kestrel.ir.graph import IRGraph
+from kestrel.ir.instructions import (Construct, Filter, ProjectAttrs, Variable,
+                                     instruction_from_json)
 
 
 @pytest.mark.parametrize(

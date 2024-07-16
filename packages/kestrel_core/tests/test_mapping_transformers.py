@@ -1,10 +1,8 @@
 import pandas as pd
 import pytest
 
-from kestrel.mapping.transformers import (
-    run_transformer,
-    run_transformer_on_series,
-)
+from kestrel.mapping.transformers import (run_transformer,
+                                          run_transformer_on_series)
 
 
 @pytest.mark.parametrize(

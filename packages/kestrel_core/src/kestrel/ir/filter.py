@@ -3,12 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Iterable, List, Tuple, Optional, Union
-
-from mashumaro.mixins.json import DataClassJSONMixin
-from typeguard import typechecked
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
 from kestrel.exceptions import MismatchedFieldValueInMultiColumnComparison
+from mashumaro.mixins.json import DataClassJSONMixin
+from typeguard import typechecked
 
 
 class NumCompOp(str, Enum):

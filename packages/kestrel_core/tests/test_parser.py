@@ -1,27 +1,18 @@
-import pytest
-import pandas
 import os
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
-from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
-from kestrel.ir.filter import ReferenceValue, AbsoluteTrue, RefComparison
-from kestrel.ir.instructions import (
-    Construct,
-    DataSource,
-    Filter,
-    Limit,
-    Offset,
-    ProjectAttrs,
-    ProjectEntity,
-    Reference,
-    Sort,
-    Variable,
-    Explain,
-    Return,
-)
-from kestrel.ir.graph import IRGraph
+import pytest
+from pandas import DataFrame, read_csv
+
 from kestrel.config import load_kestrel_config
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.ir.filter import AbsoluteTrue, RefComparison, ReferenceValue
+from kestrel.ir.graph import IRGraph
+from kestrel.ir.instructions import (Construct, DataSource, Explain, Filter,
+                                     Limit, Offset, ProjectAttrs,
+                                     ProjectEntity, Reference, Return,
+                                     SerializableDataFrame, Sort, Variable)
 
 
 @pytest.fixture
@@ -33,7 +24,7 @@ def process_creation_events():
     parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
     data_node = graph.get_nodes_by_type(Construct)[0]
     test_dir = os.path.dirname(os.path.abspath(__file__))
-    data_node.data = pandas.read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv"))
+    data_node.data = SerializableDataFrame(read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv")))
     return graph
 
 
@@ -170,12 +161,12 @@ proclist = NEW process [ {"name": "cmd.exe", "pid": 123}
     cs = graph.get_nodes_by_type(Construct)
     assert len(cs) == 1
     construct = cs[0]
-    df = [ {"name": "cmd.exe", "pid": 123}
+    df = DataFrame([ {"name": "cmd.exe", "pid": 123}
          , {"name": "explorer.exe", "pid": 99}
          , {"name": "firefox.exe", "pid": 201}
          , {"name": "chrome.exe", "pid": 205}
-         ]
-    assert df == construct.data
+         ])
+    assert df.equals(construct.data)
     vs = graph.get_variables()
     assert len(vs) == 1
     assert vs[0].name == "proclist"

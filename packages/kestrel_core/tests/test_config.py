@@ -1,5 +1,6 @@
-from kestrel.config.utils import load_kestrel_config
 import os
+
+from kestrel.config.utils import load_kestrel_config
 
 
 def test_env_vars_in_config():

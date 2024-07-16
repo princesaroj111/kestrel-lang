@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import logging
 from collections import defaultdict
@@ -8,8 +9,6 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple, Unio
 from uuid import UUID
 
 import networkx
-from typeguard import typechecked
-
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.exceptions import (
     DanglingFilter,
@@ -28,19 +27,19 @@ from kestrel.exceptions import (
     MultiInterfacesInGraph,
     MultiSourcesInGraph,
     ReferenceNotFound,
-    VariableNotFound,
     SourceNotFound,
+    VariableNotFound,
 )
 from kestrel.ir.filter import ReferenceValue
 from kestrel.ir.instructions import (
     Analytic,
+    Construct,
     DataSource,
     Filter,
     Instruction,
     IntermediateInstruction,
     ProjectAttrs,
     Reference,
-    Construct,
     Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
@@ -48,6 +47,7 @@ from kestrel.ir.instructions import (
     Variable,
     instruction_from_dict,
 )
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class IRGraph(networkx.DiGraph):
         Support subclass of IRGraph to be deep copied.
         """
         g = IRGraph()
-        o2n = {n: n.deepcopy() for n in self.nodes()}
+        o2n = {n: copy.deepcopy(n) for n in self.nodes()}
         for u, v in self.edges():
             g.add_edge(o2n[u], o2n[v])
         g.add_nodes_from([o2n[n] for n in self.nodes() if self.degree(n) == 0])

@@ -1,17 +1,16 @@
 import logging
 from collections import OrderedDict
 from functools import reduce
-from typing import Optional, Union, List, Iterable, Tuple, Any
+from typing import Any, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import yaml
-from pandas import DataFrame
-from typeguard import typechecked
-
-from kestrel.ir.filter import ReferenceValue
 from kestrel.exceptions import IncompleteDataMapping
+from kestrel.ir.filter import ReferenceValue
 from kestrel.mapping.transformers import run_transformer, run_transformer_on_series
 from kestrel.utils import list_folder_files
+from pandas import DataFrame
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 
@@ -361,7 +360,8 @@ def translate_attributes_projection_to_ocsf(
                 result += ocsf_attrs
         else:  # not found; pass through
             result.append(attr)
-    return tuple(result)
+    final_result = list(OrderedDict.fromkeys(result))
+    return tuple(final_result)
 
 
 @typechecked

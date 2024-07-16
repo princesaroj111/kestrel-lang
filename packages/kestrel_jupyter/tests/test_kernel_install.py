@@ -1,5 +1,4 @@
 from jupyter_client.kernelspec import KernelSpecManager
-
 from kestrel_jupyter_kernel.setup import install_kernelspec
 
 

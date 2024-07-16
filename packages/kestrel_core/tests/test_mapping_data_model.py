@@ -1,19 +1,13 @@
+import pandas as pd
 import pytest
 
-import pandas as pd
-
-from kestrel.exceptions import IncompleteDataMapping
 from kestrel.config.utils import load_kestrel_config
+from kestrel.exceptions import IncompleteDataMapping
 from kestrel.mapping.data_model import (
-    load_default_mapping,
-    reverse_mapping,
-    translate_comparison_to_native,
-    translate_comparison_to_ocsf,
-    translate_dataframe,
-    translate_projection_to_native,
-    check_entity_identifier_existence_in_mapping,
-)
-
+    check_entity_identifier_existence_in_mapping, load_default_mapping,
+    reverse_mapping, translate_comparison_to_native,
+    translate_comparison_to_ocsf, translate_dataframe,
+    translate_projection_to_native)
 
 # A "custom" mapping for an opensearch/elasticsearch datasource.
 # This mapping works with data from Blue Team Village's 2023 DefCon CTF, for example.

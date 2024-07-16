@@ -5,24 +5,23 @@ from uuid import UUID
 
 import sqlalchemy
 from dateutil.parser import parse as dt_parser
-from pandas import DataFrame, read_sql
-from typeguard import typechecked
-
 from kestrel.cache.base import AbstractCache
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
+    Construct,
+    Explain,
+    Filter,
     Instruction,
+    Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
-    Construct,
     Variable,
-    Filter,
-    Return,
-    Explain,
 )
+from pandas import DataFrame, read_sql
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 
@@ -117,6 +116,7 @@ class SqlCache(AbstractCache):
     def explain_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_explain: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, GraphletExplanation]:
         mapping = {}
@@ -245,7 +245,7 @@ class SqlCacheVirtual(SqlCache):
 
     def __setitem__(self, instruction_id: UUID, data: Any):
         self.cache_catalog[instruction_id] = instruction_id.hex + "v"
-        self.cache_catalog_schemas[instruction_id] = []  # TODO may need some data
+        self.cache_catalog_schemas[instruction_id] = ["*"]
 
     def __del__(self):
         pass

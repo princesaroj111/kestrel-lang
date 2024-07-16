@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-import copy
 import inspect
 import json
 import sys
 import uuid
 from dataclasses import InitVar, dataclass, field, fields
 from enum import Enum
-from typing import Any, Callable, Iterable, Tuple, Mapping, Optional, Type, Union
-
-from mashumaro.mixins.json import DataClassJSONMixin
-from typeguard import typechecked
+from io import StringIO
+from typing import Any, Callable, Iterable, Mapping, Optional, Tuple, Type, Union
 
 from kestrel.__future__ import is_python_older_than_minor_version
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
@@ -20,17 +17,36 @@ from kestrel.exceptions import (
     InvalidSeralizedInstruction,
 )
 from kestrel.ir.filter import (
-    FExpression,
     AbsoluteTrue,
+    FExpression,
     ReferenceValue,
     TimeRange,
     get_references_from_exp,
     resolve_reference_with_function,
 )
+from mashumaro.mixins.json import DataClassJSONMixin
+from mashumaro.types import SerializableType
+from pandas import DataFrame, read_json
+from typeguard import typechecked
 
 # https://stackoverflow.com/questions/70400639/how-do-i-get-python-dataclass-initvar-fields-to-work-with-typing-get-type-hints
 if is_python_older_than_minor_version(11):
     InitVar.__call__ = lambda *args: None
+
+
+class SerializableDataFrame(DataFrame, SerializableType):
+    def _serialize(self):
+        return self.to_json()
+
+    @classmethod
+    def _deserialize(cls, json_str):
+        return read_json(StringIO(json_str))
+
+    def __copy__(self):
+        return SerializableDataFrame(super().__copy__())
+
+    def __deepcopy__(self, *args):
+        return SerializableDataFrame(super().__deepcopy__(*args))
 
 
 @dataclass
@@ -50,20 +66,17 @@ class Instruction(DataClassJSONMixin):
         # stable hash during Instruction lifetime
         return self.id.int
 
-    def copy(self):
-        return copy.copy(self)
-
-    def deepcopy(self):
-        return copy.deepcopy(self)
-
     def has_same_content_as(self, instruction: Instruction) -> bool:
         if self.instruction == instruction.instruction:
             flag = True
             for f in fields(self):
-                if f.name != "id" and getattr(self, f.name) != getattr(
-                    instruction, f.name
-                ):
-                    flag = False
+                if f.name not in ("id", "instruction"):
+                    self_data = getattr(self, f.name)
+                    other_data = getattr(instruction, f.name)
+                    if isinstance(self_data, DataFrame):
+                        flag &= self_data.equals(other_data)
+                    else:
+                        flag &= self_data == other_data
         else:
             flag = False
         return flag
@@ -201,9 +214,14 @@ class Offset(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class Construct(SourceInstruction):
-    data: Tuple[Mapping[str, Union[str, int, bool]]]
+    data: SerializableDataFrame
     entity_type: Optional[str] = None
     interface: str = CACHE_INTERFACE_IDENTIFIER
+
+    def __post_init__(self):
+        if type(self.data) != SerializableDataFrame:
+            self.data = SerializableDataFrame(self.data)
+        super().__post_init__()
 
 
 class SortDirection(str, Enum):

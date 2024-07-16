@@ -2,31 +2,30 @@ import logging
 from functools import reduce
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
-from typeguard import typechecked
-import sqlalchemy
-from pandas import DataFrame, read_sql
 
-from kestrel.display import GraphletExplanation
+import sqlalchemy
+from kestrel.display import GraphletExplanation, NativeQuery
+from kestrel.exceptions import SourceNotFound
 from kestrel.interface import AbstractInterface
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     DataSource,
+    Explain,
     Filter,
     Instruction,
     Return,
-    Explain,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
     Variable,
 )
 from kestrel.mapping.data_model import translate_dataframe
-from kestrel.exceptions import SourceNotFound
+from pandas import DataFrame, read_sql
+from typeguard import typechecked
 
-from .translator import NativeTable, SubQuery, SQLAlchemyTranslator
-from .utils import iter_argument_from_function_in_callstack
 from .config import load_config
-
+from .translator import NativeTable, SQLAlchemyTranslator, SubQuery
+from .utils import iter_argument_from_function_in_callstack
 
 _logger = logging.getLogger(__name__)
 
@@ -111,11 +110,11 @@ class SQLAlchemyInterface(AbstractInterface):
         if not instructions_to_explain:
             instructions_to_explain = graph.get_sink_nodes()
         for instruction in instructions_to_explain:
-            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
             graph_dict = dep_graph.to_dict()
-            query_stmt = translator.result()
-            mapping[instruction.id] = GraphletExplanation(graph_dict, query_stmt)
+            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
+            query = NativeQuery("SQL", str(translator.result_w_literal_binds()))
+            mapping[instruction.id] = GraphletExplanation(graph_dict, query)
         return mapping
 
     def _evaluate_instruction_in_graph(

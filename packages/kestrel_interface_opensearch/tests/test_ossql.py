@@ -1,30 +1,15 @@
 from datetime import datetime
-from dateutil import parser
-
-from kestrel_interface_opensearch.ossql import OpenSearchTranslator
-from kestrel.exceptions import UnsupportedOperatorError
-from kestrel.ir.filter import (
-    ExpOp,
-    IntComparison,
-    ListOp,
-    ListComparison,
-    MultiComp,
-    NumCompOp,
-    StrCompOp,
-    StrComparison,
-    TimeRange
-)
-from kestrel.ir.instructions import (
-    Filter,
-    Limit,
-    Offset,
-    ProjectAttrs,
-    ProjectEntity,
-    Sort
-)
 
 import pytest
+from dateutil import parser
+from kestrel_interface_opensearch.ossql import OpenSearchTranslator
 
+from kestrel.exceptions import UnsupportedOperatorError
+from kestrel.ir.filter import (ExpOp, IntComparison, ListComparison, ListOp,
+                               MultiComp, NumCompOp, StrComparison, StrCompOp,
+                               TimeRange)
+from kestrel.ir.instructions import (Filter, Limit, Offset, ProjectAttrs,
+                                     ProjectEntity, Sort)
 
 TIMEFMT = '%Y-%m-%dT%H:%M:%S.%fZ'
 

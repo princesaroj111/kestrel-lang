@@ -1,33 +1,18 @@
 from datetime import datetime
-from dateutil import parser
-
-from kestrel_interface_sqlalchemy.interface import SQLAlchemyTranslator, NativeTable
-from kestrel.exceptions import UnsupportedOperatorError
-from kestrel.ir.filter import (
-    ExpOp,
-    IntComparison,
-    ListOp,
-    ListComparison,
-    MultiComp,
-    NumCompOp,
-    StrCompOp,
-    StrComparison,
-    TimeRange
-)
-from kestrel.ir.instructions import (
-    Filter,
-    Limit,
-    Offset,
-    ProjectAttrs,
-    ProjectEntity,
-    Sort
-)
-
-# Use sqlite3 for testing
-import sqlalchemy
 
 import pytest
+# Use sqlite3 for testing
+import sqlalchemy
+from dateutil import parser
+from kestrel_interface_sqlalchemy.interface import (NativeTable,
+                                                    SQLAlchemyTranslator)
 
+from kestrel.exceptions import UnsupportedOperatorError
+from kestrel.ir.filter import (ExpOp, IntComparison, ListComparison, ListOp,
+                               MultiComp, NumCompOp, StrComparison, StrCompOp,
+                               TimeRange)
+from kestrel.ir.instructions import (Filter, Limit, Offset, ProjectAttrs,
+                                     ProjectEntity, Sort)
 
 ENGINE = sqlalchemy.create_engine("sqlite:///test.db")
 DIALECT = ENGINE.dialect

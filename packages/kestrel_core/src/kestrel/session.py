@@ -3,18 +3,17 @@ from contextlib import AbstractContextManager
 from typing import Iterable
 from uuid import uuid4
 
-from typeguard import typechecked
-
 from kestrel.analytics import PythonAnalyticsInterface
 from kestrel.cache import SqlCache
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.config import load_kestrel_config
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import Explain, Instruction, Return
+from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 
@@ -84,7 +83,6 @@ class Session(AbstractContextManager):
             Evaluated result per Return instruction
         """
         rets = self.parse_and_update_graph(huntflow_block)
-
         for ret in rets:
             yield self.evaluate_instruction(ret)
 
@@ -121,7 +119,7 @@ class Session(AbstractContextManager):
                 _logger.debug("eval: subgraph: %s", [i.instruction for i in g.nodes()])
                 _logger.debug("eval: interface = %s", interface)
                 for iid, _display in (
-                    interface.explain_graph(g)
+                    interface.explain_graph(g, _cache)
                     if is_explain
                     else interface.evaluate_graph(g, _cache)
                 ).items():
