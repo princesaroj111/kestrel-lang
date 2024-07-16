@@ -1,12 +1,8 @@
 import os
 
 import yaml
-
-from kestrel_interface_opensearch.config import (
-    PROFILE_PATH_ENV_VAR,
-    Connection,
-    load_config,
-)
+from kestrel_interface_opensearch.config import (PROFILE_PATH_ENV_VAR,
+                                                 Connection, load_config)
 
 
 def test_load_config(tmp_path):

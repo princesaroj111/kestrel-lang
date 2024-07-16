@@ -1,12 +1,8 @@
 import os
 
 import yaml
-
-from kestrel_interface_sqlalchemy.config import (
-    PROFILE_PATH_ENV_VAR,
-    Connection,
-    load_config,
-)
+from kestrel_interface_sqlalchemy.config import (PROFILE_PATH_ENV_VAR,
+                                                 Connection, load_config)
 
 
 def test_load_config_w_default_map(tmp_path):

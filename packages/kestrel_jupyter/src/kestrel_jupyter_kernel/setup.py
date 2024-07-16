@@ -13,9 +13,10 @@
 #
 ################################################################
 
+import json
 import os
 import tempfile
-import json
+
 from jupyter_client.kernelspec import KernelSpecManager
 from kestrel_jupyter_kernel.codemirror.setup import update_codemirror_mode
 

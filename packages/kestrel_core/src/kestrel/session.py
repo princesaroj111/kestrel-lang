@@ -7,8 +7,8 @@ from typeguard import typechecked
 
 from kestrel.analytics import PythonAnalyticsInterface
 from kestrel.cache import SqlCache
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.config import load_kestrel_config
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph

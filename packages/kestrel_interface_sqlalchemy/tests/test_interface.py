@@ -1,14 +1,15 @@
-import pytest
-import yaml
 import os
 import sqlite3
 from collections import Counter
+
+import pytest
+import yaml
+from kestrel_interface_sqlalchemy.config import PROFILE_PATH_ENV_VAR
 from pandas import read_csv
 
 from kestrel import Session
 from kestrel.ir.filter import MultiComp
-from kestrel.ir.instructions import DataSource, Variable, Filter, ProjectEntity
-from kestrel_interface_sqlalchemy.config import PROFILE_PATH_ENV_VAR
+from kestrel.ir.instructions import DataSource, Filter, ProjectEntity, Variable
 
 
 @pytest.fixture

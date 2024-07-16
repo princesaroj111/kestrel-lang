@@ -1,23 +1,15 @@
-import networkx.utils
 from collections import Counter
+
+import networkx.utils
 from pandas import DataFrame
 
-from kestrel.ir.instructions import (
-    Variable,
-    DataSource,
-    Reference,
-    Return,
-    Filter,
-    Construct,
-    ProjectAttrs,
-    ProjectEntity,
-    Instruction,
-    TransformingInstruction,
-    CACHE_INTERFACE_IDENTIFIER,
-)
-from kestrel.ir.graph import IRGraph, IRGraphSimpleQuery
-from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.cache import InMemoryCache
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.ir.graph import IRGraph, IRGraphSimpleQuery
+from kestrel.ir.instructions import (CACHE_INTERFACE_IDENTIFIER, Construct,
+                                     DataSource, Filter, Instruction,
+                                     ProjectAttrs, ProjectEntity, Reference,
+                                     Return, TransformingInstruction, Variable)
 
 
 def test_add_get_datasource():

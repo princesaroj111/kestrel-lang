@@ -1,11 +1,7 @@
-import sys
 import re
+import sys
 
-from IPython.core.magic import (
-    line_cell_magic,
-    Magics,
-    magics_class,
-)
+from IPython.core.magic import Magics, line_cell_magic, magics_class
 
 from kestrel.session import Session
 

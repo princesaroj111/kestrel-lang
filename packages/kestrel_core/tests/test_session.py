@@ -1,16 +1,17 @@
 import json
-import pytest
 import os
-from kestrel import Session
-from pandas import DataFrame, read_csv
 from uuid import uuid4
 
-from kestrel.display import GraphExplanation
-from kestrel.ir.instructions import Construct, SerializableDataFrame
-from kestrel.ir.graph import IRGraph
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
-from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+import pytest
+from pandas import DataFrame, read_csv
+
+from kestrel import Session
 from kestrel.cache import SqlCache
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.display import GraphExplanation
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.ir.graph import IRGraph
+from kestrel.ir.instructions import Construct, SerializableDataFrame
 
 
 @pytest.fixture

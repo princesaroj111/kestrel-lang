@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import copy
+import json
 import logging
 from collections import defaultdict
 from itertools import combinations
@@ -29,19 +29,19 @@ from kestrel.exceptions import (
     MultiInterfacesInGraph,
     MultiSourcesInGraph,
     ReferenceNotFound,
-    VariableNotFound,
     SourceNotFound,
+    VariableNotFound,
 )
 from kestrel.ir.filter import ReferenceValue
 from kestrel.ir.instructions import (
     Analytic,
+    Construct,
     DataSource,
     Filter,
     Instruction,
     IntermediateInstruction,
     ProjectAttrs,
     Reference,
-    Construct,
     Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,

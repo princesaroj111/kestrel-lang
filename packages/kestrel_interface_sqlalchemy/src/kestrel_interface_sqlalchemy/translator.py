@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Callable, Optional, Union, List
-from typeguard import typechecked
+from typing import Callable, List, Optional, Union
+
 from sqlalchemy.engine.default import DefaultDialect
+from typeguard import typechecked
 
 from kestrel.interface.codegen.sql import SqlTranslator
 

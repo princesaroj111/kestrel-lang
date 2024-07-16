@@ -1,8 +1,10 @@
-import os
 import json
+import os
+import pkgutil
+
 import nbclassic
 import notebook
-import pkgutil
+
 import kestrel
 
 

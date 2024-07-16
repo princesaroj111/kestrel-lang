@@ -1,20 +1,11 @@
 import pytest
 from pandas import DataFrame
 
-from kestrel.interface.codegen.dataframe import (
-    evaluate_source_instruction,
-    evaluate_transforming_instruction,
-)
-from kestrel.ir.graph import IRGraph
-
-from kestrel.ir.instructions import (
-    Construct,
-    Variable,
-    Limit,
-    ProjectAttrs
-)
-
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.interface.codegen.dataframe import (
+    evaluate_source_instruction, evaluate_transforming_instruction)
+from kestrel.ir.graph import IRGraph
+from kestrel.ir.instructions import Construct, Limit, ProjectAttrs, Variable
 
 
 def test_evaluate_Construct():

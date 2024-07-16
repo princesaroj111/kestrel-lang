@@ -13,15 +13,15 @@ from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
+    Construct,
+    Explain,
+    Filter,
     Instruction,
+    Return,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
-    Construct,
     Variable,
-    Filter,
-    Return,
-    Explain,
 )
 
 _logger = logging.getLogger(__name__)

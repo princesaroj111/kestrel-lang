@@ -1,30 +1,15 @@
 from datetime import datetime
+
+import pytest
+# Use sqlite3 for testing
+import sqlalchemy
 from dateutil import parser
 
 from kestrel.interface.codegen.sql import SqlTranslator
-from kestrel.ir.filter import (
-    ExpOp,
-    IntComparison,
-    ListOp,
-    ListComparison,
-    MultiComp,
-    NumCompOp,
-    StrCompOp,
-    StrComparison,
-    TimeRange
-)
-from kestrel.ir.instructions import (
-    Filter,
-    Limit,
-    Offset,
-    ProjectAttrs,
-    Sort
-)
-
-# Use sqlite3 for testing
-import sqlalchemy
-
-import pytest
+from kestrel.ir.filter import (ExpOp, IntComparison, ListComparison, ListOp,
+                               MultiComp, NumCompOp, StrComparison, StrCompOp,
+                               TimeRange)
+from kestrel.ir.instructions import Filter, Limit, Offset, ProjectAttrs, Sort
 
 
 def _dt(timestr: str) -> datetime:

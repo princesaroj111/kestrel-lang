@@ -1,14 +1,15 @@
 import os
+from uuid import uuid4
+
 import pytest
 from pandas import DataFrame, read_csv
-from uuid import uuid4
 
 from kestrel.cache import InMemoryCache
 from kestrel.cache.inmemory import InMemoryCacheVirtual
-from kestrel.ir.graph import IRGraph, IRGraphEvaluable
-from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
-from kestrel.ir.instructions import Construct, SerializableDataFrame
 from kestrel.config import load_kestrel_config
+from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
+from kestrel.ir.graph import IRGraph, IRGraphEvaluable
+from kestrel.ir.instructions import Construct, SerializableDataFrame
 
 
 @pytest.fixture

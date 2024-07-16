@@ -1,19 +1,12 @@
 import pytest
 from pandas import DataFrame
 
-from kestrel.ir.instructions import (
-    Variable,
-    DataSource,
-    Construct,
-    get_instruction_class,
-    instruction_from_dict,
-    instruction_from_json,
-    CACHE_INTERFACE_IDENTIFIER,
-)
-from kestrel.exceptions import (
-    InvalidSeralizedInstruction,
-    InvalidDataSource,
-)
+from kestrel.exceptions import InvalidDataSource, InvalidSeralizedInstruction
+from kestrel.ir.instructions import (CACHE_INTERFACE_IDENTIFIER, Construct,
+                                     DataSource, Variable,
+                                     get_instruction_class,
+                                     instruction_from_dict,
+                                     instruction_from_json)
 
 
 def test_instruction_post_init():

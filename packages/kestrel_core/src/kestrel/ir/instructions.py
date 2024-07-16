@@ -4,14 +4,14 @@ import inspect
 import json
 import sys
 import uuid
-from pandas import DataFrame, read_json
-from io import StringIO
 from dataclasses import InitVar, dataclass, field, fields
 from enum import Enum
-from typing import Any, Callable, Iterable, Tuple, Mapping, Optional, Type, Union
+from io import StringIO
+from typing import Any, Callable, Iterable, Mapping, Optional, Tuple, Type, Union
 
 from mashumaro.mixins.json import DataClassJSONMixin
 from mashumaro.types import SerializableType
+from pandas import DataFrame, read_json
 from typeguard import typechecked
 
 from kestrel.__future__ import is_python_older_than_minor_version
@@ -22,8 +22,8 @@ from kestrel.exceptions import (
     InvalidSeralizedInstruction,
 )
 from kestrel.ir.filter import (
-    FExpression,
     AbsoluteTrue,
+    FExpression,
     ReferenceValue,
     TimeRange,
     get_references_from_exp,

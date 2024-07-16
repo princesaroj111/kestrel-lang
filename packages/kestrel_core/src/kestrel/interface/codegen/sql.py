@@ -1,26 +1,31 @@
 import logging
 from functools import reduce
-from typing import Callable, Optional, List, Union
+from typing import Callable, List, Optional, Union
 
 import sqlalchemy
-from sqlalchemy import and_, asc, column, tuple_, desc, or_, select
+from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
 from sqlalchemy.engine import Compiled, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import ColumnOperators, ColumnElement, CTE
+from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
 from sqlalchemy.sql.selectable import Select
 from typeguard import typechecked
 
+from kestrel.exceptions import (
+    InvalidMappingWithMultipleIdentifierFields,
+    InvalidProjectEntityFromEntity,
+    SourceSchemaNotFound,
+)
 from kestrel.ir.filter import (
+    AbsoluteTrue,
     BoolExp,
     ExpOp,
     FBasicComparison,
-    RefComparison,
     ListOp,
     MultiComp,
     NumCompOp,
+    RefComparison,
     StrComparison,
     StrCompOp,
-    AbsoluteTrue,
 )
 from kestrel.ir.instructions import (
     Filter,
@@ -35,11 +40,6 @@ from kestrel.ir.instructions import (
 from kestrel.mapping.data_model import (
     translate_comparison_to_native,
     translate_projection_to_native,
-)
-from kestrel.exceptions import (
-    SourceSchemaNotFound,
-    InvalidProjectEntityFromEntity,
-    InvalidMappingWithMultipleIdentifierFields,
 )
 
 _logger = logging.getLogger(__name__)

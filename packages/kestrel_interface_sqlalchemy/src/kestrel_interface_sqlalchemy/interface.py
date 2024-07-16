@@ -2,31 +2,31 @@ import logging
 from functools import reduce
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
-from typeguard import typechecked
+
 import sqlalchemy
 from pandas import DataFrame, read_sql
+from typeguard import typechecked
 
 from kestrel.display import GraphletExplanation, NativeQuery
+from kestrel.exceptions import SourceNotFound
 from kestrel.interface import AbstractInterface
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     DataSource,
+    Explain,
     Filter,
     Instruction,
     Return,
-    Explain,
     SolePredecessorTransformingInstruction,
     SourceInstruction,
     TransformingInstruction,
     Variable,
 )
 from kestrel.mapping.data_model import translate_dataframe
-from kestrel.exceptions import SourceNotFound
 
-from .translator import NativeTable, SubQuery, SQLAlchemyTranslator
-from .utils import iter_argument_from_function_in_callstack
 from .config import load_config
-
+from .translator import NativeTable, SQLAlchemyTranslator, SubQuery
+from .utils import iter_argument_from_function_in_callstack
 
 _logger = logging.getLogger(__name__)
 

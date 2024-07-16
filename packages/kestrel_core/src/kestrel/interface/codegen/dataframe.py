@@ -8,17 +8,21 @@ from typing import Callable
 from pandas import DataFrame, Series
 from typeguard import typechecked
 
+from kestrel.exceptions import (
+    InvalidOperatorInMultiColumnComparison,
+    MismatchedFieldValueInMultiColumnComparison,
+)
 from kestrel.ir.filter import (
+    AbsoluteTrue,
     BoolExp,
     ExpOp,
-    FExpression,
     FBasicComparison,
-    RefComparison,
+    FExpression,
     ListOp,
     MultiComp,
     NumCompOp,
+    RefComparison,
     StrCompOp,
-    AbsoluteTrue,
 )
 from kestrel.ir.instructions import (
     Construct,
@@ -28,10 +32,6 @@ from kestrel.ir.instructions import (
     ProjectEntity,
     SourceInstruction,
     TransformingInstruction,
-)
-from kestrel.exceptions import (
-    MismatchedFieldValueInMultiColumnComparison,
-    InvalidOperatorInMultiColumnComparison,
 )
 
 
