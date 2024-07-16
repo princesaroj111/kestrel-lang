@@ -28,6 +28,7 @@ jobs:
       - name: Install Kestrel package
         run: |
           pip install --upgrade pip setuptools wheel
-          pip install black
+          pip install black isort
       - name: Code style check (please black your code)
+        run: isort --profile black --check-only packages/*/src/
         run: black --check packages/*/src/
