@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.ir.filter import ReferenceValue, AbsoluteTrue, RefComparison
 from kestrel.ir.instructions import (
-    MashDataFrame,
+    SerializableDataFrame,
     Construct,
     DataSource,
     Filter,
@@ -34,7 +34,7 @@ def process_creation_events():
     parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
     data_node = graph.get_nodes_by_type(Construct)[0]
     test_dir = os.path.dirname(os.path.abspath(__file__))
-    data_node.data = MashDataFrame(read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv")))
+    data_node.data = SerializableDataFrame(read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv")))
     return graph
 
 

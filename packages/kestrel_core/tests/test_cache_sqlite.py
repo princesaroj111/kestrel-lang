@@ -7,7 +7,7 @@ from kestrel.cache import SqlCache
 from kestrel.cache.sql import SqlCacheVirtual
 from kestrel.ir.graph import IRGraph, IRGraphEvaluable
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
-from kestrel.ir.instructions import Construct, MashDataFrame
+from kestrel.ir.instructions import Construct, SerializableDataFrame
 from kestrel.config import load_kestrel_config
 
 
@@ -20,7 +20,7 @@ def process_creation_events():
     parse_kestrel_and_update_irgraph("es = NEW event [ {'id': 1} ]", graph, {})
     data_node = graph.get_nodes_by_type(Construct)[0]
     test_dir = os.path.dirname(os.path.abspath(__file__))
-    data_node.data = MashDataFrame(read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv")))
+    data_node.data = SerializableDataFrame(read_csv(os.path.join(test_dir, "logs_ocsf_process_creation.csv")))
     return graph
 
 

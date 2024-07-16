@@ -35,7 +35,7 @@ if is_python_older_than_minor_version(11):
     InitVar.__call__ = lambda *args: None
 
 
-class MashDataFrame(DataFrame, SerializableType):
+class SerializableDataFrame(DataFrame, SerializableType):
     def _serialize(self):
         return self.to_json()
 
@@ -44,10 +44,10 @@ class MashDataFrame(DataFrame, SerializableType):
         return read_json(StringIO(json_str))
 
     def __copy__(self):
-        return MashDataFrame(super().__copy__())
+        return SerializableDataFrame(super().__copy__())
 
     def __deepcopy__(self, *args):
-        return MashDataFrame(super().__deepcopy__(*args))
+        return SerializableDataFrame(super().__deepcopy__(*args))
 
 
 @dataclass
@@ -215,13 +215,13 @@ class Offset(SolePredecessorTransformingInstruction):
 
 @dataclass(eq=False)
 class Construct(SourceInstruction):
-    data: MashDataFrame
+    data: SerializableDataFrame
     entity_type: Optional[str] = None
     interface: str = CACHE_INTERFACE_IDENTIFIER
 
     def __post_init__(self):
-        if type(self.data) != MashDataFrame:
-            self.data = MashDataFrame(self.data)
+        if type(self.data) != SerializableDataFrame:
+            self.data = SerializableDataFrame(self.data)
         super().__post_init__()
 
 
