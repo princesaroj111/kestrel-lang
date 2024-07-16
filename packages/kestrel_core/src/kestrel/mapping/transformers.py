@@ -3,8 +3,9 @@
 from datetime import datetime, timezone
 from typing import Callable
 
-from kestrel.mapping.path import Path
 from pandas import Series
+
+from kestrel.mapping.path import Path
 
 # Dict of "registered" transformers
 _transformers = {}

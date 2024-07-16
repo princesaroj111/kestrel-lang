@@ -2,6 +2,8 @@ import logging
 from functools import reduce
 from typing import Optional, Union
 
+from typeguard import typechecked
+
 from kestrel.exceptions import UnsupportedOperatorError
 from kestrel.ir.filter import (
     BoolExp,
@@ -27,7 +29,6 @@ from kestrel.mapping.data_model import (
     translate_comparison_to_native,
     translate_projection_to_native,
 )
-from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 

@@ -5,8 +5,9 @@ from pathlib import Path
 from pkgutil import get_data
 from typing import Iterable, Mapping, Optional
 
-from kestrel.__future__ import is_python_older_than_minor_version
 from typeguard import typechecked
+
+from kestrel.__future__ import is_python_older_than_minor_version
 
 
 @typechecked

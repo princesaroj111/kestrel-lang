@@ -5,15 +5,16 @@ from typing import Iterable, Mapping
 import matplotlib.pyplot as plt
 import networkx as nx
 import sqlparse
-from kestrel.display import Display, GraphExplanation
-from kestrel.ir.graph import IRGraph
-from kestrel.ir.instructions import Construct, DataSource, Instruction, Variable
 from pandas import DataFrame
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import guess_lexer
 from pygments.lexers.kusto import KustoLexer
 from pygments.lexers.sql import SqlLexer
+
+from kestrel.display import Display, GraphExplanation
+from kestrel.ir.graph import IRGraph
+from kestrel.ir.instructions import Construct, DataSource, Instruction, Variable
 
 
 def gen_label_mapping(g: IRGraph) -> Mapping[Instruction, str]:

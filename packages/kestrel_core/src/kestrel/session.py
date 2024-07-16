@@ -3,6 +3,8 @@ from contextlib import AbstractContextManager
 from typing import Iterable
 from uuid import uuid4
 
+from typeguard import typechecked
+
 from kestrel.analytics import PythonAnalyticsInterface
 from kestrel.cache import SqlCache
 from kestrel.config import load_kestrel_config
@@ -13,7 +15,6 @@ from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import Explain, Instruction, Return
-from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 

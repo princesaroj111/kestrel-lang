@@ -4,9 +4,13 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
 
 import sqlalchemy
+from pandas import DataFrame, read_sql
+from typeguard import typechecked
+
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.exceptions import SourceNotFound
 from kestrel.interface import AbstractInterface
+from kestrel.interface.codegen.sql import ingest_dataframe_to_temp_table
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     DataSource,
@@ -20,8 +24,6 @@ from kestrel.ir.instructions import (
     Variable,
 )
 from kestrel.mapping.data_model import translate_dataframe
-from pandas import DataFrame, read_sql
-from typeguard import typechecked
 
 from .config import load_config
 from .translator import NativeTable, SQLAlchemyTranslator, SubQuery
@@ -63,6 +65,10 @@ class SQLAlchemyInterface(AbstractInterface):
         data: DataFrame,
     ):
         raise NotImplementedError("SQLAlchemyInterface.store")  # TEMP
+
+    def __del__(self):
+        for conn in self.conns.values():
+            conn.close()
 
     def evaluate_graph(
         self,
@@ -138,55 +144,58 @@ class SQLAlchemyInterface(AbstractInterface):
             subquery_memory = {}
 
         if instruction.id in cache:
-            # 1. get the datasource assocaited with the cached node
-            ds = None
-            for node in iter_argument_from_function_in_callstack(
-                "_evaluate_instruction_in_graph", "instruction"
-            ):
-                try:
-                    ds = graph.find_datasource_of_node(node)
-                except SourceNotFound:
-                    continue
-                else:
-                    break
-            if not ds:
-                _logger.error(
-                    "backed tracked entire stack but still do not find source"
-                )
-                raise SourceNotFound(instruction)
-
-            # 2. check the datasource config to see if the datalake supports write
-            ds_config = self.config.datasources[ds.datasource]
-            conn_config = self.config.connections[ds_config.connection]
-
-            # 3. perform table creation or in-memory cache
-            if conn_config.table_creation_permission:
-                table_name = "kestrel_temp_" + instruction.id.hex
-
-                # create a new table for the cached DataFrame
-                cache[instruction.id].to_sql(
-                    table_name,
-                    con=self.conns[ds_config.connection],
-                    if_exists="replace",
-                    index=False,
-                )
-
-                # SELECT * from the new table
-                translator = SQLAlchemyTranslator(
-                    NativeTable(
-                        self.engines[ds_config.connection].dialect,
-                        table_name,
-                        ds_config,
-                        list(cache[instruction.id]),
-                        None,
-                        None,
-                        None,
-                    )
-                )
-
+            if instruction.id in subquery_memory:
+                translator = subquery_memory[instruction.id]
             else:
-                raise NotImplementedError("Read-only data lake not handled")
-                # list(cache[instruction.id].itertuples(index=False, name=None))
+                # 1. get the datasource assocaited with the cached node
+                ds = None
+                for node in iter_argument_from_function_in_callstack(
+                    "_evaluate_instruction_in_graph", "instruction"
+                ):
+                    try:
+                        ds = graph.find_datasource_of_node(node)
+                    except SourceNotFound:
+                        continue
+                    else:
+                        break
+                if not ds:
+                    _logger.error(
+                        "backed tracked entire stack but still do not find source"
+                    )
+                    raise SourceNotFound(instruction)
+
+                # 2. check the datasource config to see if the datalake supports write
+                ds_config = self.config.datasources[ds.datasource]
+                conn_config = self.config.connections[ds_config.connection]
+
+                # 3. perform table creation or in-memory cache
+                if conn_config.table_creation_permission:
+                    table_name = instruction.id.hex
+
+                    # write to temp table
+                    ingest_dataframe_to_temp_table(
+                        self.conns[ds_config.connection],
+                        cache[instruction.id],
+                        table_name,
+                    )
+
+                    # SELECT * from the new table
+                    translator = SQLAlchemyTranslator(
+                        NativeTable(
+                            self.engines[ds_config.connection].dialect,
+                            table_name,
+                            ds_config,
+                            list(cache[instruction.id]),
+                            None,
+                            None,
+                            None,
+                        )
+                    )
+                    subquery_memory[instruction.id] = translator
+
+                else:
+                    raise NotImplementedError("Read-only data lake not handled")
+                    # list(cache[instruction.id].itertuples(index=False, name=None))
 
         if isinstance(instruction, SourceInstruction):
             if isinstance(instruction, DataSource):

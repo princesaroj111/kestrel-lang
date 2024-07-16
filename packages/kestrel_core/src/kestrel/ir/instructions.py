@@ -9,6 +9,11 @@ from enum import Enum
 from io import StringIO
 from typing import Any, Callable, Iterable, Mapping, Optional, Tuple, Type, Union
 
+from mashumaro.mixins.json import DataClassJSONMixin
+from mashumaro.types import SerializableType
+from pandas import DataFrame, read_json
+from typeguard import typechecked
+
 from kestrel.__future__ import is_python_older_than_minor_version
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.exceptions import (
@@ -24,10 +29,6 @@ from kestrel.ir.filter import (
     get_references_from_exp,
     resolve_reference_with_function,
 )
-from mashumaro.mixins.json import DataClassJSONMixin
-from mashumaro.types import SerializableType
-from pandas import DataFrame, read_json
-from typeguard import typechecked
 
 # https://stackoverflow.com/questions/70400639/how-do-i-get-python-dataclass-initvar-fields-to-work-with-typing-get-type-hints
 if is_python_older_than_minor_version(11):

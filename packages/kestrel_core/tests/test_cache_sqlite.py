@@ -2,6 +2,7 @@ import os
 from uuid import uuid4
 
 import pytest
+import sqlalchemy
 from pandas import DataFrame, read_csv
 
 from kestrel.cache import SqlCache
@@ -35,7 +36,9 @@ def test_sql_cache_set_get_del():
     idx = uuid4()
     df = DataFrame({'foo': [1, 2, 3]})
     c[idx] = df
+
     assert df.equals(c[idx])
+
     del c[idx]
     assert idx not in c
 

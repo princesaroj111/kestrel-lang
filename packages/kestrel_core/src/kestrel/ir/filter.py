@@ -5,9 +5,10 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
-from kestrel.exceptions import MismatchedFieldValueInMultiColumnComparison
 from mashumaro.mixins.json import DataClassJSONMixin
 from typeguard import typechecked
+
+from kestrel.exceptions import MismatchedFieldValueInMultiColumnComparison
 
 
 class NumCompOp(str, Enum):

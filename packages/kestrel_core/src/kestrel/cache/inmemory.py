@@ -2,6 +2,9 @@ from copy import copy
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
 
+from pandas import DataFrame
+from typeguard import typechecked
+
 from kestrel.cache.base import AbstractCache
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.dataframe import (
@@ -18,8 +21,6 @@ from kestrel.ir.instructions import (
     TransformingInstruction,
     Variable,
 )
-from pandas import DataFrame
-from typeguard import typechecked
 
 
 @typechecked

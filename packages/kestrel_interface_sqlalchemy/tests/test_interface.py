@@ -1,12 +1,14 @@
 import os
+from uuid import uuid4
 import sqlite3
 from collections import Counter
 
 import pytest
+from pandas import DataFrame
 import yaml
 from kestrel_interface_sqlalchemy.config import PROFILE_PATH_ENV_VAR
-from pandas import read_csv
-
+from kestrel.interface.codegen.sql import ingest_dataframe_to_temp_table
+from pandas import read_csv, DataFrame, read_sql
 from kestrel import Session
 from kestrel.ir.filter import MultiComp
 from kestrel.ir.instructions import DataSource, Filter, ProjectEntity, Variable
@@ -43,6 +45,21 @@ def setup_sqlite_ecs_process_creation(tmp_path):
     os.environ[PROFILE_PATH_ENV_VAR] = str(config_file)
     yield None
     del os.environ[PROFILE_PATH_ENV_VAR]
+
+
+def test_write_to_temp_table(setup_sqlite_ecs_process_creation):
+    with Session() as session:
+        datalake = session.interface_manager["sqlalchemy"]
+        idx = uuid4().hex
+        df = DataFrame({'foo': [1, 2, 3]})
+        conn_name = list(datalake.conns.keys())[0]
+        conn = datalake.conns[conn_name]
+        ingest_dataframe_to_temp_table(conn, df, idx)
+        assert read_sql(f'SELECT * FROM "{idx}"', conn).equals(df)
+        conn.close()
+        conn = datalake.engines[conn_name].connect()
+        assert read_sql(f'SELECT * FROM "{idx}"', conn).empty
+    
 
 
 @pytest.mark.parametrize(

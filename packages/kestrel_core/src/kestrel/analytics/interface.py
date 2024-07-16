@@ -110,6 +110,8 @@ from importlib.util import module_from_spec, spec_from_file_location
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
 
+from pandas import DataFrame
+
 from kestrel.analytics.config import get_profile, load_profiles
 from kestrel.display import GraphletExplanation
 from kestrel.exceptions import (
@@ -127,7 +129,6 @@ from kestrel.ir.instructions import (
     TransformingInstruction,
     Variable,
 )
-from pandas import DataFrame
 
 _logger = logging.getLogger(__name__)
 

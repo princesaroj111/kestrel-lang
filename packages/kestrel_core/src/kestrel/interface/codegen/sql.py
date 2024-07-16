@@ -3,6 +3,15 @@ from functools import reduce
 from typing import Callable, List, Optional, Union
 
 import sqlalchemy
+from pandas import DataFrame
+from pandas.io.sql import SQLTable, pandasSQL_builder
+from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
+from sqlalchemy.engine import Compiled, Connection, default
+from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
+from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
+from sqlalchemy.sql.selectable import Select
+from typeguard import typechecked
+
 from kestrel.exceptions import (
     InvalidMappingWithMultipleIdentifierFields,
     InvalidProjectEntityFromEntity,
@@ -34,12 +43,6 @@ from kestrel.mapping.data_model import (
     translate_comparison_to_native,
     translate_projection_to_native,
 )
-from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
-from sqlalchemy.engine import Compiled, default
-from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
-from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
-from sqlalchemy.sql.selectable import Select
-from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 
@@ -60,6 +63,25 @@ comp2func = {
     ListOp.IN: ColumnOperators.in_,
     ListOp.NIN: ColumnOperators.not_in,
 }
+
+
+@typechecked
+class _TemporaryTable(SQLTable):
+    def _execute_create(self):
+        self.table = self.table.to_metadata(self.pd_sql.meta)
+        self.table._prefixes.append("TEMPORARY")
+        with self.pd_sql.run_transaction():
+            self.table.create(bind=self.pd_sql.con)
+
+
+@typechecked
+def ingest_dataframe_to_temp_table(conn: Connection, df: DataFrame, table_name: str):
+    with pandasSQL_builder(conn) as pandas_engine:
+        table = _TemporaryTable(
+            table_name, pandas_engine, frame=df, if_exists="replace", index=False
+        )
+        table.create()
+        df.to_sql(table_name, con=conn, if_exists="append", index=False)
 
 
 @typechecked

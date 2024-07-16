@@ -1,8 +1,9 @@
 import logging
 
 from ipykernel.kernelbase import Kernel
-from kestrel.session import Session
 from kestrel_jupyter_kernel.display import to_html_blocks
+
+from kestrel.session import Session
 
 _logger = logging.getLogger(__name__)
 

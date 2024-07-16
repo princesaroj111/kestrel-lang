@@ -9,6 +9,8 @@ import sys
 from copy import copy
 from typing import Iterable, Mapping, Type
 
+from typeguard import typechecked
+
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.exceptions import (
     ConflictingInterfaceScheme,
@@ -17,7 +19,6 @@ from kestrel.exceptions import (
     InvalidInterfaceImplementation,
 )
 from kestrel.interface.base import MODULE_PREFIX, AbstractInterface
-from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
 
