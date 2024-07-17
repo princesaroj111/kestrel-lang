@@ -1,12 +1,14 @@
 import os
+from uuid import uuid4
 import sqlite3
 from collections import Counter
 
 import pytest
+from pandas import DataFrame
 import yaml
 from kestrel_interface_sqlalchemy.config import PROFILE_PATH_ENV_VAR
-from pandas import read_csv
-
+from kestrel.interface.codegen.sql import ingest_dataframe_to_temp_table
+from pandas import read_csv, DataFrame, read_sql
 from kestrel import Session
 from kestrel.ir.filter import MultiComp
 from kestrel.ir.instructions import DataSource, Filter, ProjectEntity, Variable
@@ -43,6 +45,21 @@ def setup_sqlite_ecs_process_creation(tmp_path):
     os.environ[PROFILE_PATH_ENV_VAR] = str(config_file)
     yield None
     del os.environ[PROFILE_PATH_ENV_VAR]
+
+
+def test_write_to_temp_table(setup_sqlite_ecs_process_creation):
+    with Session() as session:
+        datalake = session.interface_manager["sqlalchemy"]
+        idx = uuid4().hex
+        df = DataFrame({'foo': [1, 2, 3]})
+        conn_name = list(datalake.conns.keys())[0]
+        conn = datalake.conns[conn_name]
+        ingest_dataframe_to_temp_table(conn, df, idx)
+        assert read_sql(f'SELECT * FROM "{idx}"', conn).equals(df)
+        conn.close()
+        conn = datalake.engines[conn_name].connect()
+        assert read_sql(f'SELECT * FROM "{idx}"', conn).empty
+    
 
 
 @pytest.mark.parametrize(
@@ -175,6 +192,19 @@ def test_find_entity_to_event(setup_sqlite_ecs_process_creation):
         assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
 
 
+def test_find_entity_to_event_2(setup_sqlite_ecs_process_creation):
+    with Session() as session:
+        huntflow = """
+        procs = GET process FROM sqlalchemy://events WHERE os.name = "Linux"
+        e2 = FIND event ORIGINATED BY procs
+        DISP e2
+        """
+        e2 = session.execute(huntflow)[0]
+        assert e2.shape[0] == 4
+        assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
+        assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
+
+
 def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
     with Session() as session:
         huntflow = """
@@ -193,5 +223,17 @@ def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
             result = h.read()
         assert stmt == result
 
+        assert parents.shape[0] == 2
+        assert list(parents) == ['endpoint.uid', 'file.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid']
+
+
+def test_find_entity_to_entity_2(setup_sqlite_ecs_process_creation):
+    with Session() as session:
+        huntflow = """
+        procs = GET process FROM sqlalchemy://events WHERE os.name = "Linux"
+        parents = FIND process CREATED procs
+        DISP parents
+        """
+        parents = session.execute(huntflow)[0]
         assert parents.shape[0] == 2
         assert list(parents) == ['endpoint.uid', 'file.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid']
