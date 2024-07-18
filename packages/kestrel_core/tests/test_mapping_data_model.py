@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 import pytest
 
@@ -12,6 +14,22 @@ from kestrel.mapping.data_model import (
 # A "custom" mapping for an opensearch/elasticsearch datasource.
 # This mapping works with data from Blue Team Village's 2023 DefCon CTF, for example.
 WINLOGBEAT_MAPPING = {
+    "type_uid": {
+        "native_field": "winlog.event_id",
+        "native_value": {
+            100701: ["1", "4688"],  # process launch
+            100702: ["5", "4689"],  # process terminate
+            300201: ["4624", "4625"], # auth: logon (success and failure)
+        },
+        "XXX_ocsf_value": {
+            "1": 100701,  # Sysmon process create
+            "5": 100702,  # Sysmon process terminate
+            "4624": 300201,  # Security logon success
+            "4625": 300201,  # Security logon failure
+            "4688": 100701,  # Security process create
+            "4689": 100702,  # Security process terminate
+        }
+    },
     "file": {
         "path": "file.path",
         "name": "file.name"
@@ -132,6 +150,15 @@ def test_reverse_mapping_executable():
                 assert item["ocsf_value"] == "basename"
 
 
+def test_reverse_mapping_event_id():
+    rmap = reverse_mapping(WINLOGBEAT_MAPPING)
+    print(json.dumps(rmap, indent=4))
+    assert rmap["winlog.event_id"][0]["ocsf_value"]["1"] == [100701]
+    assert rmap["winlog.event_id"][0]["ocsf_value"]["5"] == [100702]
+    assert rmap["winlog.event_id"][0]["ocsf_value"]["4688"] == [100701]
+    assert rmap["winlog.event_id"][0]["ocsf_value"]["4689"] == [100702]
+
+
 @pytest.mark.parametrize(
     "dmm, field, op, value, expected_result",
     [
@@ -145,6 +172,12 @@ def test_reverse_mapping_executable():
         (ECS_MAPPING, "process.file.name", "=", "foo.exe",
          [("process.executable", "LIKE", "%\\foo.exe"),
           ("process.executable", "LIKE", "%/foo.exe")]),
+        (WINLOGBEAT_MAPPING, "type_uid", "=", 100701,
+         [("winlog.event_id", "=", ["1", "4688"])]),
+        (ECS_MAPPING, "type_uid", "=", 100701,
+         [("event.code", "=", ["1", "4688"])]),
+        (ECS_MAPPING, "type_uid", "=", 300201,
+         [("event.code", "=", ["4624", "4625"])]),
     ],
 )
 def test_translate_comparison_to_native(dmm, field, op, value, expected_result):
@@ -216,6 +249,20 @@ def test_translate_dataframe():  #TODO: more testing here
     dmm = load_default_mapping("ecs")
     df = translate_dataframe(df, dmm["process"])
     #TODO:assert df["file.name"].iloc[0] == "cmd.exe"
+
+
+def test_translate_dataframe_events():
+    df = pd.DataFrame(
+        {
+            "process.file.path": [r"C:\Windows\System32\cmd.exe", r"C:\TMP"],
+            "process.pid": [1, 2],
+            "type_uid": ["4688", "1234"],
+        }
+    )
+    df = translate_dataframe(df, WINLOGBEAT_MAPPING)
+    print(df)
+    assert df["type_uid"].iloc[0] == 100701
+    assert df["type_uid"].iloc[1] == "1234"  # Passthrough?
 
 
 def test_incomplete_mapping_no_identifier():

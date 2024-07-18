@@ -1,5 +1,5 @@
 import logging
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from functools import reduce
 from typing import Any, Iterable, List, Optional, Tuple, Union
 
@@ -15,6 +15,17 @@ from typeguard import typechecked
 _logger = logging.getLogger(__name__)
 
 
+def _reverse_value_map(obj: dict):
+    result = defaultdict(list)
+    for k, v in obj.items():
+        if isinstance(v, list):
+            for i in v:
+                result[i].append(k)
+        else:
+            result[v].append(k)
+    return result
+
+
 def _add_mapping(obj: dict, key: str, mapping: dict):
     """Add `key` -> `mapping` to `obj`, appending if necessary"""
     existing_mapping = obj.get(key)
@@ -25,6 +36,10 @@ def _add_mapping(obj: dict, key: str, mapping: dict):
             existing_mapping = [existing_mapping]
     else:
         existing_mapping = []
+    native_value = mapping.get("native_value")
+    if "ocsf_value" not in mapping and isinstance(native_value, dict):
+        # There's a dict instead of a transformer function; reverse that
+        mapping["ocsf_value"] = _reverse_value_map(native_value)
     existing_mapping.append(mapping)
     obj[key] = existing_mapping
 
@@ -97,7 +112,11 @@ def reverse_mapping(obj: dict, prefix: str = None, result: dict = None) -> dict:
 def _get_map_triple(d: dict, prefix: str, op: str, value) -> tuple:
     mapped_op = d.get(f"{prefix}_op")
     transform = d.get(f"{prefix}_value")
-    new_value = run_transformer(transform, value)
+    _logger.debug("transform = %s (%s)", type(transform), transform)
+    if isinstance(transform, dict):
+        new_value = transform.get(value, value)  # FIXME
+    else:
+        new_value = run_transformer(transform, value)
     new_op = mapped_op if mapped_op else op
     return (d[f"{prefix}_field"], new_op, new_value)
 
@@ -364,6 +383,29 @@ def translate_attributes_projection_to_ocsf(
     return tuple(final_result)
 
 
+def _get_transformer(obj: dict) -> Optional[Union[str, dict]]:
+    # First look for native -> ocsf value transformer
+    ocsf_value = obj.get("ocsf_value")
+    if not ocsf_value:
+        # Next check if there's a ocsf -> native transformer
+        native_value = obj.get("native_value")
+        if isinstance(native_value, dict):
+            # If it's a simple value map, we can reverse it
+            ocsf_value = _reverse_value_map(native_value)
+    return ocsf_value
+
+
+def _get_transformers(mappings: List[Union[str, dict]]) -> List[Union[str, dict]]:
+    """Collect value transformers from mappings, discarding duplicates"""
+    result = []  # Need a list instead of set since dicts aren't hashable
+    for mapping in mappings:
+        if "ocsf_value" in mapping or "native_value" in mapping:
+            transformer = _get_transformer(mapping)
+            if transformer not in result:
+                result.append(transformer)
+    return result
+
+
 @typechecked
 def translate_dataframe(df: DataFrame, to_native_nested_map: dict) -> DataFrame:
     # Translate results into Kestrel OCSF data model
@@ -374,17 +416,21 @@ def translate_dataframe(df: DataFrame, to_native_nested_map: dict) -> DataFrame:
         except KeyError:
             _logger.debug("No mapping for %s", col)
             mapping = None
+        if isinstance(mapping, dict):
+            mapping = [mapping]
         if isinstance(mapping, list):
-            transformer_names = {
-                x.get("ocsf_value") for x in mapping if x.get("ocsf_value")
-            }
+            transformer_names = _get_transformers(mapping)
             if len(transformer_names) > 0:
                 if len(transformer_names) > 1:
                     raise NotImplementedError("Multiple to OCSF value transformers")
                 else:
                     transformer_name = transformer_names.pop()
-                    df[col] = run_transformer_on_series(
-                        transformer_name, df[col].dropna()
-                    )
+                    if isinstance(transformer_name, dict):
+                        # Not actually a named function; it's a literal value map
+                        df[col] = df[col].replace(transformer_name)
+                    else:
+                        df[col] = run_transformer_on_series(
+                            transformer_name, df[col].dropna()
+                        )
     df = df.replace({np.nan: None})
     return df
