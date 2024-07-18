@@ -173,11 +173,11 @@ def test_reverse_mapping_event_id():
          [("process.executable", "LIKE", "%\\foo.exe"),
           ("process.executable", "LIKE", "%/foo.exe")]),
         (WINLOGBEAT_MAPPING, "type_uid", "=", 100701,
-         [("winlog.event_id", "=", ["1", "4688"])]),
+         [("winlog.event_id", "IN", ["1", "4688"])]),
         (ECS_MAPPING, "type_uid", "=", 100701,
-         [("event.code", "=", ["1", "4688"])]),
+         [("event.code", "IN", ["1", "4688"])]),
         (ECS_MAPPING, "type_uid", "=", 300201,
-         [("event.code", "=", ["4624", "4625"])]),
+         [("event.code", "IN", ["4624", "4625"])]),
     ],
 )
 def test_translate_comparison_to_native(dmm, field, op, value, expected_result):

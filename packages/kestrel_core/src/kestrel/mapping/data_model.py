@@ -117,7 +117,13 @@ def _get_map_triple(d: dict, prefix: str, op: str, value) -> tuple:
         new_value = transform.get(value, value)  # FIXME
     else:
         new_value = run_transformer(transform, value)
-    new_op = mapped_op if mapped_op else op
+    if mapped_op:
+        new_op = mapped_op
+    elif isinstance(new_value, list) and op == "=":
+        # Do we need to change the op here?
+        new_op = "IN"
+    else:
+        new_op = op
     return (d[f"{prefix}_field"], new_op, new_value)
 
 
