@@ -86,6 +86,12 @@ def to_str(value) -> str:
 
 
 @transformer
+def lowercase(value: str) -> str:
+    """Ensure `value` is all lowercase"""
+    return value.lower()
+
+
+@transformer
 def ip_version_to_network_layer(value: int) -> str:
     if value == 4:
         return "ipv4"
