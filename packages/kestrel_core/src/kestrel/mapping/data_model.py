@@ -407,7 +407,7 @@ def _get_transformers(mappings: List[Union[str, dict]]) -> List[Union[str, dict]
     for mapping in mappings:
         if "ocsf_value" in mapping or "native_value" in mapping:
             transformer = _get_transformer(mapping)
-            if transformer not in result:
+            if transformer and transformer not in result:
                 result.append(transformer)
     return result
 
