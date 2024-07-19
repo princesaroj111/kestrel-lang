@@ -1,0 +1,128 @@
+# SecurityDatasets GoldenSAML WindowsEvents.json to OSCF mapping
+
+
+# endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+endpoint: &endpoint
+    hostname:
+        native_field: Computer
+        ocsf_value: lowercase
+    uid: _ResourceId
+
+
+file: &file
+    endpoint: *endpoint  # FIXME: should be device?
+    name: PipeName
+    type_id:
+        native_field: EventID
+        native_value:
+            6: 18
+
+
+# https://schema.ocsf.io/1.1.0/objects/process
+process:
+    "*": process.*
+    endpoint: *endpoint
+    name:
+        native_field: Image
+        native_op: LIKE
+        native_value: winpath_endswith
+        ocsf_value: basename
+    pid:
+        native_field: ProcessId_dynamic
+        ocsf_value: to_int
+    uid: ProcessGuid
+    file:
+        name:
+            native_field: Image
+            native_op: LIKE
+            native_value: winpath_endswith
+            ocsf_value: basename
+        path: Image
+        parent_folder:
+            native_field: Image
+            native_op: LIKE
+            native_value: winpath_startswith
+            ocsf_value: dirname
+
+
+# src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+src_endpoint: &src_ref
+    ip: IpAddress
+    port:
+        - native_field: SourcePort_string
+          ocsf_value: to_int
+        - native_field: IpPort
+          ocsf_value: to_int
+
+
+# dst_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+dst_endpoint: &dst_ref
+    domain: DestinationHostname
+    hostname: DestinationHostname
+    ip: DestinationIp
+    port: DestinationPort
+
+
+# https://schema.ocsf.io/1.1.0/objects/user
+user: &user
+    domain: TargetDomainName
+    name: TargetUserName
+    uid: TargetUserSid
+
+
+# https://schema.ocsf.io/1.1.0/classes/network_activity
+# Network Activity [4001] Class
+network_activity:
+    src_endpoint: *src_ref
+    dst_endpoint: *dst_ref
+
+
+# https://schema.ocsf.io/1.1.0/classes/file_activity?extensions=win
+# File System Activity [1001]
+file_activity:
+    device: *endpoint
+    file: *file
+
+
+# https://schema.ocsf.io/1.1.0/classes/authentication?extensions=win
+# Authentication [3002]
+authentication:
+    actor.user: *user
+    auth_protocol: AuthenticationPackageName
+    dst_endpoint: *dst_ref
+    logon_type_id: LogonType
+    user: *user
+
+
+# https://schema.ocsf.io/1.1.0/classes/base_event
+# Base Event
+type_uid:
+    native_field: EventID
+    native_value:
+        100101: # File System Activity: Create
+            - "11"   # Sysmon: FileCreate
+        100701: # Process Activity: Launch
+            - "1"    # Sysmon: Process creation
+            - "4688" # Security: Process Create
+        100702: # Process Activity: Terminate
+            - "5"    # Sysmon: Process termindated
+            - "4689"
+        100703: # Process Activity: Open
+            - "10"   # Sysmon: ProcessAccess
+        100704: # Process Activity: Inject
+            - "8"    # Sysmon: CreateRemoteThread
+        300201: # auth: logon (success and failure)
+            - "4624" # Security: An account was successfully logged on.
+            - "4625" # Security: An account failed to log on.
+        300400: # Entity Management: Unknown
+            - "4662" # Security: An operation was performed on an object.
+        400101: # Network Activity: Open
+            - "3"    # Sysmon: Network connection
+            - "5156" # Security: The Windows Filtering Platform has permitted a connection.
+status_id:
+  - native_field: event.code
+    native_value:
+        1: # Success
+            - "4624" # Security: An account was successfully logged on.
+        2: # Failure
+            - "4625" # Security: An account failed to log on.
