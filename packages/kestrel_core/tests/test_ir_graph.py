@@ -14,7 +14,8 @@ from kestrel.ir.instructions import (CACHE_INTERFACE_IDENTIFIER, Construct,
 
 def test_add_get_datasource():
     g = IRGraph()
-    g.add_datasource("stixshifter://abc")
+    s = g.add_datasource("stixshifter://abc")
+    s.store = "xyz"
 
     s = g.add_datasource(DataSource("stixshifter://abc"))
     assert len(g) == 1
@@ -380,3 +381,30 @@ DISP p4
     for g in gs[0].find_simple_query_subgraphs(c):
         assert Counter(map(type, g.nodes())) == Counter([ProjectAttrs, Variable, Filter, ProjectEntity, DataSource])
         assert sink in g
+
+
+def test_interface_with_two_stores():
+    huntflow = """
+p1 = GET process FROM elastic://edr
+     WHERE name = "cmd.exe"
+     LAST 5 DAYS
+
+p2 = GET process FROM elastic://firewall
+     WHERE pid = 999
+     LAST 30 MINUTES
+
+p3 = p1 WHERE pid = p2.pid
+
+p4 = GET process FROM elastic://edr WHERE name = p3.name
+
+DISP p4
+"""
+    graph = IRGraph()
+    parse_kestrel_and_update_irgraph(huntflow, graph, {})
+    for ds in graph.get_nodes_by_type(DataSource):
+        ds.store = ds.datasource
+    c = InMemoryCache()
+    gs = graph.find_dependent_subgraphs_of_node(graph.get_returns()[0], c)
+    assert len(gs) == 2
+    assert len(gs[0]) == 4
+    assert len(gs[1]) == 5

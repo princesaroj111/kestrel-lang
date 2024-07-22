@@ -56,7 +56,7 @@ class AbstractInterface(ABC):
         ...
 
     @abstractmethod
-    def get_storage_of_datasource(datasource: str) -> str:
+    def get_storage_of_datasource(self, datasource: str) -> str:
         """Get the storage name of a given datasource"""
         ...
 

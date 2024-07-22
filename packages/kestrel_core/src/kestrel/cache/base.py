@@ -21,7 +21,7 @@ class AbstractCache(AbstractInterface, MutableMapping):
     def schemes() -> Iterable[str]:
         return [CACHE_INTERFACE_IDENTIFIER]
 
-    def get_storage_of_datasource(datasource: str) -> str:
+    def get_storage_of_datasource(self, datasource: str) -> str:
         return CACHE_STORAGE_IDENTIFIER
 
     @abstractmethod

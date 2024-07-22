@@ -67,10 +67,10 @@ class Session(AbstractContextManager):
             rets = parse_kestrel_and_update_irgraph(
                 huntflow_block, self.irgraph, self.config["entity_identifier"]
             )
-            for ds in self.irgraph.get_nodes_by_type(DataSource):
-                if not ds.store:
-                    itf = self.interface_manager[ds.interface]
-                    ds.store = itf.get_storage_of_datasource(ds.datasource)
+            for s in self.irgraph.get_nodes_by_type(DataSource):
+                if not s.store:
+                    itf = self.interface_manager[s.interface]
+                    s.store = itf.get_storage_of_datasource(s.datasource)
         except Exception as e:
             self.irgraph = irgraph_snapshot
             raise e

@@ -100,7 +100,7 @@ class OpenSearchInterface(AbstractInterface):
 
     def get_storage_of_datasource(datasource: str) -> str:
         """Get the storage name of a given datasource"""
-        if datasource not in self.config.datasources.values():
+        if datasource not in self.config.datasources:
             raise InvalidDataSource(datasource)
         return self.config.datasources[datasource].connection
 

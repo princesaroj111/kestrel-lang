@@ -10,7 +10,7 @@ from io import StringIO
 from typing import Any, Callable, Iterable, Mapping, Optional, Tuple, Type, Union
 
 from kestrel.__future__ import is_python_older_than_minor_version
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER, CACHE_STORAGE_IDENTIFIER
 from kestrel.exceptions import (
     InvalidDataSource,
     InvalidInstruction,
@@ -70,7 +70,7 @@ class Instruction(DataClassJSONMixin):
         if self.instruction == instruction.instruction:
             flag = True
             for f in fields(self):
-                if f.name not in ("id", "instruction"):
+                if f.name not in ("id", "instruction", "store"):
                     self_data = getattr(self, f.name)
                     other_data = getattr(instruction, f.name)
                     if isinstance(self_data, DataFrame):
@@ -150,6 +150,9 @@ class DataSource(SourceInstruction):
     default_interface: InitVar[Optional[str]] = None
     interface: str = ""
     datasource: str = ""
+
+    # additional info; mapped from self.datasource
+    # not used to decide whether two DataSource instructions are the same
     store: str = ""
 
     def __post_init__(self, uri: Optional[str], default_interface: Optional[str]):
@@ -173,6 +176,7 @@ class DataSource(SourceInstruction):
 @dataclass(eq=False)
 class AnalyticsInterface(SourceInstruction):
     interface: str
+    store = None
 
 
 @dataclass(eq=False)
@@ -223,6 +227,7 @@ class Construct(SourceInstruction):
     data: SerializableDataFrame
     entity_type: Optional[str] = None
     interface: str = CACHE_INTERFACE_IDENTIFIER
+    store: str = CACHE_STORAGE_IDENTIFIER
 
     def __post_init__(self):
         if type(self.data) != SerializableDataFrame:

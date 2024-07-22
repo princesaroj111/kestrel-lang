@@ -60,9 +60,9 @@ class SQLAlchemyInterface(AbstractInterface):
     def schemes() -> Iterable[str]:
         return ["sqlalchemy"]
 
-    def get_storage_of_datasource(datasource: str) -> str:
+    def get_storage_of_datasource(self, datasource: str) -> str:
         """Get the storage name of a given datasource"""
-        if datasource not in self.config.datasources.values():
+        if datasource not in self.config.datasources:
             raise InvalidDataSource(datasource)
         return self.config.datasources[datasource].connection
 
