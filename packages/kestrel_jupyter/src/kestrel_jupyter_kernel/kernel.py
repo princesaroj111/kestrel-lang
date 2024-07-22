@@ -46,8 +46,9 @@ class KestrelKernel(Kernel):
 
             except Exception as e:
                 _logger.error("Exception occurred", exc_info=True)
+                error = f"{e.__class__.__name__}: {e}"
                 self.send_response(
-                    self.iopub_socket, "stream", {"name": "stderr", "text": str(e)}
+                    self.iopub_socket, "stream", {"name": "stderr", "text": error}
                 )
 
         return {

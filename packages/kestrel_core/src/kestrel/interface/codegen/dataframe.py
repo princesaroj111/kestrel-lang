@@ -6,6 +6,7 @@ import sys
 from typing import Callable
 
 from kestrel.exceptions import (
+    InvalidAttributes,
     InvalidOperatorInMultiColumnComparison,
     MismatchedFieldValueInMultiColumnComparison,
 )
@@ -79,6 +80,10 @@ def _eval_Information(instruction: Information, dataframe: DataFrame) -> DataFra
 
 @typechecked
 def _eval_ProjectAttrs(instruction: ProjectAttrs, dataframe: DataFrame) -> DataFrame:
+    cols = set(list(dataframe))
+    invalid_attrs = set(instruction.attrs) - cols
+    if invalid_attrs:
+        raise InvalidAttributes(list(invalid_attrs))
     return dataframe[list(instruction.attrs)]
 
 
