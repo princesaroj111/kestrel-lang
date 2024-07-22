@@ -249,9 +249,10 @@ class SqlTranslator:
         if not self.source_schema:
             raise SourceSchemaNotFound(self.result_w_literal_binds())
         else:
-            invalid_attrs = set(proj.attrs) - set(self.source_schema)
-            if invalid_attrs:
-                raise InvalidAttributes(list(invalid_attrs))
+            if self.source_schema != ["*"]:
+                invalid_attrs = set(proj.attrs) - set(self.source_schema)
+                if invalid_attrs:
+                    raise InvalidAttributes(list(invalid_attrs))
             cols = [column(col) for col in proj.attrs]
             self.query = self.query.with_only_columns(*cols)
 
