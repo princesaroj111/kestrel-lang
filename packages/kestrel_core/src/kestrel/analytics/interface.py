@@ -171,7 +171,7 @@ class PythonAnalyticsInterface(AbstractInterface):
     def schemes() -> Iterable[str]:
         return ["python"]
 
-    def get_storage_of_datasource(self, datasource:str) -> str:
+    def get_storage_of_datasource(self, datasource: str) -> str:
         return "local"
 
     def store(
