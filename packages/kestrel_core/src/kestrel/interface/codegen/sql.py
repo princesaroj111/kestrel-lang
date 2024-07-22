@@ -4,6 +4,7 @@ from typing import Callable, List, Optional, Union
 
 import sqlalchemy
 from kestrel.exceptions import (
+    InvalidAttributes,
     InvalidMappingWithMultipleIdentifierFields,
     InvalidProjectEntityFromEntity,
     SourceSchemaNotFound,
@@ -22,6 +23,7 @@ from kestrel.ir.filter import (
 )
 from kestrel.ir.instructions import (
     Filter,
+    Information,
     Instruction,
     Limit,
     Offset,
@@ -244,8 +246,15 @@ class SqlTranslator:
         self.query = self.query.where(selection)
 
     def add_ProjectAttrs(self, proj: ProjectAttrs) -> None:
-        cols = [column(col) for col in proj.attrs]
-        self.query = self.query.with_only_columns(*cols)
+        if not self.source_schema:
+            raise SourceSchemaNotFound(self.result_w_literal_binds())
+        else:
+            if self.source_schema != ["*"]:
+                invalid_attrs = set(proj.attrs) - set(self.source_schema)
+                if invalid_attrs:
+                    raise InvalidAttributes(list(invalid_attrs))
+            cols = [column(col) for col in proj.attrs]
+            self.query = self.query.with_only_columns(*cols)
 
     def add_ProjectEntity(self, proj: ProjectEntity) -> None:
         if self.projection_base_field and self.projection_base_field != "event":
@@ -289,6 +298,9 @@ class SqlTranslator:
 
     def add_Limit(self, lim: Limit) -> None:
         self.query = self.query.limit(lim.num)
+
+    def add_Information(self, ins: Information) -> None:
+        self.query = self.query.limit(1)
 
     def add_Offset(self, offset: Offset) -> None:
         self.query = self.query.offset(offset.num)

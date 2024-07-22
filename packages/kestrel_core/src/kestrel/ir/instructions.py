@@ -203,6 +203,11 @@ class Explain(SolePredecessorTransformingInstruction):
 
 
 @dataclass(eq=False)
+class Information(SolePredecessorTransformingInstruction):
+    pass
+
+
+@dataclass(eq=False)
 class Limit(SolePredecessorTransformingInstruction):
     num: int
 

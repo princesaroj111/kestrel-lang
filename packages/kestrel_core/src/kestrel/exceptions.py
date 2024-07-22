@@ -194,3 +194,7 @@ class InvalidProjectEntityFromEntity(KestrelError):
 
 class InvalidMappingWithMultipleIdentifierFields(KestrelError):
     pass
+
+
+class InvalidAttributes(KestrelError):
+    pass

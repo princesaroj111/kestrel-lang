@@ -17,7 +17,7 @@ from kestrel.ir.instructions import (Filter, Limit, Offset, ProjectAttrs,
 ENGINE = sqlalchemy.create_engine("sqlite:///test.db")
 DIALECT = ENGINE.dialect
 TABLE = "my_table"
-TABLE_SCHEMA = ["CommandLine", "Image", "ProcessId", "ParentProcessId"]
+TABLE_SCHEMA = ["CommandLine", "Image", "ProcessId", "ParentProcessId", "foo", "bar", "baz"]
 
 
 TIMEFMT = '%Y-%m-%dT%H:%M:%S.%fZ'

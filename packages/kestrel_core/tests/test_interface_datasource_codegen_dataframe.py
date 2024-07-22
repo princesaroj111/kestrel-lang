@@ -6,6 +6,7 @@ from kestrel.interface.codegen.dataframe import (
     evaluate_source_instruction, evaluate_transforming_instruction)
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import Construct, Limit, ProjectAttrs, Variable
+from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
 
 
 def test_evaluate_Construct():
@@ -97,3 +98,11 @@ p4 = proclist WHERE name MATCHES r"^c\w{2}\.exe"
     ft = next(graph.predecessors(graph.get_variable("p4")))
     dfx = evaluate_transforming_instruction(ft, df0)
     assert dfx.to_dict("records") == [ {"name": "cmd.exe", "pid": 123} ]
+
+
+def test_information():
+    data = [ {"process.name": "cmd.exe", "process.pid": 123, "user.name": "user", "event_type": "process"} ]
+    df = DataFrame(data)
+    idf = variable_attributes_to_dataframe(df)
+    attrs = idf["attributes"].to_list()
+    assert attrs == ['event_type', 'process.name, process.pid', 'user.name']

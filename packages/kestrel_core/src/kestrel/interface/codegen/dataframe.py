@@ -6,9 +6,11 @@ import sys
 from typing import Callable
 
 from kestrel.exceptions import (
+    InvalidAttributes,
     InvalidOperatorInMultiColumnComparison,
     MismatchedFieldValueInMultiColumnComparison,
 )
+from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
 from kestrel.ir.filter import (
     AbsoluteTrue,
     BoolExp,
@@ -24,6 +26,7 @@ from kestrel.ir.filter import (
 from kestrel.ir.instructions import (
     Construct,
     Filter,
+    Information,
     Limit,
     ProjectAttrs,
     ProjectEntity,
@@ -71,7 +74,16 @@ def _eval_Limit(instruction: Limit, dataframe: DataFrame) -> DataFrame:
 
 
 @typechecked
+def _eval_Information(instruction: Information, dataframe: DataFrame) -> DataFrame:
+    return variable_attributes_to_dataframe(dataframe)
+
+
+@typechecked
 def _eval_ProjectAttrs(instruction: ProjectAttrs, dataframe: DataFrame) -> DataFrame:
+    cols = set(list(dataframe))
+    invalid_attrs = set(instruction.attrs) - cols
+    if invalid_attrs:
+        raise InvalidAttributes(list(invalid_attrs))
     return dataframe[list(instruction.attrs)]
 
 
@@ -84,7 +96,7 @@ def _eval_ProjectEntity(instruction: ProjectEntity, dataframe: DataFrame) -> Dat
         df = dataframe[
             [col for col in dataframe if col.startswith(instruction.ocsf_field)]
         ]
-        df.rename(columns=lambda x: x[len(instruction.ocsf_field) + 1 :], inplace=True)
+        df = df.rename(columns=lambda x: x[len(instruction.ocsf_field) + 1 :])
         df = df.drop_duplicates()
     return df
 
