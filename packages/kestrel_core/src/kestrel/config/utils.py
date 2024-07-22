@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Mapping, Union
+from typing import List, Mapping, Union
 
 import pandas
 import yaml
@@ -105,3 +105,12 @@ def load_relation_configs(table_name: str) -> pandas.DataFrame:
     except:
         raise InvalidKestrelRelationTable(filepaths[0])
     return table
+
+
+@typechecked
+def get_all_relations() -> List[str]:
+    relations = set()
+    for filepath in list_folder_files("kestrel.config", "relations", extension="csv"):
+        table = pandas.read_csv(filepath)
+        relations |= set(table["Relation"].to_list())
+    return list(relations)
