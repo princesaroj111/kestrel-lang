@@ -37,7 +37,7 @@ def to_html_blocks(d: Display) -> Iterable[str]:
     elif isinstance(d, GraphExplanation):
         for graphlet in d.graphlets:
             graph = IRGraph(graphlet.graph)
-            plt.figure(figsize=(4, 2))
+            plt.figure(figsize=(10, 8))
             nx.draw(
                 graph,
                 with_labels=True,
