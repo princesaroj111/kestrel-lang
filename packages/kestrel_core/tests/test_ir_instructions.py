@@ -77,7 +77,6 @@ def test_construct():
     c = Construct(data)
     assert c.data.equals(DataFrame(data))
     assert c.interface == CACHE_INTERFACE_IDENTIFIER
-    print(c.to_dict())
 
 
 def test_instruction_from_dict():

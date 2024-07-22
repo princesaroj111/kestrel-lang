@@ -237,3 +237,15 @@ def test_find_entity_to_entity_2(setup_sqlite_ecs_process_creation):
         parents = session.execute(huntflow)[0]
         assert parents.shape[0] == 2
         assert list(parents) == ['endpoint.uid', 'file.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid']
+
+
+def test_information(setup_sqlite_ecs_process_creation):
+    with Session() as session:
+        huntflow = """
+        evs = GET event FROM sqlalchemy://events WHERE os.name = 'Linux'
+        INFO evs
+        """
+        df = session.execute(huntflow)[0]
+        attrs = df["attributes"].to_list()
+        assert attrs == ['actor.process.cmd_line, actor.process.endpoint.name, actor.process.endpoint.os, actor.process.endpoint.uid, actor.process.file.endpoint.name, actor.process.file.endpoint.os, actor.process.file.endpoint.uid, actor.process.file.name, actor.process.file.parent_folder, actor.process.file.path, actor.process.name, actor.process.parent_process.cmd_line, actor.process.parent_process.endpoint.name, actor.process.parent_process.endpoint.os, actor.process.parent_process.endpoint.uid, actor.process.parent_process.file.endpoint.name, actor.process.parent_process.file.endpoint.os, actor.process.parent_process.file.endpoint.uid, actor.process.parent_process.name, actor.process.parent_process.pid, actor.process.parent_process.uid, actor.process.parent_process.user.endpoint.name, actor.process.parent_process.user.endpoint.os, actor.process.parent_process.user.endpoint.uid, actor.process.pid, actor.process.uid, actor.process.user.endpoint.name, actor.process.user.endpoint.os, actor.process.user.endpoint.uid, actor.user.name, actor.user.uid', 'endpoint.name, endpoint.os, endpoint.uid', 'file.endpoint.name, file.endpoint.os, file.endpoint.uid', 'process.cmd_line, process.endpoint.name, process.endpoint.os, process.endpoint.uid, process.file.endpoint.name, process.file.endpoint.os, process.file.endpoint.uid, process.file.name, process.file.parent_folder, process.file.path, process.name, process.parent_process.cmd_line, process.parent_process.endpoint.name, process.parent_process.endpoint.os, process.parent_process.endpoint.uid, process.parent_process.file.endpoint.name, process.parent_process.file.endpoint.os, process.parent_process.file.endpoint.uid, process.parent_process.name, process.parent_process.pid, process.parent_process.uid, process.parent_process.user.endpoint.name, process.parent_process.user.endpoint.os, process.parent_process.user.endpoint.uid, process.pid, process.uid, process.user.endpoint.name, process.user.endpoint.os, process.user.endpoint.uid', 'reg_key.endpoint.name, reg_key.endpoint.os, reg_key.endpoint.uid', 'reg_value.endpoint.name, reg_value.endpoint.os, reg_value.endpoint.uid', 'user.name, user.uid']
+

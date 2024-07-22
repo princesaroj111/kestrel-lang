@@ -17,7 +17,6 @@ def test_add_get_datasource():
     g.add_datasource("stixshifter://abc")
 
     s = g.add_datasource(DataSource("stixshifter://abc"))
-    print(g.to_json())
     assert len(g) == 1
 
     s2 = DataSource("stixshifter://abcd")

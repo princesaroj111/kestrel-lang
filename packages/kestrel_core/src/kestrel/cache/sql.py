@@ -8,11 +8,13 @@ from dateutil.parser import parse as dt_parser
 from kestrel.cache.base import AbstractCache
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
+from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     Construct,
     Explain,
     Filter,
+    Information,
     Instruction,
     Return,
     SolePredecessorTransformingInstruction,
@@ -110,7 +112,15 @@ class SqlCache(AbstractCache):
             translator = self._evaluate_instruction_in_graph(graph, instruction)
             # TODO: may catch error in case evaluation starts from incomplete SQL
             _logger.debug(f"SQL query generated: {translator.result_w_literal_binds()}")
-            mapping[instruction.id] = read_sql(translator.result(), self.connection)
+            df = read_sql(translator.result(), self.connection)
+
+            # handle Information command
+            if isinstance(instruction, Return):
+                trunk, _ = graph.get_trunk_n_branches(instruction)
+                if isinstance(trunk, Information):
+                    df = variable_attributes_to_dataframe(df)
+
+            mapping[instruction.id] = df
         return mapping
 
     def explain_graph(

@@ -8,11 +8,13 @@ from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.exceptions import SourceNotFound
 from kestrel.interface import AbstractInterface
 from kestrel.interface.codegen.sql import ingest_dataframe_to_temp_table
+from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     DataSource,
     Explain,
     Filter,
+    Information,
     Instruction,
     Return,
     SolePredecessorTransformingInstruction,
@@ -40,10 +42,10 @@ class SQLAlchemyInterface(AbstractInterface):
     ):
         _logger.debug("SQLAlchemyInterface: loading config")
         super().__init__(serialized_cache_catalog, session_id)
-        self.config = load_config()
         self.schemas: dict = {}  # Schema per table (index)
         self.engines: dict = {}  # Map of conn name -> engine
         self.conns: dict = {}  # Map of conn name -> connection
+        self.config = load_config()
         for info in self.config.datasources.values():
             name = info.connection
             conn_info = self.config.connections[name]
@@ -102,7 +104,16 @@ class SQLAlchemyInterface(AbstractInterface):
                     # pass through
                     _logger.debug("No result/value translation")
                     dmm = None
-            mapping[instruction.id] = translate_dataframe(df, dmm) if dmm else df
+
+            df = translate_dataframe(df, dmm) if dmm else df
+
+            # handle Information command
+            if isinstance(instruction, Return):
+                trunk, _ = graph.get_trunk_n_branches(instruction)
+                if isinstance(trunk, Information):
+                    df = variable_attributes_to_dataframe(df)
+
+            mapping[instruction.id] = df
         return mapping
 
     def explain_graph(

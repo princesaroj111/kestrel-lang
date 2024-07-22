@@ -22,6 +22,7 @@ from kestrel.ir.filter import (
 )
 from kestrel.ir.instructions import (
     Filter,
+    Information,
     Instruction,
     Limit,
     Offset,
@@ -289,6 +290,9 @@ class SqlTranslator:
 
     def add_Limit(self, lim: Limit) -> None:
         self.query = self.query.limit(lim.num)
+
+    def add_Information(self, ins: Information) -> None:
+        self.query = self.query.limit(1)
 
     def add_Offset(self, offset: Offset) -> None:
         self.query = self.query.offset(offset.num)

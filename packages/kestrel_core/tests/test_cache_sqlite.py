@@ -300,3 +300,21 @@ FROM es
 WHERE device.os = 'Linux')
  SELECT DISTINCT * 
 FROM procs"""
+
+
+def test_eval_information():
+    stmt = """
+events = NEW event [ {"process.name": "cmd.exe", "process.pid": 123, "user.name": "user", "event_type": "process"} ]
+INFO events
+"""
+    graph = IRGraph()
+    rets = parse_kestrel_and_update_irgraph(stmt, graph, {})
+    graph = IRGraphEvaluable(graph)
+    c = SqlCache()
+    mapping = c.evaluate_graph(graph, c)
+
+    # check the return is correct
+    assert len(rets) == 1
+    df = mapping[rets[0].id]
+    attrs = df["attributes"].to_list()
+    assert attrs == ['event_type', 'process.name, process.pid', 'user.name']

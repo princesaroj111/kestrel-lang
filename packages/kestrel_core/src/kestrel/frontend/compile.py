@@ -37,6 +37,7 @@ from kestrel.ir.instructions import (
     DataSource,
     Explain,
     Filter,
+    Information,
     Instruction,
     Limit,
     Offset,
@@ -697,4 +698,10 @@ class _KestrelT(Transformer):
         variable = self.irgraph.get_variable(args[0].value)
         explain = self.irgraph.add_node(Explain(), variable)
         ret = self.irgraph.add_node(Return(), explain)
+        return [ret]
+
+    def info(self, args) -> List[Return]:
+        variable = self.irgraph.get_variable(args[0].value)
+        info = self.irgraph.add_node(Information(), variable)
+        ret = self.irgraph.add_node(Return(), info)
         return [ret]
