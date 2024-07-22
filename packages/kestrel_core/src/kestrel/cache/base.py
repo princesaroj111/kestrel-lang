@@ -4,7 +4,7 @@ from abc import abstractmethod
 from typing import Iterable, MutableMapping
 from uuid import UUID
 
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER, CACHE_STORAGE_IDENTIFIER
 from kestrel.interface import AbstractInterface
 from pandas import DataFrame
 
@@ -20,6 +20,9 @@ class AbstractCache(AbstractInterface, MutableMapping):
     @staticmethod
     def schemes() -> Iterable[str]:
         return [CACHE_INTERFACE_IDENTIFIER]
+
+    def get_storage_of_datasource(datasource: str) -> str:
+        return CACHE_STORAGE_IDENTIFIER
 
     @abstractmethod
     def __del__(self):

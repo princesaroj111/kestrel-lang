@@ -12,7 +12,7 @@ from kestrel.exceptions import InstructionNotFound
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
-from kestrel.ir.instructions import Explain, Instruction, Return
+from kestrel.ir.instructions import DataSource, Explain, Instruction, Return
 from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
@@ -67,6 +67,10 @@ class Session(AbstractContextManager):
             rets = parse_kestrel_and_update_irgraph(
                 huntflow_block, self.irgraph, self.config["entity_identifier"]
             )
+            for ds in self.irgraph.get_nodes_by_type(DataSource):
+                if not ds.store:
+                    itf = self.interface_manager[ds.interface]
+                    ds.store = itf.get_storage_of_datasource(ds.datasource)
         except Exception as e:
             self.irgraph = irgraph_snapshot
             raise e

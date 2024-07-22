@@ -171,6 +171,9 @@ class PythonAnalyticsInterface(AbstractInterface):
     def schemes() -> Iterable[str]:
         return ["python"]
 
+    def get_storage_of_datasource(datasource: str) -> str:
+        return "local"
+
     def store(
         self,
         instruction_id: UUID,

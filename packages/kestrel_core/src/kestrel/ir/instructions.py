@@ -150,6 +150,7 @@ class DataSource(SourceInstruction):
     default_interface: InitVar[Optional[str]] = None
     interface: str = ""
     datasource: str = ""
+    store: str = ""
 
     def __post_init__(self, uri: Optional[str], default_interface: Optional[str]):
         super().__post_init__()
