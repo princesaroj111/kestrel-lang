@@ -30,14 +30,14 @@ classifiers = [
 ]
 
 dependencies = [
-    "typeguard>=4.1.5",
+    "typeguard>=4.3.0",
     "pyyaml>=6.0.1",
-    "lark>=1.1.7",
-    "pandas>=2.0.3",
-    "pyarrow>=13.0.0",
-    "mashumaro>=3.10",
+    "lark>=1.1.9",
+    "pandas>=2.2.2",
+    "pyarrow>=17.0.0",
+    "mashumaro>=3.13.1",
     "networkx>=3.1", # networkx==3.2.1 only for Python>=3.9
-    "SQLAlchemy>=2.0.23",
+    "SQLAlchemy>=2.0.31",
 ]
 
 [project.optional-dependencies]
