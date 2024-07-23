@@ -128,7 +128,7 @@ def get_all_relations() -> List[str]:
 def get_all_entity_types() -> List[str]:
     global entity_types
     if not entity_types:
-        _entity_types = set()
+        _entity_types = {"event"}
         for filepath in list_folder_files(
             "kestrel.config", "relations", extension="csv"
         ):
