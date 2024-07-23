@@ -5,7 +5,7 @@ from uuid import UUID
 
 import sqlalchemy
 from kestrel.display import GraphletExplanation, NativeQuery
-from kestrel.exceptions import SourceNotFound
+from kestrel.exceptions import InvalidDataSource, SourceNotFound
 from kestrel.interface import AbstractInterface
 from kestrel.interface.codegen.sql import ingest_dataframe_to_temp_table
 from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
@@ -59,6 +59,12 @@ class SQLAlchemyInterface(AbstractInterface):
     @staticmethod
     def schemes() -> Iterable[str]:
         return ["sqlalchemy"]
+
+    def get_storage_of_datasource(self, datasource: str) -> str:
+        """Get the storage name of a given datasource"""
+        if datasource not in self.config.datasources:
+            raise InvalidDataSource(datasource)
+        return self.config.datasources[datasource].connection
 
     def store(
         self,

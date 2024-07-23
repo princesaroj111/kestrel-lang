@@ -3,7 +3,7 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple
 from uuid import UUID
 
 from kestrel.display import GraphletExplanation
-from kestrel.exceptions import DataSourceError
+from kestrel.exceptions import DataSourceError, InvalidDataSource
 from kestrel.interface import AbstractInterface
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
@@ -97,6 +97,12 @@ class OpenSearchInterface(AbstractInterface):
     @staticmethod
     def schemes() -> Iterable[str]:
         return ["opensearch"]
+
+    def get_storage_of_datasource(datasource: str) -> str:
+        """Get the storage name of a given datasource"""
+        if datasource not in self.config.datasources:
+            raise InvalidDataSource(datasource)
+        return self.config.datasources[datasource].connection
 
     def store(
         self,

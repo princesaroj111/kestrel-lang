@@ -17,15 +17,15 @@ class AbstractInterface(ABC):
 
     Concepts:
 
-    - Think an interface as a datalake
+    - Think an interface as a type of datalakes
+
+    - Think a storage as a datalake
 
     - Think a datasource as a table in the datalake
 
     Attributes:
 
         session_id: the optional information to derive table name in datalake
-
-        datasources: map a datasource name to datalake table name
 
         cache_catalog: map a cached item (instruction.id) to datalake table/view name
     """
@@ -53,6 +53,11 @@ class AbstractInterface(ABC):
 
         Each scheme should be defined as ``("_"|LETTER) ("_"|LETTER|DIGIT)*``
         """
+        ...
+
+    @abstractmethod
+    def get_storage_of_datasource(self, datasource: str) -> str:
+        """Get the storage name of a given datasource"""
         ...
 
     @abstractmethod
