@@ -123,9 +123,7 @@ def do_complete(
         _p = last_word_prefix
         _e = expected_values
         suggestions = [t[len(_p) :] for t in _e if t.startswith(_p)] if _p else _e
-        suggestions = set(suggestions)
-        suggestions.discard("")
-        suggestions = list(suggestions)
+        suggestions = [x for x in set(suggestions) if x]
         _logger.debug(f"suggestions: {suggestions}")
 
     else:
@@ -143,14 +141,23 @@ def do_complete(
                 for clause in ("attr_clause", "limit_clause", "offset_clause"):
                     if not list(stmt.find_data(clause)):
                         suggestions.append("ATTR")
-            if cmd in ("expression", "find") and not list(
+            elif cmd in ("expression", "find") and not list(
                 stmt.find_data("where_clause")
             ):
                 suggestions.append("WHERE")
-            if cmd in ("get", "find") and not list(stmt.find_data("timerange")):
+            elif cmd in ("get", "find") and not list(stmt.find_data("timerange")):
                 suggestions.append("START")
             elif cmd == "apply" and not list(stmt.find_data("args")):
                 suggestions.append("WITH")
+
+        suggestions = [x for x in set(suggestions) if x]
+        _p = last_word_prefix
+        suggestions = (
+            [t[len(_p) :] for t in suggestions if t.startswith(_p)]
+            if _p
+            else suggestions
+        )
+        _logger.debug(f"suggestions from optional components: {suggestions}")
 
     return suggestions
 
