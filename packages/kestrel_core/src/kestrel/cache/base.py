@@ -1,25 +1,23 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Iterable, MutableMapping
+from typing import Iterable, List, MutableMapping
 from uuid import UUID
 
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER, CACHE_STORAGE_IDENTIFIER
-from kestrel.interface import AbstractInterface
+from kestrel.interface import DatasourceInterface
 from pandas import DataFrame
 
 
-class AbstractCache(AbstractInterface, MutableMapping):
-    """Base class for Kestrel cache
-
-    Additional @abstractmethod from AbstractInterface:
-
-        - evaluate_graph()
-    """
+class AbstractCache(DatasourceInterface, MutableMapping):
+    """Base class for Kestrel cache"""
 
     @staticmethod
     def schemes() -> Iterable[str]:
         return [CACHE_INTERFACE_IDENTIFIER]
+
+    def get_datasources(self) -> List[str]:
+        return []
 
     def get_storage_of_datasource(self, datasource: str) -> str:
         return CACHE_STORAGE_IDENTIFIER

@@ -1,6 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional
 from uuid import UUID
 
 from kestrel.display import GraphletExplanation
@@ -53,6 +53,11 @@ class AbstractInterface(ABC):
 
         Each scheme should be defined as ``("_"|LETTER) ("_"|LETTER|DIGIT)*``
         """
+        ...
+
+    @abstractmethod
+    def get_datasources(self) -> List[str]:
+        """Get the list of datasource names registered at this interface"""
         ...
 
     @abstractmethod
@@ -130,3 +135,9 @@ class AbstractInterface(ABC):
     def cache_catalog_to_json(self) -> str:
         """Serialize the cache catalog to a JSON string"""
         return json.dumps(self.cache_catalog)
+
+
+class DatasourceInterface(AbstractInterface): ...
+
+
+class AnalyticsInterface(AbstractInterface): ...
