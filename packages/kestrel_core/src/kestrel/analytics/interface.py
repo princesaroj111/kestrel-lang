@@ -107,7 +107,7 @@ import sys
 import traceback
 from contextlib import AbstractContextManager
 from importlib.util import module_from_spec, spec_from_file_location
-from typing import Any, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional
 from uuid import UUID
 
 from kestrel.analytics.config import get_profile, load_profiles
@@ -119,7 +119,7 @@ from kestrel.exceptions import (
     InvalidAnalyticsInterfaceImplementation,
     InvalidAnalyticsOutput,
 )
-from kestrel.interface import AbstractInterface
+from kestrel.interface import AnalyticsInterface
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     Analytic,
@@ -157,7 +157,7 @@ class PythonAnalyticsJob:
         return df
 
 
-class PythonAnalyticsInterface(AbstractInterface):
+class PythonAnalyticsInterface(AnalyticsInterface):
     def __init__(
         self,
         serialized_cache_catalog: Optional[str] = None,
@@ -170,6 +170,9 @@ class PythonAnalyticsInterface(AbstractInterface):
     @staticmethod
     def schemes() -> Iterable[str]:
         return ["python"]
+
+    def get_datasources(self) -> List[str]:
+        return list(self.config)
 
     def get_storage_of_datasource(self, datasource: str) -> str:
         return "local"

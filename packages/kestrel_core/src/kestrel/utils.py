@@ -1,5 +1,6 @@
 import collections.abc
 import os
+from datetime import datetime
 from importlib import resources
 from pathlib import Path
 from pkgutil import get_data
@@ -7,6 +8,8 @@ from typing import Iterable, Mapping, Optional
 
 from kestrel.__future__ import is_python_older_than_minor_version
 from typeguard import typechecked
+
+TIME_FMT = "%Y-%m-%dT%H:%M:%S.%f"
 
 
 @typechecked
@@ -76,3 +79,20 @@ def update_nested_dict(dict_old: Mapping, dict_new: Optional[Mapping]) -> Mappin
             else:
                 dict_old[k] = v
     return dict_old
+
+
+@typechecked
+def timefmt(t: datetime, prec: int = 3) -> str:
+    """Format Python datetime `t` in RFC 3339-format
+
+    Ported from firepit.timestamp
+    """
+    val = t.strftime(TIME_FMT)
+    parts = val.split(".")
+    if len(parts) > 1:
+        l = len(parts[0])
+        digits = parts[1]
+        num_digits = len(digits)
+        if num_digits:
+            l += min(num_digits, prec) + 1
+    return val[:l] + "Z"

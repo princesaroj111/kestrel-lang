@@ -9,6 +9,7 @@ from kestrel.config import load_kestrel_config
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
+from kestrel.frontend.completor import do_complete
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
@@ -136,7 +137,7 @@ class Session(AbstractContextManager):
                     if iid == ins.id:
                         return display
 
-    def do_complete(self, huntflow_block: str, cursor_pos: int):
+    def do_complete(self, huntflow_block: str, cursor_pos: int) -> Iterable[str]:
         """Kestrel code auto-completion.
 
         Parameters:
@@ -146,7 +147,12 @@ class Session(AbstractContextManager):
         Returns:
             A list of suggested strings to complete the code
         """
-        raise NotImplementedError()
+        return do_complete(
+            huntflow_block,
+            cursor_pos,
+            self.interface_manager,
+            [v.name for v in self.irgraph.get_variables()],
+        )
 
     def close(self):
         """Explicitly close the session.

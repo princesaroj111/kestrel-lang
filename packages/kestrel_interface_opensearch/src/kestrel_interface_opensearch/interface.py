@@ -1,10 +1,10 @@
 import logging
-from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional, Tuple
 from uuid import UUID
 
 from kestrel.display import GraphletExplanation
 from kestrel.exceptions import DataSourceError, InvalidDataSource
-from kestrel.interface import AbstractInterface
+from kestrel.interface import DatasourceInterface
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     DataSource,
@@ -73,7 +73,7 @@ def read_sql(sql: str, conn: OpenSearch, dmm: Optional[dict] = None) -> DataFram
     return concat(dfs)
 
 
-class OpenSearchInterface(AbstractInterface):
+class OpenSearchInterface(DatasourceInterface):
     def __init__(
         self,
         serialized_cache_catalog: Optional[str] = None,
@@ -97,6 +97,9 @@ class OpenSearchInterface(AbstractInterface):
     @staticmethod
     def schemes() -> Iterable[str]:
         return ["opensearch"]
+
+    def get_datasources(self) -> List[str]:
+        return list(self.config.datasources)
 
     def get_storage_of_datasource(datasource: str) -> str:
         """Get the storage name of a given datasource"""

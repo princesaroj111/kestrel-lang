@@ -1,12 +1,12 @@
 import logging
 from functools import reduce
-from typing import Any, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional
 from uuid import UUID
 
 import sqlalchemy
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.exceptions import InvalidDataSource, SourceNotFound
-from kestrel.interface import AbstractInterface
+from kestrel.interface import DatasourceInterface
 from kestrel.interface.codegen.sql import ingest_dataframe_to_temp_table
 from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
 from kestrel.ir.graph import IRGraphEvaluable
@@ -34,7 +34,7 @@ _logger = logging.getLogger(__name__)
 
 
 @typechecked
-class SQLAlchemyInterface(AbstractInterface):
+class SQLAlchemyInterface(DatasourceInterface):
     def __init__(
         self,
         serialized_cache_catalog: Optional[str] = None,
@@ -59,6 +59,9 @@ class SQLAlchemyInterface(AbstractInterface):
     @staticmethod
     def schemes() -> Iterable[str]:
         return ["sqlalchemy"]
+
+    def get_datasources(self) -> List[str]:
+        return list(self.config.datasources)
 
     def get_storage_of_datasource(self, datasource: str) -> str:
         """Get the storage name of a given datasource"""

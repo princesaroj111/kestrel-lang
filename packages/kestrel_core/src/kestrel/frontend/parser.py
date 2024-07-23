@@ -4,14 +4,14 @@ import logging
 from itertools import chain
 from typing import Iterable
 
+import lark
 import yaml
-from kestrel.config.utils import load_relation_configs
+from kestrel.config.utils import get_all_relations, load_relation_configs
 from kestrel.frontend.compile import _KestrelT
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import Return
 from kestrel.mapping.data_model import reverse_mapping
 from kestrel.utils import list_folder_files, load_data_file
-from lark import Lark
 from pandas import DataFrame
 from typeguard import typechecked
 
@@ -51,13 +51,12 @@ def get_frontend_mapping(submodule: str, do_reverse_mapping: bool = False) -> di
 
 
 @typechecked
-def get_keywords():
-    # TODO: this Kestrel1 code needs to be updated
+def get_keywords(including_relations: bool = True):
     grammar = load_data_file("kestrel.frontend", "kestrel.lark")
-    parser = Lark(grammar, parser="lalr")
+    parser = lark.Lark(grammar, parser="lalr")
     alphabet_patterns = filter(lambda x: x.pattern.value.isalnum(), parser.terminals)
-    # keywords = [x.pattern.value for x in alphabet_patterns] + all_relations
-    keywords = [x.pattern.value for x in alphabet_patterns]
+    all_relations = get_all_relations()
+    keywords = [x.pattern.value for x in alphabet_patterns] + all_relations
     keywords_lower = map(lambda x: x.lower(), keywords)
     keywords_upper = map(lambda x: x.upper(), keywords)
     keywords_comprehensive = list(chain(keywords_lower, keywords_upper))
@@ -78,7 +77,7 @@ def parse_kestrel_and_update_irgraph(
     Returns:
         List of Return instructions in the current code block
     """
-    lp = Lark(
+    lp = lark.Lark(
         load_data_file("kestrel.frontend", "kestrel.lark"),
         parser="lalr",
         transformer=_KestrelT(
@@ -89,5 +88,17 @@ def parse_kestrel_and_update_irgraph(
             get_relation_table("event"),
             entity_identifier_map,
         ),
+    )
+    return lp.parse(stmts)
+
+
+@typechecked
+def parse_without_transform(
+    stmts: str,
+) -> lark.tree.Tree:
+    """Parse Kestrel code block and not transform; for syntax error check"""
+    lp = lark.Lark(
+        load_data_file("kestrel.frontend", "kestrel.lark"),
+        parser="lalr",
     )
     return lp.parse(stmts)
