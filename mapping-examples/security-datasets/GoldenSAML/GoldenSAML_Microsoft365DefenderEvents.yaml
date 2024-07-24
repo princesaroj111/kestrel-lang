@@ -53,6 +53,15 @@ network_activity:
     dst_endpoint: *dst_ref
 
 
+# https://schema.ocsf.io/1.1.0/classes/api_activity
+# API Activity [6003]
+api_activity:
+    src_endpoint: *src_ref
+    dst_endpoint: *dst_ref
+    http_request:
+        user_agent: UserAgent
+
+
 # https://schema.ocsf.io/1.1.0/classes/file_activity?extensions=win
 # File System Activity [1001]
 file_activity:
