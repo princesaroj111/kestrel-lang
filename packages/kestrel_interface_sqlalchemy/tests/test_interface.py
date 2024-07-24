@@ -71,7 +71,7 @@ def test_write_to_temp_table(setup_sqlite_ecs_process_creation):
         ("parent.pid = 1022", "process.parent_process.pid"),  # ECS attribute
     ]
 )
-def test_get_sinple_ecs_process(setup_sqlite_ecs_process_creation, where, ocsf_field):
+def test_get_simple_ecs_process(setup_sqlite_ecs_process_creation, where, ocsf_field):
     with Session() as session:
         stmt = f"procs = GET process FROM sqlalchemy://events WHERE {where}"
         session.execute(stmt)
@@ -103,7 +103,7 @@ def test_get_sinple_ecs_process(setup_sqlite_ecs_process_creation, where, ocsf_f
         ("process.parent.pid = 1022", ["process.parent_process.pid", "actor.process.parent_process.pid"]),
     ]
 )
-def test_get_sinple_event(setup_sqlite_ecs_process_creation, where, ocsf_fields):
+def test_get_simple_event(setup_sqlite_ecs_process_creation, where, ocsf_fields):
     with Session() as session:
         stmt = f"evs = GET event FROM sqlalchemy://events WHERE {where}"
         session.execute(stmt)
@@ -162,7 +162,7 @@ def test_find_event_to_entity(setup_sqlite_ecs_process_creation):
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_event_to_entity.txt")
         with open(result_file) as h:
-            result = h.read()
+            result = h.read().strip()
         assert stmt == result
 
         assert list(procs) == ['endpoint.uid', 'file.endpoint.uid', 'parent_process.endpoint.uid', 'parent_process.file.endpoint.uid', 'parent_process.user.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'parent_process.endpoint.name', 'parent_process.file.endpoint.name', 'parent_process.user.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'parent_process.endpoint.os', 'parent_process.file.endpoint.os', 'parent_process.user.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid', 'file.name', 'file.path', 'file.parent_folder', 'parent_process.cmd_line', 'parent_process.name', 'parent_process.pid', 'parent_process.uid']
@@ -184,12 +184,12 @@ def test_find_entity_to_event(setup_sqlite_ecs_process_creation):
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_entity_to_event.txt")
         with open(result_file) as h:
-            result = h.read()
+            result = h.read().strip()
         assert stmt == result
 
         assert e2.shape[0] == 4
         assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
-        assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
+        assert e2.shape[1] == 74  # full event: refer to test_get_simple_event() for number
 
 
 def test_find_entity_to_event_2(setup_sqlite_ecs_process_creation):
@@ -202,7 +202,7 @@ def test_find_entity_to_event_2(setup_sqlite_ecs_process_creation):
         e2 = session.execute(huntflow)[0]
         assert e2.shape[0] == 4
         assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
-        assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
+        assert e2.shape[1] == 74  # full event: refer to test_get_simple_event() for number
 
 
 def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
@@ -220,7 +220,7 @@ def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_entity_to_entity.txt")
         with open(result_file) as h:
-            result = h.read()
+            result = h.read().strip()
         assert stmt == result
 
         assert parents.shape[0] == 2

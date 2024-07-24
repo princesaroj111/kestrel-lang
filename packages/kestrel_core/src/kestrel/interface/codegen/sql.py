@@ -174,7 +174,9 @@ class SqlTranslator:
         return rendered_comp
 
     @typechecked
-    def _render_multi_comp(self, comps: MultiComp) -> BooleanClauseList:
+    def _render_multi_comp(
+        self, comps: MultiComp
+    ) -> Union[BooleanClauseList, BinaryExpression]:
         op = and_ if comps.op == ExpOp.AND else or_
         binary_expressions = list(map(self._render_comp, comps.comps))
 
