@@ -8,6 +8,7 @@ import typer
 
 
 def _normalize_event(event: dict) -> dict:
+    # We could definitely optimize this
     if "tags" in event:
         # Blue Team Village CTF data (cribl?)
         del event["tags"]
@@ -27,7 +28,22 @@ def _normalize_event(event: dict) -> dict:
         del event["ParentProcessName"]
         event["Image"] = event["NewProcessName"]
         del event["NewProcessName"]
-    return event
+
+    # SecurityDatasets.com GoldenSAML Microsoft365DefenderEvents
+    # Some fields ending with "_string" are JSON strings?  Why?
+    # Deserialize them so they're flattened later
+    new_event = {}
+    for name, value in event.items():
+        if name.endswith("_string"):
+            # Maybe this is a JSON string?
+            new_name, _, _ = name.rpartition("_")
+            try:
+                new_event[new_name] = json.loads(value)
+            except json.JSONDecodeError:
+                pass  # maybe it's NOT JSON
+        else:
+            new_event[name] = value
+    return new_event
 
 
 def _jsonify_complex(df: pd.DataFrame) -> pd.DataFrame:
