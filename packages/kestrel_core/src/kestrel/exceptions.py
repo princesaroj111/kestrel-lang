@@ -196,5 +196,9 @@ class InvalidMappingWithMultipleIdentifierFields(KestrelError):
     pass
 
 
+class InvalidTransformerInMapping(KestrelError):
+    pass
+
+
 class InvalidAttributes(KestrelError):
     pass

@@ -113,10 +113,13 @@ def _get_map_triple(d: dict, prefix: str, op: str, value) -> tuple:
     mapped_op = d.get(f"{prefix}_op")
     transform = d.get(f"{prefix}_value")
     _logger.debug("transform = %s (%s)", type(transform), transform)
-    if isinstance(transform, dict):
-        new_value = transform.get(value, value)  # FIXME
+    if transform:
+        if isinstance(transform, dict):
+            new_value = transform.get(value, value)  # FIXME
+        else:
+            new_value = run_transformer(transform, value)
     else:
-        new_value = run_transformer(transform, value)
+        new_value = value
     if mapped_op:
         new_op = mapped_op
     elif isinstance(new_value, list) and op == "=":
