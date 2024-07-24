@@ -166,10 +166,9 @@ reg_value:
 # To simplify mapping, we do not cover parent process in actor.process
 # - This semantic only appear in Process Activity [1007], please use `process.parent_process` to specify in this case
 # - This works in Activity besides Process Activity [1007]
-actor.process: *process
-
-
-actor.user: *user
+actor:
+    process: *process
+    user: *user
 
 
 # https://schema.ocsf.io/1.1.0/classes/network_activity
