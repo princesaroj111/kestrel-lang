@@ -120,9 +120,12 @@ class SqlTranslator:
         # Primary timestamp field in target table
         self.timestamp = timestamp
 
-        from_clause = (
-            from_obj if isinstance(from_obj, CTE) else sqlalchemy.table(from_obj)
-        )
+        if isinstance(from_obj, CTE):
+            from_clause = from_obj
+            self.is_subquery = True
+        else:
+            from_clause = sqlalchemy.table(from_obj)
+            self.is_subquery = False
 
         # SQLAlchemy statement object
         # Auto-dedup by default
@@ -130,7 +133,7 @@ class SqlTranslator:
 
     @typechecked
     def _map_identifier_field(self, field) -> ColumnElement:
-        if self.data_mapping:
+        if self.data_mapping and not self.is_subquery:
             comps = translate_comparison_to_native(self.data_mapping, field, "", None)
             if len(comps) > 1:
                 raise InvalidMappingWithMultipleIdentifierFields(comps)
@@ -152,7 +155,7 @@ class SqlTranslator:
                     *[self._map_identifier_field(field) for field in comp.fields]
                 )
             rendered_comp = comp2func[comp.op](col, comp.value)
-        elif self.data_mapping:  # translation needed
+        elif self.data_mapping and not self.is_subquery:  # translation needed
             comps = translate_comparison_to_native(
                 self.data_mapping, comp.field, comp.op, comp.value
             )
@@ -265,7 +268,7 @@ class SqlTranslator:
             self.projection_base_field = proj.ocsf_field
 
         if proj.ocsf_field == "event":  # project to event
-            if self.data_mapping:
+            if self.data_mapping and not self.is_subquery:
                 if not self.source_schema:
                     raise SourceSchemaNotFound(self.result_w_literal_binds())
                 else:
@@ -280,7 +283,7 @@ class SqlTranslator:
             if not self.source_schema:
                 raise SourceSchemaNotFound(self.result_w_literal_binds())
 
-            if self.data_mapping:
+            if self.data_mapping and not self.is_subquery:
                 pairs = translate_projection_to_native(
                     self.data_mapping, proj.ocsf_field, None, self.source_schema
                 )

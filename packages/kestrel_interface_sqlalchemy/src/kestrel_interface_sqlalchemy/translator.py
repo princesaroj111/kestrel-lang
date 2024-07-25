@@ -8,8 +8,6 @@ from kestrel.interface.codegen.sql import SqlTranslator
 from sqlalchemy.engine.default import DefaultDialect
 from typeguard import typechecked
 
-from .config import DataSource
-
 _logger = logging.getLogger(__name__)
 
 
@@ -17,7 +15,6 @@ _logger = logging.getLogger(__name__)
 class NativeTable:
     dialect: DefaultDialect
     table_name: str
-    table_config: Optional[DataSource]  # for testing purpose, can provide None
     table_schema: Optional[List[str]]  # column names
     data_model_map: Optional[dict]
     timefmt: Optional[Callable]
@@ -37,22 +34,15 @@ class SQLAlchemyTranslator(SqlTranslator):
         obj: Union[NativeTable, SubQuery],
     ):
         if isinstance(obj, SubQuery):
-            # SqlTranslator specific attribute
-            self.datasource_config = obj.translator.datasource_config
-
-            # SqlTranslator generic arguments
             dialect = obj.translator.dialect
             from_obj = obj.translator.query.cte(name=obj.name)
             from_obj_schema = obj.translator.projected_schema
             from_obj_projection_base_field = obj.translator.projection_base_field
-            ocsf_to_native_mapping = None
+            ocsf_to_native_mapping = obj.translator.data_mapping
             timefmt = None
             timestamp = None
 
         elif isinstance(obj, NativeTable):
-            # SqlTranslator specific attribute
-            self.datasource_config = obj.table_config
-
             dialect = obj.dialect
             from_obj = obj.table_name
             from_obj_schema = obj.table_schema

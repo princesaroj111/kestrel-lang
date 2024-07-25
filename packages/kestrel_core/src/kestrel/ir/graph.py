@@ -383,6 +383,9 @@ class IRGraph(networkx.DiGraph):
         ps = list(self.predecessors(node))
         pps = [(p, pp) for p in self.predecessors(node) for pp in self.predecessors(p)]
 
+        if not ps:
+            raise SourceNotFound(node)
+
         # may need to add a patch in find_dependent_subgraphs_of_node()
         # for each new case added in the if/elif, e.g., FIlter
         if isinstance(node, SolePredecessorTransformingInstruction):
@@ -676,7 +679,7 @@ class IRGraph(networkx.DiGraph):
         while isinstance(node, TransformingInstruction):
             node, _ = self.get_trunk_n_branches(node)
         if not isinstance(node, (DataSource, Construct)):
-            raise SourceNotFound(v, node)
+            raise SourceNotFound(node)
         else:
             return node
 
@@ -818,7 +821,9 @@ class IRGraphEvaluable(IRGraph):
 
         1. Only has one interface
 
-        2. No IntermediateInstruction node
+        2. Only has one store
+
+        3. No IntermediateInstruction node
     """
 
     def __init__(self, graph: Optional[IRGraph] = None):
@@ -826,6 +831,7 @@ class IRGraphEvaluable(IRGraph):
 
         # need to initialize it before `self.update(graph)` below
         self.interface = None
+        self.store = None
 
         # update() will call _add_node() internally to set self.interface
         if graph:
@@ -834,16 +840,27 @@ class IRGraphEvaluable(IRGraph):
         # all source nodes are already cached (no SourceInstruction)
         if not self.interface:
             self.interface = CACHE_INTERFACE_IDENTIFIER
+            self.store = CACHE_STORAGE_IDENTIFIER
 
     def _add_node(self, node: Instruction, deref: bool = True) -> Instruction:
         if isinstance(node, IntermediateInstruction):
             raise InevaluableInstruction(node)
         elif isinstance(node, SourceInstruction):
             if self.interface:
-                if node.interface != self.interface:
-                    raise MultiInterfacesInGraph([self.interface, node.interface])
+                if node.interface != self.interface or node.store != self.store:
+                    raise MultiInterfacesInGraph(
+                        [
+                            "INTERFACE: ",
+                            self.interface,
+                            node.interface,
+                            "STORE: ",
+                            self.store,
+                            node.store,
+                        ]
+                    )
             else:
                 self.interface = node.interface
+                self.store = node.store
         return super()._add_node(node, deref)
 
 
