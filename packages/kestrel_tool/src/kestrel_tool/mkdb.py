@@ -1,10 +1,14 @@
 """ mkdb: turn JSON logs into SQLAlchemy DBs (e.g. sqlite3)"""
 
 import json
+import re
 
 import pandas as pd
 import sqlalchemy
 import typer
+
+
+RE_UUID = re.compile("^%?{?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})}?$")
 
 
 def _normalize_event(event: dict) -> dict:
@@ -65,6 +69,22 @@ def _read_events(filename: str) -> pd.DataFrame:
     return pd.json_normalize(events)
 
 
+def _replace(value):
+    """Replace a cell value"""
+    # dump list/dict
+    if isinstance(value, (list, dict)):
+        return json.dumps(value)
+
+    # extract UUID
+    if isinstance(value, str):
+        matched = RE_UUID.match(value)
+        if matched:
+            return matched.group(1)
+
+    # do nothing
+    return value
+
+
 def mkdb(
     db: str = typer.Option("sqlite:///events.db", help="Database connection string"),
     table: str = typer.Option("events", help="Table name"),
@@ -73,8 +93,8 @@ def mkdb(
     # basic normalize to DataFrame
     df = _read_events(filename)
 
-    # dump list/dict into str if any
-    df = df.map(lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x)
+    # post-processing values
+    df = df.map(_replace)
 
     # write to db
     engine = sqlalchemy.create_engine(db)

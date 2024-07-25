@@ -70,6 +70,13 @@ user: &user
     uid: TargetUserSid
 
 
+# https://schema.ocsf.io/1.2.0/objects/managed_entity?extensions=
+entity:
+    uid: ObjectName
+    type: ObjectType
+    data: Properties
+
+
 # https://schema.ocsf.io/1.1.0/classes/network_activity
 # Network Activity [4001] Class
 network_activity:
