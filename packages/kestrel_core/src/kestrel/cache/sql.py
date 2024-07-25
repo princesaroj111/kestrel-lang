@@ -1,5 +1,7 @@
 import logging
+import os
 from copy import copy
+from tempfile import mkstemp
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
 
@@ -46,12 +48,14 @@ class SqlCache(AbstractCache):
     def __init__(
         self,
         initial_cache: Optional[Mapping[UUID, DataFrame]] = None,
-        session_id: Optional[UUID] = None,
+        debug: bool = False,
     ):
         super().__init__()
 
-        basename = session_id or "cache"
-        self.db_path = f"{basename}.db"
+        if debug:
+            self.db_path = "local.db"
+        else:
+            _, self.db_path = mkstemp(suffix=".db")
 
         # for an absolute file path, the three slashes are followed by the absolute path
         # for a relative path, it's also three slashes?
@@ -68,6 +72,7 @@ class SqlCache(AbstractCache):
 
     def __del__(self):
         self.connection.close()
+        os.remove(self.db_path)
 
     def __getitem__(self, instruction_id: UUID) -> DataFrame:
         return read_sql(self.cache_catalog[instruction_id], self.connection)

@@ -2,10 +2,8 @@
 language:
   default_sort_order: "desc"
 
-# debug options
-debug:
-  env_var: "KESTREL_DEBUG" # debug mode if the environment variable exists
-  cache_directory_path: "~/kestrel-debug-session" # put in user's home directory by default
+# debug mode
+debug: false
 
 # default identifier attribute(s) of an entity across all datasource interfaces
 # always provide a list as identifiers even it is a single identifier

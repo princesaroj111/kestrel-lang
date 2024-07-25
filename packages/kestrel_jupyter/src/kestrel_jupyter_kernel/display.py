@@ -32,7 +32,8 @@ def gen_label_mapping(g: IRGraph) -> Mapping[Instruction, str]:
 
 def to_html_blocks(d: Display) -> Iterable[str]:
     if isinstance(d, DataFrame):
-        escaped_df = d.replace("\$", "\\\$", inplace=False, regex=True)
+        escaped_df = d.map(lambda x: x.replace("$", "\\$") if isinstance(x, str) else x)
+        # escaped_df = d.replace("\$", "\\\$", inplace=False, regex=True)
         yield escaped_df.to_html(index=False, na_rep="")
     elif isinstance(d, GraphExplanation):
         for graphlet in d.graphlets:
