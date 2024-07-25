@@ -235,7 +235,7 @@ DISP procs
         session.interface_manager[CACHE_INTERFACE_IDENTIFIER].__class__ = DataLake
         session.irgraph.get_nodes_by_type_and_attributes(Construct, {"interface": CACHE_INTERFACE_IDENTIFIER})[0].interface = "datalake"
 
-        new_cache = SqlCache(session_id = uuid4())
+        new_cache = SqlCache()
         extra_db.append(new_cache.db_path)
         session.interface_manager.interfaces.append(new_cache)
         stmt2 = """
@@ -248,7 +248,7 @@ DISP nt
         session.interface_manager[CACHE_INTERFACE_IDENTIFIER].__class__ = Gateway
         session.irgraph.get_nodes_by_type_and_attributes(Construct, {"interface": CACHE_INTERFACE_IDENTIFIER})[0].interface = "gateway"
 
-        new_cache = SqlCache(session_id = uuid4())
+        new_cache = SqlCache()
         extra_db.append(new_cache.db_path)
         session.interface_manager.interfaces.append(new_cache)
         stmt3 = """
