@@ -1,5 +1,6 @@
 import logging
 from contextlib import AbstractContextManager
+from os import environ
 from typing import Iterable
 from uuid import uuid4
 
@@ -28,8 +29,17 @@ class Session(AbstractContextManager):
         self.irgraph = IRGraph()
         self.config = load_kestrel_config()
 
+        if "KESTREL_DEBUG" in environ:
+            self.config["debug"]["enable"] = True
+
         # load all interfaces; cache is a special interface
-        cache = SqlCache()
+        cache = SqlCache(
+            debug_db_dir=(
+                self.config["debug"]["cache_directory"]
+                if self.config["debug"]["enable"]
+                else None
+            )
+        )
 
         # Python analytics are "built-in"
         pyanalytics = PythonAnalyticsInterface()
