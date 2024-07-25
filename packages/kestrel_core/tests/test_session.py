@@ -237,9 +237,9 @@ DISP procs
         new_cache = SqlCache()
         session.interface_manager.interfaces.append(new_cache)
         stmt2 = """
-nt = NEW network [ {"pid": 123, "source": "192.168.1.1", "destination": "1.1.1.1"}
-                 , {"pid": 205, "source": "192.168.1.1", "destination": "1.1.1.2"}
-                 ]
+nt = NEW event [ {"abc": 123, "source": "192.168.1.1", "destination": "1.1.1.1"}
+               , {"abc": 205, "source": "192.168.1.1", "destination": "1.1.1.2"}
+               ]
 DISP nt
 """
         session.execute(stmt2)
@@ -258,7 +258,7 @@ DISP domain
 
         stmt = """
 p2 = procs WHERE name IN ("firefox.exe", "chrome.exe")
-ntx = nt WHERE pid IN p2.pid
+ntx = nt WHERE abc IN p2.pid
 d2 = domain WHERE ip IN ntx.destination
 EXPLAIN d2
 DISP d2
@@ -299,7 +299,7 @@ DISP d2
         query = disp.graphlets[3].query.statement.replace('"', '')
         p2 = session.irgraph.get_variable("p2")
         p2pa = next(session.irgraph.successors(p2))
-        assert query == f"WITH ntx AS \n(SELECT DISTINCT * \nFROM {nt.id.hex}v \nWHERE pid IN (SELECT DISTINCT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT DISTINCT * \nFROM {domain.id.hex}v \nWHERE ip IN (SELECT DISTINCT destination \nFROM ntx))\n SELECT DISTINCT * \nFROM d2"
+        assert query == f"WITH ntx AS \n(SELECT DISTINCT * \nFROM {nt.id.hex}v \nWHERE abc IN (SELECT DISTINCT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT DISTINCT * \nFROM {domain.id.hex}v \nWHERE ip IN (SELECT DISTINCT destination \nFROM ntx))\n SELECT DISTINCT * \nFROM d2"
 
         df_ref = DataFrame([{"ip": "1.1.1.2", "domain": "xyz.cloudflare.com"}])
         assert df_ref.equals(df_res)

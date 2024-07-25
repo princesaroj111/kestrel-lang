@@ -78,7 +78,11 @@ def _trim_ocsf_base_field(field: str, only_trim_event: bool) -> str:
     items = field.split(".")
     if (not only_trim_event) or (
         only_trim_event
-        and (items[0].endswith("_event") or items[0].endswith("_activity"))
+        and (
+            items[0].endswith("_event")
+            or items[0].endswith("_activity")
+            or items[0] == "event"
+        )
     ):
         items = items[1:]
     field = ".".join(items)
@@ -144,6 +148,7 @@ def _map_filter_exp(
             field = filter_exp.fields[0]
         else:
             raise InvalidComparison(filter_exp)
+
         map_result = translate_comparison_to_ocsf(
             field_map, field, filter_exp.op, filter_exp.value
         )
@@ -180,7 +185,17 @@ def _map_filter_exp(
             filter_exp.op = mapping[1]
             filter_exp.value = mapping[2]
         else:  # pass-through
-            pass
+            if field.startswith(ocsf_projection_field + "."):
+                _field = field
+            else:
+                _field = ocsf_projection_field + "." + field
+            _field = _trim_ocsf_base_field(_field, only_trim_event)
+            if _field != field:
+                if hasattr(filter_exp, "field"):
+                    filter_exp.field = _field
+                elif hasattr(filter_exp, "fields"):
+                    filter_exp.fields[0] = _field
+
         # TODO: for RefComparison, map the attribute in value (may not be possible here)
 
     elif isinstance(filter_exp, BoolExp):
