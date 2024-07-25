@@ -231,7 +231,7 @@ def translate_comparison_to_ocsf(
 
 @typechecked
 def load_default_mapping(
-    data_model_name: str,
+    data_model_name: Optional[str],
     mapping_pkg: str = "kestrel.mapping",
     submodule: str = "fields",
 ):
@@ -240,6 +240,11 @@ def load_default_mapping(
         with open(f, "r") as fp:
             result.update(yaml.safe_load(fp))
     return result
+
+
+@typechecked
+def get_all_entity_types() -> List[str]:
+    return list(set(load_default_mapping(None, submodule="types").values()))
 
 
 @typechecked

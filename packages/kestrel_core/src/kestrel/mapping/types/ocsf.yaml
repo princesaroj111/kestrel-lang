@@ -23,6 +23,7 @@ reg_key: reg_key
 reg_value: reg_value
 actor.process: process
 actor.user: user
+entity: managed_entity
 
 # event
 activity: event
@@ -36,3 +37,4 @@ file_activity: event
 process_activity: event
 registry_key_activity: event
 registry_value_activity: event
+entity_management: event
