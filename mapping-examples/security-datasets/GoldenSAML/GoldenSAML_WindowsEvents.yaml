@@ -109,32 +109,32 @@ type_uid:
     native_field: EventID
     native_value:
         100101: # File System Activity: Create
-            - "11"   # Sysmon: FileCreate
+            - 11   # Sysmon: FileCreate
         100701: # Process Activity: Launch
-            - "1"    # Sysmon: Process creation
-            - "4688" # Security: Process Create
+            - 1    # Sysmon: Process creation
+            - 4688 # Security: Process Create
         100702: # Process Activity: Terminate
-            - "5"    # Sysmon: Process termindated
-            - "4689"
+            - 5    # Sysmon: Process termindated
+            - 4689
         100703: # Process Activity: Open
-            - "10"   # Sysmon: ProcessAccess
+            - 10   # Sysmon: ProcessAccess
         100704: # Process Activity: Inject
-            - "8"    # Sysmon: CreateRemoteThread
+            - 8    # Sysmon: CreateRemoteThread
         300201: # auth: logon (success and failure)
-            - "4624" # Security: An account was successfully logged on.
-            - "4625" # Security: An account failed to log on.
+            - 4624 # Security: An account was successfully logged on.
+            - 4625 # Security: An account failed to log on.
         300400: # Entity Management: Unknown
-            - "4662" # Security: An operation was performed on an object.
+            - 4662 # Security: An operation was performed on an object.
         400101: # Network Activity: Open
-            - "3"    # Sysmon: Network connection
-            - "5156" # Security: The Windows Filtering Platform has permitted a connection.
+            - 3    # Sysmon: Network connection
+            - 5156 # Security: The Windows Filtering Platform has permitted a connection.
 status_id:
   - native_field: event.code
     native_value:
         1: # Success
-            - "4624" # Security: An account was successfully logged on.
+            - 4624 # Security: An account was successfully logged on.
         2: # Failure
-            - "4625" # Security: An account failed to log on.
+            - 4625 # Security: An account failed to log on.
 
 
 actor:
