@@ -77,7 +77,10 @@ def to_int(value) -> int:
         return int(value)
     except ValueError:
         # Maybe it's a hexadecimal string?
-        return int(value, 16)
+        try:
+            return int(value, 16)
+        except:
+            return -1
 
 
 @transformer
