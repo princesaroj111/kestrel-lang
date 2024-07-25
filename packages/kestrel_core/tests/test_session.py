@@ -221,7 +221,6 @@ def test_multi_interface_explain():
         def schemes():
             return ["gateway"]
 
-    extra_db = []
     with Session() as session:
         stmt1 = """
 procs = NEW process [ {"name": "cmd.exe", "pid": 123}
@@ -236,7 +235,6 @@ DISP procs
         session.irgraph.get_nodes_by_type_and_attributes(Construct, {"interface": CACHE_INTERFACE_IDENTIFIER})[0].interface = "datalake"
 
         new_cache = SqlCache()
-        extra_db.append(new_cache.db_path)
         session.interface_manager.interfaces.append(new_cache)
         stmt2 = """
 nt = NEW network [ {"pid": 123, "source": "192.168.1.1", "destination": "1.1.1.1"}
@@ -249,7 +247,6 @@ DISP nt
         session.irgraph.get_nodes_by_type_and_attributes(Construct, {"interface": CACHE_INTERFACE_IDENTIFIER})[0].interface = "gateway"
 
         new_cache = SqlCache()
-        extra_db.append(new_cache.db_path)
         session.interface_manager.interfaces.append(new_cache)
         stmt3 = """
 domain = NEW domain [ {"ip": "1.1.1.1", "domain": "cloudflare.com"}
@@ -306,9 +303,6 @@ DISP d2
 
         df_ref = DataFrame([{"ip": "1.1.1.2", "domain": "xyz.cloudflare.com"}])
         assert df_ref.equals(df_res)
-
-    for db_file in extra_db:
-        os.remove(db_file)
 
 
 def test_apply_on_construct():

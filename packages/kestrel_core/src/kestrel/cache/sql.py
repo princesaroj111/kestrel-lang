@@ -1,4 +1,5 @@
 import logging
+import os
 from copy import copy
 from tempfile import mkstemp
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
@@ -71,6 +72,7 @@ class SqlCache(AbstractCache):
 
     def __del__(self):
         self.connection.close()
+        os.remove(self.db_path)
 
     def __getitem__(self, instruction_id: UUID) -> DataFrame:
         return read_sql(self.cache_catalog[instruction_id], self.connection)
