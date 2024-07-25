@@ -69,7 +69,7 @@ def _read_events(filename: str) -> pd.DataFrame:
     return pd.json_normalize(events)
 
 
-def _replace(value):
+def _update_cell(value):
     """Replace a cell value"""
     # dump list/dict
     if isinstance(value, (list, dict)):
@@ -85,6 +85,14 @@ def _replace(value):
     return value
 
 
+def _integerize_columns(df):
+    for col in df.columns:
+        try:
+            df[col] = df[col].astype(pd.Int64Dtype())
+        except:
+            pass
+
+
 def mkdb(
     db: str = typer.Option("sqlite:///events.db", help="Database connection string"),
     table: str = typer.Option("events", help="Table name"),
@@ -94,7 +102,10 @@ def mkdb(
     df = _read_events(filename)
 
     # post-processing values
-    df = df.map(_replace)
+    df = df.map(_update_cell)
+
+    # convert values to integer if possible
+    _integerize_columns(df)
 
     # write to db
     engine = sqlalchemy.create_engine(db)

@@ -2,13 +2,13 @@
 
 
 # endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
-endpoint: &endpoint
+device: &endpoint
     hostname: DeviceName
     uid: DeviceId
 
 
 file: &file
-    endpoint: *endpoint  # FIXME: should be device?
+    endpoint: *endpoint
     name: FileName
 
 
@@ -17,6 +17,7 @@ process:
     endpoint: *endpoint
     cmd_line: InitiatingProcessCommandLine
     pid: InitiatingProcessId
+    uid: InitiatingProcessId
     file:
         name: InitiatingProcessFileName
         path: InitiatingProcessFolderPath
