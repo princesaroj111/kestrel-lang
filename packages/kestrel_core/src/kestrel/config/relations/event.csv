@@ -2,6 +2,7 @@ OutputType,Relation,OutputProjection
 process,ORIGINATED,process.parent_process
 process,RESPONDED,process
 file,RESPONDED,file
+managed_entity,RESPONDED,entity
 network_endpoint,ORIGINATED,src_endpoint
 network_endpoint,RESPONDED,dst_endpoint
 reg_key,RESPONDED,reg_key

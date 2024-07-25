@@ -4,10 +4,11 @@ from datetime import datetime
 from typing import Callable, Iterable, List, Tuple
 
 import lark
-from kestrel.config.utils import get_all_entity_types, get_all_relations
+from kestrel.config.utils import get_all_relations
 from kestrel.frontend.parser import get_keywords, parse_without_transform
 from kestrel.interface import InterfaceManager
 from kestrel.interface.base import AnalyticsInterface, DatasourceInterface
+from kestrel.mapping.data_model import get_all_entity_types
 from kestrel.utils import timefmt
 from typeguard import typechecked
 
