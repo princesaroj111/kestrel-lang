@@ -1,6 +1,5 @@
 import logging
 from copy import copy
-from pathlib import Path
 from tempfile import mkstemp
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
@@ -48,13 +47,12 @@ class SqlCache(AbstractCache):
     def __init__(
         self,
         initial_cache: Optional[Mapping[UUID, DataFrame]] = None,
-        debug_db_dir: Optional[str] = None,
+        debug: bool = False,
     ):
         super().__init__()
 
-        if debug_db_dir:
-            self.db_path = Path(debug_db_dir) / "local.db"
-            self.db_path = str(self.db_path.resolve())
+        if debug:
+            self.db_path = "local.db"
         else:
             _, self.db_path = mkstemp(suffix=".db")
 

@@ -30,16 +30,10 @@ class Session(AbstractContextManager):
         self.config = load_kestrel_config()
 
         if "KESTREL_DEBUG" in environ:
-            self.config["debug"]["enable"] = True
+            self.config["debug"] = True
 
         # load all interfaces; cache is a special interface
-        cache = SqlCache(
-            debug_db_dir=(
-                self.config["debug"]["cache_directory"]
-                if self.config["debug"]["enable"]
-                else None
-            )
-        )
+        cache = SqlCache(debug=self.config["debug"])
 
         # Python analytics are "built-in"
         pyanalytics = PythonAnalyticsInterface()
