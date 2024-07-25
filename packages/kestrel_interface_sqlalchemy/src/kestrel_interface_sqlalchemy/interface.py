@@ -42,7 +42,6 @@ class SQLAlchemyInterface(DatasourceInterface):
     ):
         _logger.debug("SQLAlchemyInterface: loading config")
         super().__init__(serialized_cache_catalog, session_id)
-        self.schemas: dict = {}  # Schema per table (index)
         self.engines: dict = {}  # Map of conn name -> engine
         self.conns: dict = {}  # Map of conn name -> connection
         self.config = load_config()
