@@ -71,7 +71,7 @@ def test_write_to_temp_table(setup_sqlite_ecs_process_creation):
         ("parent.pid = 1022", "process.parent_process.pid"),  # ECS attribute
     ]
 )
-def test_get_sinple_ecs_process(setup_sqlite_ecs_process_creation, where, ocsf_field):
+def test_get_simple_ecs_process(setup_sqlite_ecs_process_creation, where, ocsf_field):
     with Session() as session:
         stmt = f"procs = GET process FROM sqlalchemy://events WHERE {where}"
         session.execute(stmt)
@@ -103,7 +103,7 @@ def test_get_sinple_ecs_process(setup_sqlite_ecs_process_creation, where, ocsf_f
         ("process.parent.pid = 1022", ["process.parent_process.pid", "actor.process.parent_process.pid"]),
     ]
 )
-def test_get_sinple_event(setup_sqlite_ecs_process_creation, where, ocsf_fields):
+def test_get_simple_event(setup_sqlite_ecs_process_creation, where, ocsf_fields):
     with Session() as session:
         stmt = f"evs = GET event FROM sqlalchemy://events WHERE {where}"
         session.execute(stmt)
@@ -162,7 +162,7 @@ def test_find_event_to_entity(setup_sqlite_ecs_process_creation):
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_event_to_entity.txt")
         with open(result_file) as h:
-            result = h.read()
+            result = h.read().strip()
         assert stmt == result
 
         assert list(procs) == ['endpoint.uid', 'file.endpoint.uid', 'parent_process.endpoint.uid', 'parent_process.file.endpoint.uid', 'parent_process.user.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'parent_process.endpoint.name', 'parent_process.file.endpoint.name', 'parent_process.user.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'parent_process.endpoint.os', 'parent_process.file.endpoint.os', 'parent_process.user.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid', 'file.name', 'file.path', 'file.parent_folder', 'parent_process.cmd_line', 'parent_process.name', 'parent_process.pid', 'parent_process.uid']
@@ -184,12 +184,12 @@ def test_find_entity_to_event(setup_sqlite_ecs_process_creation):
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_entity_to_event.txt")
         with open(result_file) as h:
-            result = h.read()
+            result = h.read().strip()
         assert stmt == result
 
         assert e2.shape[0] == 4
         assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
-        assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
+        assert e2.shape[1] == 74  # full event: refer to test_get_simple_event() for number
 
 
 def test_find_entity_to_event_2(setup_sqlite_ecs_process_creation):
@@ -202,7 +202,7 @@ def test_find_entity_to_event_2(setup_sqlite_ecs_process_creation):
         e2 = session.execute(huntflow)[0]
         assert e2.shape[0] == 4
         assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
-        assert e2.shape[1] == 74  # full event: refer to test_get_sinple_event() for number
+        assert e2.shape[1] == 74  # full event: refer to test_get_simple_event() for number
 
 
 def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
@@ -220,7 +220,7 @@ def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_entity_to_entity.txt")
         with open(result_file) as h:
-            result = h.read()
+            result = h.read().strip()
         assert stmt == result
 
         assert parents.shape[0] == 2
@@ -237,3 +237,15 @@ def test_find_entity_to_entity_2(setup_sqlite_ecs_process_creation):
         parents = session.execute(huntflow)[0]
         assert parents.shape[0] == 2
         assert list(parents) == ['endpoint.uid', 'file.endpoint.uid', 'user.endpoint.uid', 'endpoint.name', 'file.endpoint.name', 'user.endpoint.name', 'endpoint.os', 'file.endpoint.os', 'user.endpoint.os', 'cmd_line', 'name', 'pid', 'uid']
+
+
+def test_information(setup_sqlite_ecs_process_creation):
+    with Session() as session:
+        huntflow = """
+        evs = GET event FROM sqlalchemy://events WHERE os.name = 'Linux'
+        INFO evs
+        """
+        df = session.execute(huntflow)[0]
+        attrs = df["attributes"].to_list()
+        assert attrs == ['actor.process.cmd_line, actor.process.endpoint.name, actor.process.endpoint.os, actor.process.endpoint.uid, actor.process.file.endpoint.name, actor.process.file.endpoint.os, actor.process.file.endpoint.uid, actor.process.file.name, actor.process.file.parent_folder, actor.process.file.path, actor.process.name, actor.process.parent_process.cmd_line, actor.process.parent_process.endpoint.name, actor.process.parent_process.endpoint.os, actor.process.parent_process.endpoint.uid, actor.process.parent_process.file.endpoint.name, actor.process.parent_process.file.endpoint.os, actor.process.parent_process.file.endpoint.uid, actor.process.parent_process.name, actor.process.parent_process.pid, actor.process.parent_process.uid, actor.process.parent_process.user.endpoint.name, actor.process.parent_process.user.endpoint.os, actor.process.parent_process.user.endpoint.uid, actor.process.pid, actor.process.uid, actor.process.user.endpoint.name, actor.process.user.endpoint.os, actor.process.user.endpoint.uid, actor.user.name, actor.user.uid', 'device.name, device.os, device.uid', 'file.endpoint.name, file.endpoint.os, file.endpoint.uid', 'process.cmd_line, process.endpoint.name, process.endpoint.os, process.endpoint.uid, process.file.endpoint.name, process.file.endpoint.os, process.file.endpoint.uid, process.file.name, process.file.parent_folder, process.file.path, process.name, process.parent_process.cmd_line, process.parent_process.endpoint.name, process.parent_process.endpoint.os, process.parent_process.endpoint.uid, process.parent_process.file.endpoint.name, process.parent_process.file.endpoint.os, process.parent_process.file.endpoint.uid, process.parent_process.name, process.parent_process.pid, process.parent_process.uid, process.parent_process.user.endpoint.name, process.parent_process.user.endpoint.os, process.parent_process.user.endpoint.uid, process.pid, process.uid, process.user.endpoint.name, process.user.endpoint.os, process.user.endpoint.uid', 'reg_key.endpoint.name, reg_key.endpoint.os, reg_key.endpoint.uid', 'reg_value.endpoint.name, reg_value.endpoint.os, reg_value.endpoint.uid', 'user.name, user.uid']
+

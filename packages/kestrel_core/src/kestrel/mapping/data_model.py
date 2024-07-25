@@ -3,13 +3,13 @@ from collections import OrderedDict, defaultdict
 from functools import reduce
 from typing import Any, Iterable, List, Optional, Tuple, Union
 
-import numpy as np
+import numpy
 import yaml
 from kestrel.exceptions import IncompleteDataMapping
 from kestrel.ir.filter import ReferenceValue
 from kestrel.mapping.transformers import run_transformer, run_transformer_on_series
 from kestrel.utils import list_folder_files
-from pandas import DataFrame
+from pandas import DataFrame, Int64Dtype
 from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
@@ -113,10 +113,13 @@ def _get_map_triple(d: dict, prefix: str, op: str, value) -> tuple:
     mapped_op = d.get(f"{prefix}_op")
     transform = d.get(f"{prefix}_value")
     _logger.debug("transform = %s (%s)", type(transform), transform)
-    if isinstance(transform, dict):
-        new_value = transform.get(value, value)  # FIXME
+    if transform:
+        if isinstance(transform, dict):
+            new_value = transform.get(value, value)  # FIXME
+        else:
+            new_value = run_transformer(transform, value)
     else:
-        new_value = run_transformer(transform, value)
+        new_value = value
     if mapped_op:
         new_op = mapped_op
     elif isinstance(new_value, list) and op == "=":
@@ -228,7 +231,7 @@ def translate_comparison_to_ocsf(
 
 @typechecked
 def load_default_mapping(
-    data_model_name: str,
+    data_model_name: Optional[str],
     mapping_pkg: str = "kestrel.mapping",
     submodule: str = "fields",
 ):
@@ -237,6 +240,11 @@ def load_default_mapping(
         with open(f, "r") as fp:
             result.update(yaml.safe_load(fp))
     return result
+
+
+@typechecked
+def get_all_entity_types() -> List[str]:
+    return list(set(load_default_mapping(None, submodule="types").values()))
 
 
 @typechecked
@@ -435,8 +443,13 @@ def translate_dataframe(df: DataFrame, to_native_nested_map: dict) -> DataFrame:
                         # Not actually a named function; it's a literal value map
                         df[col] = df[col].replace(transformer_name)
                     else:
-                        df[col] = run_transformer_on_series(
+                        s = run_transformer_on_series(
                             transformer_name, df[col].dropna()
                         )
-    df = df.replace({np.nan: None})
+                        df[col] = s
+                        # if the series is integers, use Int64 (Nullable int) to allow NaN/NA
+                        # if not, pandas will use float64 by default, which gives .0
+                        if s.dtype == numpy.int64:
+                            df[col] = df[col].astype(Int64Dtype())
+    df = df.replace({numpy.nan: None})
     return df

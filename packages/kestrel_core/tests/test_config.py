@@ -27,7 +27,7 @@ def test_env_vars_in_config_overwrite():
 credentials:
   username: ${TEST_USER}
   password: ${TEST_PASSWORD}
-debug:
+testattr:
   cache_directory_prefix: $KESTREL_CACHE_DIRECTORY_PREFIX
     """
     os.environ["TEST_USER"] = "test-user"
@@ -39,14 +39,14 @@ debug:
     config = load_kestrel_config()
     assert config["credentials"]["username"] == "test-user"
     assert config["credentials"]["password"] == "test-password"
-    assert config["debug"]["cache_directory_prefix"] == "Kestrel2.0-"
+    assert config["testattr"]["cache_directory_prefix"] == "Kestrel2.0-"
 
 def test_empty_env_var_in_config():
     test_config = """---
 credentials:
   username: ${TEST_USER}
   password: ${TEST_PASSWORD}
-debug:
+testattr:
   cache_directory_prefix: $I_DONT_EXIST
     """
     os.environ["TEST_USER"] = "test-user"
@@ -58,7 +58,7 @@ debug:
     config = load_kestrel_config()
     assert config["credentials"]["username"] == "test-user"
     assert config["credentials"]["password"] == "test-password"
-    assert config["debug"]["cache_directory_prefix"] == "$I_DONT_EXIST"
+    assert config["testattr"]["cache_directory_prefix"] == "$I_DONT_EXIST"
 
 def test_yaml_load_in_config(tmp_path):
     test_config = """---

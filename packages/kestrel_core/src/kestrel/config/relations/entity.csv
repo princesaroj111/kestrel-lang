@@ -1,6 +1,10 @@
 OutputType,InputType,Relation,OutputProjection,InputSpecifier,type_uid
 process,process,CREATED,process.parent_process,process,100701
 user,process,OWNED,process.user,process,
+user,managed_entity,CREATED,actor.user,entity,300401
+user,managed_entity,READ,actor.user,entity,300402
+user,managed_entity,UPDATED,actor.user,entity,300403
+user,managed_entity,DELETED,actor.user,entity,300404
 process,file,LOADED,process,process.file,
 process,file,CREATED,actor.process,file,100101
 process,file,READ,actor.process,file,100102

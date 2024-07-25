@@ -44,7 +44,10 @@ class InterfaceManager(Mapping):
             raise InterfaceNotFound(f"no interface loaded for scheme {scheme}")
 
     def __iter__(self) -> Iterable[str]:
-        return itertools.chain(*[i.schemes() for i in self.interfaces])
+        return filter(
+            lambda x: x != CACHE_INTERFACE_IDENTIFIER,
+            itertools.chain(*[i.schemes() for i in self.interfaces]),
+        )
 
     def __len__(self) -> int:
         return sum(1 for _ in iter(self))
@@ -63,6 +66,17 @@ class InterfaceManager(Mapping):
         cache = self[CACHE_INTERFACE_IDENTIFIER]
         self.interfaces.remove(cache)
         del cache
+
+    def schemes(self, interface_type: type) -> Iterable[str]:
+        return filter(
+            lambda x: x != CACHE_INTERFACE_IDENTIFIER,
+            itertools.chain(
+                *[i.schemes() for i in self.interfaces if isinstance(i, interface_type)]
+            ),
+        )
+
+    def list_datasources_from_scheme(self, scheme: str) -> Iterable[str]:
+        return self[scheme].get_datasources()
 
 
 def _load_interface_classes():
@@ -95,7 +109,7 @@ def _list_interface_pkg_names():
 
 
 def _is_class(cls):
-    return lambda obj: inspect.isclass(obj) and obj.__bases__[0] == cls
+    return lambda obj: inspect.isclass(obj) and issubclass(obj, cls)
 
 
 @typechecked

@@ -1,6 +1,6 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Iterable, List, Mapping, MutableMapping, Optional
 from uuid import UUID
 
 from kestrel.display import GraphletExplanation
@@ -17,15 +17,15 @@ class AbstractInterface(ABC):
 
     Concepts:
 
-    - Think an interface as a datalake
+    - Think an interface as a type of datalakes
+
+    - Think a storage as a datalake
 
     - Think a datasource as a table in the datalake
 
     Attributes:
 
         session_id: the optional information to derive table name in datalake
-
-        datasources: map a datasource name to datalake table name
 
         cache_catalog: map a cached item (instruction.id) to datalake table/view name
     """
@@ -53,6 +53,16 @@ class AbstractInterface(ABC):
 
         Each scheme should be defined as ``("_"|LETTER) ("_"|LETTER|DIGIT)*``
         """
+        ...
+
+    @abstractmethod
+    def get_datasources(self) -> List[str]:
+        """Get the list of datasource names registered at this interface"""
+        ...
+
+    @abstractmethod
+    def get_storage_of_datasource(self, datasource: str) -> str:
+        """Get the storage name of a given datasource"""
         ...
 
     @abstractmethod
@@ -125,3 +135,9 @@ class AbstractInterface(ABC):
     def cache_catalog_to_json(self) -> str:
         """Serialize the cache catalog to a JSON string"""
         return json.dumps(self.cache_catalog)
+
+
+class DatasourceInterface(AbstractInterface): ...
+
+
+class AnalyticsInterface(AbstractInterface): ...

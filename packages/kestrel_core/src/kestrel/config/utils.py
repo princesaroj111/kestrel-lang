@@ -1,7 +1,7 @@
 import logging
 import os
 from pathlib import Path
-from typing import Mapping, Union
+from typing import List, Mapping, Union
 
 import pandas
 import yaml
@@ -16,6 +16,9 @@ from typeguard import typechecked
 CONFIG_DIR_DEFAULT = Path.home() / ".config" / "kestrel"
 CONFIG_PATH_DEFAULT = CONFIG_DIR_DEFAULT / "kestrel.yaml"
 CONFIG_PATH_ENV_VAR = "KESTREL_CONFIG"  # override CONFIG_PATH_DEFAULT if provided
+
+relations = []
+entity_types = []
 
 _logger = logging.getLogger(__name__)
 
@@ -105,3 +108,17 @@ def load_relation_configs(table_name: str) -> pandas.DataFrame:
     except:
         raise InvalidKestrelRelationTable(filepaths[0])
     return table
+
+
+@typechecked
+def get_all_relations() -> List[str]:
+    global relations
+    if not relations:
+        _relations = set()
+        for filepath in list_folder_files(
+            "kestrel.config", "relations", extension="csv"
+        ):
+            table = pandas.read_csv(filepath)
+            _relations |= set(table["Relation"].to_list())
+        relations = list(_relations)
+    return relations

@@ -20,6 +20,7 @@ News
 ====
 
 - Register `Black Hat USA 2024`_ to hunt with Kestrel
+- Kestrel and AI talk at `CNCF Secure AI Summit 2024`_
 - Learn scalable Kestrel deployment at `Red Hat Research Quarterly`_ (RHRQ)
 
 The Goal
@@ -115,6 +116,7 @@ Talks And Demos
 
 Talk summary (visit `Kestrel documentation on talks`_ to learn details):
 
+- 2024/06 `CNCF Secure AI Summit 2024`_
 - 2023/08 `Black Hat USA 2023`_
 - 2022/12 `Infosec Jupyterthon 2022`_ [`IJ'22 live hunt recording`_]
 - 2022/08 `Black Hat USA 2022`_ [`BH'22 recording`_ | `BH'22 hunting lab`_]
@@ -196,6 +198,7 @@ Connecting With The Community
 .. _BH'22 hunting lab: https://mybinder.org/v2/gh/opencybersecurityalliance/black-hat-us-2022/HEAD?filepath=demo
 .. _Black Hat USA 2022 Kestrel hunting lab: https://mybinder.org/v2/gh/opencybersecurityalliance/black-hat-us-2022/HEAD?filepath=demo
 .. _Red Hat Research Quarterly: https://research.redhat.com/blog/article/team-threat-hunting-on-a-container-platform-kestrel-as-a-service/
+.. _CNCF Secure AI Summit 2024: https://secureaisummit2024.sched.com/event/1dBWF/elevate-cloud-threat-hunting-with-ai-kenneth-peeples-maya-costantini-red-hat
 
 .. _slack invitation: https://join.slack.com/t/open-cybersecurity/shared_invite/zt-19pliofsm-L7eSSB8yzABM2Pls1nS12w
 .. _Open Cybersecurity Alliance workspace: https://open-cybersecurity.slack.com/

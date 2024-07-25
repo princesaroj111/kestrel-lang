@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from typing import Callable
 
+from kestrel.exceptions import InvalidTransformerInMapping
 from kestrel.mapping.path import Path
 from pandas import Series
 
@@ -76,7 +77,10 @@ def to_int(value) -> int:
         return int(value)
     except ValueError:
         # Maybe it's a hexadecimal string?
-        return int(value, 16)
+        try:
+            return int(value, 16)
+        except:
+            return -1
 
 
 @transformer
@@ -120,7 +124,7 @@ def run_transformer(transformer_name: str, value):
     if func:
         result = func(value)
     else:
-        raise NameError(transformer_name)
+        raise InvalidTransformerInMapping(transformer_name)
     return result
 
 
@@ -130,5 +134,5 @@ def run_transformer_on_series(transformer_name: str, value: Series):
     if func:
         result = value.apply(func)
     else:
-        raise NameError(transformer_name)
+        raise InvalidTransformerInMapping(transformer_name)
     return result

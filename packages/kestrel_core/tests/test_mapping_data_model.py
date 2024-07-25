@@ -152,7 +152,6 @@ def test_reverse_mapping_executable():
 
 def test_reverse_mapping_event_id():
     rmap = reverse_mapping(WINLOGBEAT_MAPPING)
-    print(json.dumps(rmap, indent=4))
     assert rmap["winlog.event_id"][0]["ocsf_value"]["1"] == [100701]
     assert rmap["winlog.event_id"][0]["ocsf_value"]["5"] == [100702]
     assert rmap["winlog.event_id"][0]["ocsf_value"]["4688"] == [100701]
@@ -260,7 +259,6 @@ def test_translate_dataframe_events():
         }
     )
     df = translate_dataframe(df, WINLOGBEAT_MAPPING)
-    print(df)
     assert df["type_uid"].iloc[0] == 100701
     assert df["type_uid"].iloc[1] == "1234"  # Passthrough?
 

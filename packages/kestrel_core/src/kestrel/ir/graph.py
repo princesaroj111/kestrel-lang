@@ -9,7 +9,7 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional, Tuple, Unio
 from uuid import UUID
 
 import networkx
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER, CACHE_STORAGE_IDENTIFIER
 from kestrel.exceptions import (
     DanglingFilter,
     DanglingReferenceInFilter,
@@ -509,7 +509,8 @@ class IRGraph(networkx.DiGraph):
         finally be evaluated in the last return, which will just be a
         IRGraphEvaluable at that time.
 
-        TODO: analytics node support
+        TODO: [optimization] consider trunk or branch to reduce the
+        subgraphs---trunk does not need segmentation
 
         Parameters:
             node: the instruction/node to generate dependent subgraphs for
@@ -518,7 +519,7 @@ class IRGraph(networkx.DiGraph):
         Returns:
             A list of subgraphs that do not have further dependency
         """
-        _CII = CACHE_INTERFACE_IDENTIFIER
+        _CII = (CACHE_INTERFACE_IDENTIFIER, CACHE_STORAGE_IDENTIFIER)
 
         # the base graph to segment
         g = self.find_cached_dependent_subgraph_of_node(node, cache)
@@ -526,8 +527,8 @@ class IRGraph(networkx.DiGraph):
         # Mapping: {interface name: [impacted nodes]}
         a2ns = defaultdict(set)
         for n in g.get_nodes_by_type(SourceInstruction):
-            a2ns[n.interface].add(n)
-            a2ns[n.interface].update(networkx.descendants(g, n))
+            a2ns[(n.interface, n.store)].add(n)
+            a2ns[(n.interface, n.store)].update(networkx.descendants(g, n))
 
         # all predecessor nodes to any interface impacted nodes
         pns = set().union(*[set(g.predecessors(n)) for ns in a2ns.values() for n in ns])
@@ -552,17 +553,17 @@ class IRGraph(networkx.DiGraph):
         # handle direct predecessor node cached
         # such nodes are required in building dep graphs around interfaces
         # such nodes could be shared by multiple interfaces; can only handle now
-        for interface in set(a2uns) - set([_CII]):
-            ps = set().union(*[set(g.predecessors(n)) for n in a2uns[interface]])
-            a2uns[interface].update(ps & cached_nodes)
+        for k in set(a2uns) - set([_CII]):
+            ps = set().union(*[set(g.predecessors(n)) for n in a2uns[k]])
+            a2uns[k].update(ps & cached_nodes)
 
         # Add Variable/Reference node if succeeded by ProjectAttrs and Filter,
         # which will be needed (for metadata) by get_trunk_n_branches() in the
         # evaluation phase, through the succeeding node (ProjectAttrs) is
         # already in cache.
-        for interface in a2uns:
+        for k in a2uns:
             auxs = []
-            for n in a2uns[interface]:
+            for n in a2uns[k]:
                 if isinstance(n, ProjectAttrs):
                     # need to search in `self`, not `g`, since the boundry of
                     # `g` is cut by the cache and ProjectAttrs will be cached
@@ -571,10 +572,10 @@ class IRGraph(networkx.DiGraph):
                     if (
                         isinstance(s, Filter)
                         and isinstance(p, (Variable, Reference))
-                        and s in a2uns[interface]
+                        and s in a2uns[k]
                     ):
                         auxs.append(p)
-            a2uns[interface].update(auxs)
+            a2uns[k].update(auxs)
 
         # remove dep graphs with only one node
         # e.g., `ds://a` in "y = GET file FROM ds://a WHERE x = v.x"

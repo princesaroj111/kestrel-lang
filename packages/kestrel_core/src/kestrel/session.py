@@ -1,5 +1,6 @@
 import logging
 from contextlib import AbstractContextManager
+from os import environ
 from typing import Iterable
 from uuid import uuid4
 
@@ -9,10 +10,11 @@ from kestrel.config import load_kestrel_config
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
+from kestrel.frontend.completor import do_complete
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
-from kestrel.ir.instructions import Explain, Instruction, Return
+from kestrel.ir.instructions import DataSource, Explain, Instruction, Return
 from typeguard import typechecked
 
 _logger = logging.getLogger(__name__)
@@ -27,8 +29,11 @@ class Session(AbstractContextManager):
         self.irgraph = IRGraph()
         self.config = load_kestrel_config()
 
+        if "KESTREL_DEBUG" in environ:
+            self.config["debug"] = True
+
         # load all interfaces; cache is a special interface
-        cache = SqlCache()
+        cache = SqlCache(debug=self.config["debug"])
 
         # Python analytics are "built-in"
         pyanalytics = PythonAnalyticsInterface()
@@ -67,6 +72,10 @@ class Session(AbstractContextManager):
             rets = parse_kestrel_and_update_irgraph(
                 huntflow_block, self.irgraph, self.config["entity_identifier"]
             )
+            for s in self.irgraph.get_nodes_by_type(DataSource):
+                if not s.store:
+                    itf = self.interface_manager[s.interface]
+                    s.store = itf.get_storage_of_datasource(s.datasource)
         except Exception as e:
             self.irgraph = irgraph_snapshot
             raise e
@@ -132,7 +141,7 @@ class Session(AbstractContextManager):
                     if iid == ins.id:
                         return display
 
-    def do_complete(self, huntflow_block: str, cursor_pos: int):
+    def do_complete(self, huntflow_block: str, cursor_pos: int) -> Iterable[str]:
         """Kestrel code auto-completion.
 
         Parameters:
@@ -142,7 +151,12 @@ class Session(AbstractContextManager):
         Returns:
             A list of suggested strings to complete the code
         """
-        raise NotImplementedError()
+        return do_complete(
+            huntflow_block,
+            cursor_pos,
+            self.interface_manager,
+            [v.name for v in self.irgraph.get_variables()],
+        )
 
     def close(self):
         """Explicitly close the session.

@@ -1,5 +1,7 @@
 import logging
+import os
 from copy import copy
+from tempfile import mkstemp
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
 from uuid import UUID
 
@@ -8,11 +10,13 @@ from dateutil.parser import parse as dt_parser
 from kestrel.cache.base import AbstractCache
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
+from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
 from kestrel.ir.graph import IRGraphEvaluable
 from kestrel.ir.instructions import (
     Construct,
     Explain,
     Filter,
+    Information,
     Instruction,
     Return,
     SolePredecessorTransformingInstruction,
@@ -44,12 +48,14 @@ class SqlCache(AbstractCache):
     def __init__(
         self,
         initial_cache: Optional[Mapping[UUID, DataFrame]] = None,
-        session_id: Optional[UUID] = None,
+        debug: bool = False,
     ):
         super().__init__()
 
-        basename = session_id or "cache"
-        self.db_path = f"{basename}.db"
+        if debug:
+            self.db_path = "local.db"
+        else:
+            _, self.db_path = mkstemp(suffix=".db")
 
         # for an absolute file path, the three slashes are followed by the absolute path
         # for a relative path, it's also three slashes?
@@ -66,6 +72,7 @@ class SqlCache(AbstractCache):
 
     def __del__(self):
         self.connection.close()
+        os.remove(self.db_path)
 
     def __getitem__(self, instruction_id: UUID) -> DataFrame:
         return read_sql(self.cache_catalog[instruction_id], self.connection)
@@ -110,7 +117,15 @@ class SqlCache(AbstractCache):
             translator = self._evaluate_instruction_in_graph(graph, instruction)
             # TODO: may catch error in case evaluation starts from incomplete SQL
             _logger.debug(f"SQL query generated: {translator.result_w_literal_binds()}")
-            mapping[instruction.id] = read_sql(translator.result(), self.connection)
+            df = read_sql(translator.result(), self.connection)
+
+            # handle Information command
+            if isinstance(instruction, Return):
+                trunk, _ = graph.get_trunk_n_branches(instruction)
+                if isinstance(trunk, Information):
+                    df = variable_attributes_to_dataframe(df)
+
+            mapping[instruction.id] = df
         return mapping
 
     def explain_graph(

@@ -2,7 +2,7 @@
 # if the submap is referred, there will be multiple reversed mappings, the first will be used
 
 # endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
-endpoint: &endpoint
+device: &endpoint
     "*": host.*
     uid: host.id
     domain: host.domain
@@ -65,6 +65,13 @@ file:
     xattributes:
         primary_group: file.gid
         link_name: file.target_path
+
+
+# https://schema.ocsf.io/1.2.0/objects/managed_entity
+entity:
+    "*": file.*
+    uid: file.uid
+    name: file.name
 
 
 # https://schema.ocsf.io/1.1.0/objects/group
@@ -296,10 +303,9 @@ reg_value:
 # To simplify mapping, we do not cover parent process in actor.process
 # - This semantic only appear in Process Activity [1007], please use `process.parent_process` to specify in this case
 # - This works in Activity besides Process Activity [1007]
-actor.process: *process
-
-
-actor.user: *user
+actor:
+    process: *process
+    user: *user
 
 
 # https://schema.ocsf.io/1.1.0/classes/network_activity
