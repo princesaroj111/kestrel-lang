@@ -177,6 +177,8 @@ def test_reverse_mapping_event_id():
          [("event.code", "IN", ["1", "4688"])]),
         (ECS_MAPPING, "type_uid", "=", 300201,
          [("event.code", "IN", ["4624", "4625"])]),
+        (ECS_MAPPING, "type_uid", "!=", 300201,
+         [("event.code", "NOT IN", ["4624", "4625"])]),
     ],
 )
 def test_translate_comparison_to_native(dmm, field, op, value, expected_result):
