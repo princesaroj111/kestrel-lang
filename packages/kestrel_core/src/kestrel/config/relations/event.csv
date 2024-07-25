@@ -7,4 +7,5 @@ network_endpoint,RESPONDED,dst_endpoint
 reg_key,RESPONDED,reg_key
 reg_value,RESPONDED,reg_value
 user,ORIGINATED,actor.user
+user,RESPONDED,user
 endpoint,RESPONDED,device
