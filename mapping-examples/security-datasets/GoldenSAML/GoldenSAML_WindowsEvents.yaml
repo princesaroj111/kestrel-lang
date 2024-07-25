@@ -2,7 +2,7 @@
 
 
 # endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
-endpoint: &endpoint
+device: &endpoint
     hostname:
         native_field: Computer
         ocsf_value: lowercase
@@ -19,8 +19,7 @@ file: &file
 
 
 # https://schema.ocsf.io/1.1.0/objects/process
-process:
-    "*": process.*
+process: &process
     endpoint: *endpoint
     name:
         native_field: Image
@@ -47,20 +46,21 @@ process:
 
 # src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
 src_endpoint: &src_ref
-    ip: IpAddress
+    ip: SourceAddress
     port:
-        - native_field: SourcePort_string
+        - native_field: SourcePort
           ocsf_value: to_int
-        - native_field: IpPort
-          ocsf_value: to_int
+        # normalized by ingestion
+        #- native_field: IpPort
+        #  ocsf_value: to_int
 
 
 # dst_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
 dst_endpoint: &dst_ref
-    domain: DestinationHostname
-    hostname: DestinationHostname
-    ip: DestinationIp
-    port: DestinationPort
+    ip: DestAddress
+    port:
+        - native_field: DestPort
+          ocsf_value: to_int
 
 
 # https://schema.ocsf.io/1.1.0/objects/user
@@ -90,7 +90,9 @@ authentication:
     actor.user: *user
     auth_protocol: AuthenticationPackageName
     dst_endpoint: *dst_ref
-    logon_type_id: LogonType
+    logon_type_id:
+        - native_field: LogonType
+          ocsf_value: to_int
     user: *user
 
 
@@ -126,3 +128,11 @@ status_id:
             - "4624" # Security: An account was successfully logged on.
         2: # Failure
             - "4625" # Security: An account failed to log on.
+
+
+actor:
+    process: *process
+    user:
+        domain: SubjectDomainName
+        name: SubjectUserName
+        uid: SubjectUserSid

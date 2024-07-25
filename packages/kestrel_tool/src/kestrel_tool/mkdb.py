@@ -28,6 +28,14 @@ def _normalize_event(event: dict) -> dict:
         del event["ParentProcessName"]
         event["Image"] = event["NewProcessName"]
         del event["NewProcessName"]
+    if "IpPort" in event:
+        # normalize `IpPort` in auth log into generic source port
+        event["SourcePort"] = event["IpPort"]
+        del event["IpPort"]
+    if "IpAddress" in event:
+        # normalize `IpAddress` in auth log into generic source address
+        event["SourceAddress"] = event["IpAddress"]
+        del event["IpAddress"]
 
     # SecurityDatasets.com GoldenSAML Microsoft365DefenderEvents
     # Some fields ending with "_string" are JSON strings?  Why?
@@ -46,19 +54,6 @@ def _normalize_event(event: dict) -> dict:
     return new_event
 
 
-def _jsonify_complex(df: pd.DataFrame) -> pd.DataFrame:
-    """JSONify non-numerical columns that have non-string objects (e.g. lists)"""
-    cols = [
-        col
-        for col in df.columns
-        if df[col].dtype == "object" and df[col][df[col].apply(type) != str].any()
-    ]
-    for col in cols:
-        df[col] = df[col].apply(json.dumps)
-    # To drop instead, use: return df.drop(cols, axis='columns')
-    return df
-
-
 def _read_events(filename: str) -> pd.DataFrame:
     """Read JSON lines from `filename` and return a DataFrame"""
     events = []
@@ -75,8 +70,13 @@ def mkdb(
     table: str = typer.Option("events", help="Table name"),
     filename: str = typer.Argument(..., help="File with JSON lines"),
 ):
+    # basic normalize to DataFrame
     df = _read_events(filename)
-    df = _jsonify_complex(df)
+
+    # dump list/dict into str if any
+    df = df.map(lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x)
+
+    # write to db
     engine = sqlalchemy.create_engine(db)
     with engine.connect() as conn:
         df.to_sql(table, conn, index=False)
