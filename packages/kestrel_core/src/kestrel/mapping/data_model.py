@@ -15,6 +15,12 @@ from typeguard import typechecked
 _logger = logging.getLogger(__name__)
 
 
+PROMOTE_LIST_OP = {
+    "=": "IN",
+    "!=": "NOT IN",
+}
+
+
 def _reverse_value_map(obj: dict):
     result = defaultdict(list)
     for k, v in obj.items():
@@ -122,9 +128,9 @@ def _get_map_triple(d: dict, prefix: str, op: str, value) -> tuple:
         new_value = value
     if mapped_op:
         new_op = mapped_op
-    elif isinstance(new_value, list) and op == "=":
+    elif isinstance(new_value, list):
         # Do we need to change the op here?
-        new_op = "IN"
+        new_op = PROMOTE_LIST_OP.get(op, op)
     else:
         new_op = op
     return (d[f"{prefix}_field"], new_op, new_value)
