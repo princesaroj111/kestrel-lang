@@ -10,7 +10,7 @@ device: &endpoint
 
 
 file: &file
-    endpoint: *endpoint  # FIXME: should be device?
+    endpoint: *endpoint
     name: PipeName
     type_id:
         native_field: EventID
