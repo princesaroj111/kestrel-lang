@@ -7,7 +7,7 @@ from uuid import uuid4
 from kestrel.analytics import PythonAnalyticsInterface
 from kestrel.cache import SqlCache
 from kestrel.config import load_kestrel_config
-from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
+from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER, VIRTUAL_VAR_DATA
 from kestrel.display import Display, GraphExplanation
 from kestrel.exceptions import InstructionNotFound
 from kestrel.frontend.completor import do_complete
@@ -134,7 +134,7 @@ class Session(AbstractContextManager):
                 ).items():
                     if is_explain:
                         display.graphlets.append(_display)
-                        _cache[iid] = True  # virtual cache; value type does not matter
+                        _cache[iid] = VIRTUAL_VAR_DATA
                     else:
                         display = _display
                         _cache[iid] = display

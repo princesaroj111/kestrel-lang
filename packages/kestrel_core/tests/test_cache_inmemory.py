@@ -5,7 +5,6 @@ import pytest
 from pandas import DataFrame, read_csv
 
 from kestrel.cache import InMemoryCache
-from kestrel.cache.inmemory import InMemoryCacheVirtual
 from kestrel.config import load_kestrel_config
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.ir.graph import IRGraph, IRGraphEvaluable
@@ -126,15 +125,11 @@ browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
     mapping = c.evaluate_graph(graph, c)
     v = c.get_virtual_copy()
     new_entry = uuid4()
-    v[new_entry] = True
+    v[new_entry] = DataFrame()
 
-    # v[new_entry] calls the right method
-    assert isinstance(v, InMemoryCacheVirtual)
-    assert v[new_entry].startswith("virtual")
-
-    # v[new_entry] does not hit v.cache
+    # v[new_entry] does not hit c.cache
     assert len(c.cache) == 2
-    assert len(v.cache) == 2 
+    assert len(v.cache) == 3 
 
     # the two cache_catalog are different
     assert new_entry not in c

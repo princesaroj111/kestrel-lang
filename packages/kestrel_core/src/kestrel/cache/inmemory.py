@@ -56,7 +56,7 @@ class InMemoryCache(AbstractCache):
     def get_virtual_copy(self) -> AbstractCache:
         v = copy(self)
         v.cache_catalog = copy(self.cache_catalog)
-        v.__class__ = InMemoryCacheVirtual
+        v.cache = copy(self.cache)
         return v
 
     def evaluate_graph(
@@ -113,15 +113,3 @@ class InMemoryCache(AbstractCache):
         else:
             raise NotImplementedError(f"Unknown instruction type: {instruction}")
         return df
-
-
-@typechecked
-class InMemoryCacheVirtual(InMemoryCache):
-    def __getitem__(self, instruction_id: UUID) -> Any:
-        return self.cache_catalog[instruction_id]
-
-    def __delitem__(self, instruction_id: UUID):
-        del self.cache_catalog[instruction_id]
-
-    def __setitem__(self, instruction_id: UUID, data: Any):
-        self.cache_catalog[instruction_id] = "virtual" + instruction_id.hex

@@ -118,7 +118,7 @@ class SQLAlchemyInterface(DatasourceInterface):
 
             # handle Information command
             if isinstance(instruction, Return):
-                trunk, _ = graph.get_trunk_n_branches(instruction)
+                trunk = instruction.predecessor if hasattr(instruction, "predecessor") else graph.get_trunk_n_branches(instruction)[0]
                 if isinstance(trunk, Information):
                     df = variable_attributes_to_dataframe(df)
 
@@ -132,10 +132,11 @@ class SQLAlchemyInterface(DatasourceInterface):
         instructions_to_explain: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, GraphletExplanation]:
         mapping = {}
+        graph_genuine_copy = graph.deepcopy()
         if not instructions_to_explain:
             instructions_to_explain = graph.get_sink_nodes()
         for instruction in instructions_to_explain:
-            dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
+            dep_graph = graph_genuine_copy.duplicate_dependent_subgraph_of_node(instruction)
             graph_dict = dep_graph.to_dict()
             translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             query = NativeQuery("SQL", str(translator.result_w_literal_binds()))
@@ -169,6 +170,10 @@ class SQLAlchemyInterface(DatasourceInterface):
                 if self.config.connections[graph.store].table_creation_permission:
                     table_name = instruction.id.hex
 
+                    print("####")
+                    print(graph)
+                    print(instruction)
+                    print(cache[instruction.id])
                     # write to temp table
                     ingest_dataframe_to_temp_table(
                         self.conns[graph.store],
@@ -220,7 +225,14 @@ class SQLAlchemyInterface(DatasourceInterface):
             if instruction.id in subquery_memory:
                 translator = subquery_memory[instruction.id]
             else:
-                trunk, r2n = graph.get_trunk_n_branches(instruction)
+                # record the predecessor so we do not resolve reference for Filter again
+                # which is not possible (ReferenceValue already gone---replaced with subquery)
+                if hasattr(instruction, "predecessor"):
+                    trunk, r2n = instruction.predecessor, {}
+                else:
+                    trunk, r2n = graph.get_trunk_n_branches(instruction)
+                    instruction.predecessor = trunk
+
                 translator = self._evaluate_instruction_in_graph(
                     graph, cache, trunk, graph_genuine_copy, subquery_memory
                 )
@@ -237,11 +249,12 @@ class SQLAlchemyInterface(DatasourceInterface):
                         translator.add_instruction(instruction)
 
                 elif isinstance(instruction, Filter):
-                    instruction.resolve_references(
-                        lambda x: self._evaluate_instruction_in_graph(
-                            graph, cache, r2n[x], graph_genuine_copy, subquery_memory
-                        ).query
-                    )
+                    if r2n:
+                        instruction.resolve_references(
+                            lambda x: self._evaluate_instruction_in_graph(
+                                graph, cache, r2n[x], graph_genuine_copy, subquery_memory
+                            ).query
+                        )
                     translator.add_instruction(instruction)
 
                 else:

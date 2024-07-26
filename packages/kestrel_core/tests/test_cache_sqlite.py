@@ -5,6 +5,7 @@ import pytest
 import sqlalchemy
 from pandas import DataFrame, read_csv
 
+from kestrel.config.internal import VIRTUAL_VAR_DATA
 from kestrel.cache import SqlCache
 from kestrel.cache.sql import SqlCacheVirtual
 from kestrel.config import load_kestrel_config
@@ -201,11 +202,11 @@ browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
     mapping = c.evaluate_graph(graph, c)
     v = c.get_virtual_copy()
     new_entry = uuid4()
-    v[new_entry] = True
+    v[new_entry] = DataFrame()
 
     # v[new_entry] calls the right method
     assert isinstance(v, SqlCacheVirtual)
-    assert v[new_entry].endswith("v")
+    assert v[new_entry].equals(VIRTUAL_VAR_DATA)
 
     # the two cache_catalog are different
     assert new_entry not in c
