@@ -132,24 +132,27 @@ def do_complete(
 
         # handle optional components
         if ast:
-            stmt = ast.children[-1].children[0]
-            cmd = (
-                stmt.children[1].data.value
-                if stmt.data.value == "assignment"
-                else stmt.data.value
-            )
-            if cmd == "disp":
-                for clause in ("attr_clause", "limit_clause", "offset_clause"):
-                    if not list(stmt.find_data(clause)):
-                        suggestions.append("ATTR")
-            elif cmd in ("expression", "find") and not list(
-                stmt.find_data("where_clause")
-            ):
-                suggestions.append("WHERE")
-            elif cmd in ("get", "find") and not list(stmt.find_data("timerange")):
-                suggestions.append("START")
-            elif cmd == "apply" and not list(stmt.find_data("args")):
-                suggestions.append("WITH")
+            if ast.children:
+                stmt = ast.children[-1].children[0]
+                cmd = (
+                    stmt.children[1].data.value
+                    if stmt.data.value == "assignment"
+                    else stmt.data.value
+                )
+                if cmd == "disp":
+                    for clause in ("attr_clause", "limit_clause", "offset_clause"):
+                        if not list(stmt.find_data(clause)):
+                            suggestions.append("ATTR")
+                elif cmd in ("expression", "find") and not list(
+                    stmt.find_data("where_clause")
+                ):
+                    suggestions.append("WHERE")
+                elif cmd in ("get", "find") and not list(stmt.find_data("timerange")):
+                    suggestions.append("START")
+                elif cmd == "apply" and not list(stmt.find_data("args")):
+                    suggestions.append("WITH")
+            else:
+                suggestions = ["DISP", "APPLY", "EXPLAIN", "INFO", "SAVE", "DESCRIBE"]
 
         suggestions = [x for x in set(suggestions) if x]
         _p = last_word_prefix
