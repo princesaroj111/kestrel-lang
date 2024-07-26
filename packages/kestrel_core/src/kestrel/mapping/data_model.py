@@ -447,7 +447,18 @@ def translate_dataframe(df: DataFrame, to_native_nested_map: dict) -> DataFrame:
                     transformer_name = transformer_names.pop()
                     if isinstance(transformer_name, dict):
                         # Not actually a named function; it's a literal value map
-                        df[col] = df[col].replace(transformer_name)
+                        value_map = {}
+                        for k, vl in transformer_name.items():
+                            if len(vl) > 1:
+                                raise NotImplementedError(
+                                    "Multiple to OCSF value mapping"
+                                )
+                            else:
+                                value_map[k] = vl[0]
+                        # use .apply intead of .replace to handle type correctly
+                        df[col] = df[col].apply(
+                            lambda x: value_map[x] if x in value_map else x
+                        )
                     else:
                         s = run_transformer_on_series(
                             transformer_name, df[col].dropna()

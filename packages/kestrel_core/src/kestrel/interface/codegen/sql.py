@@ -133,7 +133,7 @@ class SqlTranslator:
 
     @typechecked
     def _map_identifier_field(self, field) -> ColumnElement:
-        if self.data_mapping and not self.is_subquery:
+        if self.data_mapping:
             comps = translate_comparison_to_native(self.data_mapping, field, "", None)
             if len(comps) > 1:
                 raise InvalidMappingWithMultipleIdentifierFields(comps)
@@ -155,10 +155,15 @@ class SqlTranslator:
                     *[self._map_identifier_field(field) for field in comp.fields]
                 )
             rendered_comp = comp2func[comp.op](col, comp.value)
-        elif self.data_mapping and not self.is_subquery:  # translation needed
+        elif self.data_mapping:
             comps = translate_comparison_to_native(
                 self.data_mapping, comp.field, comp.op, comp.value
             )
+            if self.is_subquery:
+                # do not translate field
+                # only translate value
+                comps = [(comp.field, op, value) for (_, op, value) in comps]
+
             translated_comps = (
                 (
                     ~comp2func[op](column(field), value)
