@@ -25,6 +25,7 @@ actor.process: process
 actor.user: user
 entity: managed_entity
 query: query_info
+traffic: network_traffic
 
 # event
 activity: event

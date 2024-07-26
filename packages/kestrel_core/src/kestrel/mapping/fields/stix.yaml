@@ -92,7 +92,7 @@ device:
 
 
 # https://schema.ocsf.io/1.1.0/objects/network_traffic
-network_traffic: &network_traffic
+traffic: &network_traffic
     #TODO: bytes: sum of byte counts?
     bytes_in: network-traffic:dst_byte_count
     bytes_out: network-traffic:src_byte_count
