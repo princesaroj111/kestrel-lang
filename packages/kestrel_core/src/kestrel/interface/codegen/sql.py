@@ -74,13 +74,27 @@ class _TemporaryTable(SQLTable):
         with self.pd_sql.run_transaction():
             self.table.create(bind=self.pd_sql.con)
 
+    def create(self) -> None:
+        # SQLite actually use the same temp DB everytime
+        # even after connection closed and opened again
+        # so we need to drop the previous temp table
+        #
+        # override the superclass code here
+        # since we need to drop a table with a different schema
+        # which is not supported by the superclass method
+        if self.exists():
+            with self.pd_sql.run_transaction():
+                self.pd_sql.get_table(self.name).drop(bind=self.pd_sql.con)
+                self.pd_sql.meta.clear()
+        self._execute_create()
+
 
 @typechecked
 def ingest_dataframe_to_temp_table(conn: Connection, df: DataFrame, table_name: str):
     with pandasSQL_builder(conn) as pandas_engine:
-        table = _TemporaryTable(
-            table_name, pandas_engine, frame=df, if_exists="replace", index=False
-        )
+        # no need to put if_exists="replace"
+        # since our customized .create() only has this logic
+        table = _TemporaryTable(table_name, pandas_engine, frame=df, index=False)
         table.create()
         df.to_sql(table_name, con=conn, if_exists="append", index=False)
 

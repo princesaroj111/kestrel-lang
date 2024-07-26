@@ -42,16 +42,12 @@ class SQLAlchemyInterface(DatasourceInterface):
         _logger.debug("SQLAlchemyInterface: loading config")
         super().__init__(serialized_cache_catalog, session_id)
         self.engines: dict = {}  # Map of conn name -> engine
-        self.conns: dict = {}  # Map of conn name -> connection
         self.config = load_config()
         for info in self.config.datasources.values():
             name = info.connection
             conn_info = self.config.connections[name]
             if name not in self.engines:
                 self.engines[name] = sqlalchemy.create_engine(conn_info.url)
-            if name not in self.conns:
-                engine = self.engines[name]
-                self.conns[name] = engine.connect()
             _logger.debug("SQLAlchemyInterface: configured %s", name)
 
     @staticmethod
@@ -75,8 +71,7 @@ class SQLAlchemyInterface(DatasourceInterface):
         raise NotImplementedError("SQLAlchemyInterface.store")  # TEMP
 
     def __del__(self):
-        for conn in self.conns.values():
-            conn.close()
+        pass
 
     def evaluate_graph(
         self,
@@ -88,14 +83,18 @@ class SQLAlchemyInterface(DatasourceInterface):
         if not instructions_to_evaluate:
             instructions_to_evaluate = graph.get_sink_nodes()
         for instruction in instructions_to_evaluate:
-            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
+            conn = self.engines[graph.store].connect()
+
+            translator = self._evaluate_instruction_in_graph(
+                conn, graph, cache, instruction
+            )
             # TODO: may catch error in case evaluation starts from incomplete SQL
             sql = translator.result()
             _logger.debug("SQL query generated: %s", sql)
 
             # Get the "from" table for this query
-            conn = self.conns[graph.store]
             df = read_sql(sql, conn)
+            conn.close()
 
             # value translation
             if translator.data_mapping:
@@ -145,14 +144,19 @@ class SQLAlchemyInterface(DatasourceInterface):
                 instruction
             )
             # render the graph in SQL
-            translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
+            conn = self.engines[graph.store].connect()
+            translator = self._evaluate_instruction_in_graph(
+                conn, graph, cache, instruction
+            )
             query = NativeQuery("SQL", str(translator.result_w_literal_binds()))
+            conn.close()
             # return the graph and SQL
             mapping[instruction.id] = GraphletExplanation(dep_graph.to_dict(), query)
         return mapping
 
     def _evaluate_instruction_in_graph(
         self,
+        conn: sqlalchemy.engine.Connection,
         graph: IRGraphEvaluable,
         cache: MutableMapping[UUID, Any],
         instruction: Instruction,
@@ -180,7 +184,7 @@ class SQLAlchemyInterface(DatasourceInterface):
 
                     # write to temp table
                     ingest_dataframe_to_temp_table(
-                        self.conns[graph.store],
+                        conn,
                         cache[instruction.id],
                         table_name,
                     )
@@ -206,11 +210,9 @@ class SQLAlchemyInterface(DatasourceInterface):
             if isinstance(instruction, DataSource):
                 ds_config = self.config.datasources[instruction.datasource]
                 columns = list(
-                    self.conns[ds_config.connection]
-                    .execute(
+                    conn.execute(
                         sqlalchemy.text(f"SELECT * FROM {ds_config.table} LIMIT 1")
-                    )
-                    .keys()
+                    ).keys()
                 )
                 translator = SQLAlchemyTranslator(
                     NativeTable(
@@ -238,7 +240,7 @@ class SQLAlchemyInterface(DatasourceInterface):
                     instruction.predecessor = trunk
 
                 translator = self._evaluate_instruction_in_graph(
-                    graph, cache, trunk, graph_genuine_copy, subquery_memory
+                    conn, graph, cache, trunk, graph_genuine_copy, subquery_memory
                 )
 
                 if isinstance(instruction, SolePredecessorTransformingInstruction):
@@ -256,6 +258,7 @@ class SQLAlchemyInterface(DatasourceInterface):
                     if r2n:
                         instruction.resolve_references(
                             lambda x: self._evaluate_instruction_in_graph(
+                                conn,
                                 graph,
                                 cache,
                                 r2n[x],

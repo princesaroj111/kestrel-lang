@@ -52,13 +52,20 @@ def test_write_to_temp_table(setup_sqlite_ecs_process_creation):
         datalake = session.interface_manager["sqlalchemy"]
         idx = uuid4().hex
         df = DataFrame({'foo': [1, 2, 3]})
-        conn_name = list(datalake.conns.keys())[0]
-        conn = datalake.conns[conn_name]
+        conn = datalake.engines["datalake"].connect()
         ingest_dataframe_to_temp_table(conn, df, idx)
         assert read_sql(f'SELECT * FROM "{idx}"', conn).equals(df)
         conn.close()
-        conn = datalake.engines[conn_name].connect()
+        conn = datalake.engines["datalake"].connect()
         assert read_sql(f'SELECT * FROM "{idx}"', conn).empty
+        # ingest again actually write to the same temp table
+        # which exist in temp.
+        # the kestrel.interface.codegen.sql needs to handle this
+        ingest_dataframe_to_temp_table(conn, df, idx)
+        conn.close()
+        conn = datalake.engines["datalake"].connect()
+        assert read_sql(f'SELECT * FROM "{idx}"', conn).empty
+        conn.close()
     
 
 
