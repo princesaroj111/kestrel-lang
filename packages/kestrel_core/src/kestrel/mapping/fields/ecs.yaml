@@ -171,7 +171,7 @@ process: &process
         uid: process.user.id
 
 
-src_endpoint: &src_endpoint
+src_endpoint:
     "*": source.*
     domain: source.domain
     hostname: source.domain
@@ -186,7 +186,7 @@ src_endpoint: &src_endpoint
     # port: client.port
 
 
-dst_endpoint: &dst_endpoint
+dst_endpoint:
     "*": destination.*
     domain: destination.domain
     hostname: destination.domain
@@ -231,7 +231,7 @@ dst_endpoint: &dst_endpoint
 
 
 # https://schema.ocsf.io/1.1.0/objects/network_traffic
-network_traffic: &network_traffic
+traffic:
     bytes: network.bytes
     packets: network.packets
     bytes_in: destination.bytes
@@ -299,14 +299,6 @@ reg_value:
 actor:
     process: *process
     user: *user
-
-
-# https://schema.ocsf.io/1.1.0/classes/network_activity
-# Network Activity [4001] Class
-network_activity:
-    src_endpoint: *src_endpoint
-    dst_endpoint: *dst_endpoint
-    traffic: *network_traffic
 
 
 # https://schema.ocsf.io/1.1.0/classes/base_event
