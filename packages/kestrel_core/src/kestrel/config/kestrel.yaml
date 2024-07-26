@@ -30,3 +30,5 @@ entity_identifier:
     - uid
   email:
     - uid
+  query_info:
+    - uid
