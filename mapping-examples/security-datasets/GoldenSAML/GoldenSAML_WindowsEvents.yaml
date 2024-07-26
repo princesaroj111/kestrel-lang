@@ -138,11 +138,11 @@ type_name:
     native_field: EventID
     native_value:
         Pipe connected: 18
-        Successfully logged on: 4624
-        Failed logged on: 4625
-        Operation on object: 4662
-        Desktop Window Manager heavy load: 501
-        Connected permitted: 5156
+        An account was successfully logged on: 4624
+        An account failed to log on: 4625
+        An operation was performed on an object: 4662
+        Desktop Window Manager is experiencing heavy resource contention: 501
+        The Windows Filtering Platform has permitted a connection: 5156
 
 status_id:
   - native_field: event.code
