@@ -359,7 +359,7 @@ def test_parser_find_entity_to_event(process_creation_events, kestrel_config):
     assert (projattr, filt) in graph.edges
     exp = filt.exp
     assert isinstance(exp, RefComparison)
-    assert set(exp.fields) == set(['process.parent_process.uid', 'process.parent_process.endpoint.uid'])
+    assert set(exp.fields) == set(['actor.process.uid', 'actor.process.endpoint.uid'])
     assert exp.value.reference == 'procs'
     assert set(exp.value.attributes) == set(['uid', 'endpoint.uid'])
 

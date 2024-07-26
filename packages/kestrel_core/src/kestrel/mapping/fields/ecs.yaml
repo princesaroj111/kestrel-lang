@@ -297,8 +297,39 @@ reg_value:
 # - This semantic only appear in Process Activity [1007], please use `process.parent_process` to specify in this case
 # - This works in Activity besides Process Activity [1007]
 actor:
-    process: *process
-    user: *user
+    process:
+        endpoint: *endpoint
+        cmd_line: process.parent.command_line
+        name: process.parent.name
+        pid: process.parent.pid
+        uid: process.parent.entity_id
+        file:
+            endpoint: *endpoint
+            name:
+              - native_field: process.parent.executable
+                native_op: LIKE
+                native_value: winpath_endswith
+                ocsf_value: basename
+              - native_field: process.parent.executable
+                native_op: LIKE
+                native_value: posixpath_endswith
+                ocsf_value: basename
+            path: process.parent.executable
+            parent_folder:
+              - native_field: process.parent.executable
+                native_op: LIKE
+                native_value: winpath_startswith
+                ocsf_value: dirname
+              - native_field: process.parent.executable
+                native_op: LIKE
+                native_value: posixpath_startswith
+                ocsf_value: dirname
+    user:
+        endpoint: *endpoint
+        domain: process.parent.user.domain
+        full_name: process.parent.user.full_name
+        name: process.parent.user.name
+        uid: process.parent.user.id
 
 
 # https://schema.ocsf.io/1.1.0/classes/base_event
