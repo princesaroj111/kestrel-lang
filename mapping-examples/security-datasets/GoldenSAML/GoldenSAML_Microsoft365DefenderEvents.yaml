@@ -51,46 +51,21 @@ user: &user
     uid: AccountSid
 
 
-# https://schema.ocsf.io/1.1.0/classes/network_activity
-# Network Activity [4001] Class
-network_activity:
-    src_endpoint: *src_ref
-    dst_endpoint: *dst_ref
+# https://schema.ocsf.io/1.1.0/objects/http_request
+http_request:
+    user_agent: UserAgent
 
 
-# https://schema.ocsf.io/1.1.0/classes/api_activity
-# API Activity [6003]
-api_activity:
-    src_endpoint: *src_ref
-    dst_endpoint: *dst_ref
-    http_request:
-        user_agent: UserAgent
+# https://schema.ocsf.io/1.1.0/objects/query_info
+query_info:
+    attr_list: AdditionalFields.AttributeList
+    search_filter: AdditionalFields.SearchFilter
 
 
-# https://schema.ocsf.io/1.1.0/classes/datastore_activity
-# Datastore Activity [6005]
-datastore_activity:
-    src_endpoint: *src_ref
-    dst_endpoint: *dst_ref
-    http_request:
-        user_agent: UserAgent
-    query_info:
-        attr_list: AdditionalFields.AttributeList
-        search_filter: AdditionalFields.SearchFilter
-
-
-# https://schema.ocsf.io/1.1.0/classes/file_activity?extensions=win
-# File System Activity [1001]
-file_activity:
-    device: *endpoint
-    file: *file
-
-
-# https://schema.ocsf.io/1.1.0/classes/entity_management
-# Entity Management [3004]
-entity_management:
-    entity:
-        data: ActivityObjects
+# https://schema.ocsf.io/1.1.0/objects/managed_entity
+entity:
+    data: ActivityObjects
+    uid: RawEventData.MailboxGuid
 
 
 # https://schema.ocsf.io/1.1.0/classes/base_event

@@ -79,23 +79,12 @@ entity:
     data: Properties
 
 
-# https://schema.ocsf.io/1.1.0/classes/network_activity
-# Network Activity [4001] Class
-network_activity:
-    src_endpoint: *src_ref
-    dst_endpoint: *dst_ref
-
-
 # https://schema.ocsf.io/1.1.0/classes/authentication?extensions=win
 # Authentication [3002]
-authentication:
-    actor.user: *user
-    auth_protocol: AuthenticationPackageName
-    dst_endpoint: *dst_ref
-    logon_type_id:
-        - native_field: LogonType
-          ocsf_value: to_int
-    user: *user
+auth_protocol: AuthenticationPackageName
+logon_type_id:
+    - native_field: LogonType
+      ocsf_value: to_int
 
 
 # https://schema.ocsf.io/1.1.0/classes/base_event
