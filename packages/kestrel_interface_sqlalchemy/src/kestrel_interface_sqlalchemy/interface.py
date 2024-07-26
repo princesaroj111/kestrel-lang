@@ -118,7 +118,11 @@ class SQLAlchemyInterface(DatasourceInterface):
 
             # handle Information command
             if isinstance(instruction, Return):
-                trunk = instruction.predecessor if hasattr(instruction, "predecessor") else graph.get_trunk_n_branches(instruction)[0]
+                trunk = (
+                    instruction.predecessor
+                    if hasattr(instruction, "predecessor")
+                    else graph.get_trunk_n_branches(instruction)[0]
+                )
                 if isinstance(trunk, Information):
                     df = variable_attributes_to_dataframe(df)
 
@@ -137,7 +141,9 @@ class SQLAlchemyInterface(DatasourceInterface):
             instructions_to_explain = graph.get_sink_nodes()
         for instruction in instructions_to_explain:
             # duplicate graph here before ref resolution
-            dep_graph = graph_genuine_copy.duplicate_dependent_subgraph_of_node(instruction)
+            dep_graph = graph_genuine_copy.duplicate_dependent_subgraph_of_node(
+                instruction
+            )
             # render the graph in SQL
             translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             query = NativeQuery("SQL", str(translator.result_w_literal_binds()))
@@ -250,7 +256,11 @@ class SQLAlchemyInterface(DatasourceInterface):
                     if r2n:
                         instruction.resolve_references(
                             lambda x: self._evaluate_instruction_in_graph(
-                                graph, cache, r2n[x], graph_genuine_copy, subquery_memory
+                                graph,
+                                cache,
+                                r2n[x],
+                                graph_genuine_copy,
+                                subquery_memory,
                             ).query
                         )
                     translator.add_instruction(instruction)

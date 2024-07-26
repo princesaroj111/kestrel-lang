@@ -48,7 +48,9 @@ def kestrel():
         with open(args.huntflow, "r") as fp:
             huntflow = fp.read()
         outputs = session.execute(huntflow)
-        results = "\n\n".join([o.to_string() if isinstance(o, DataFrame) else str(o) for o in outputs])
+        results = "\n\n".join(
+            [o.to_string() if isinstance(o, DataFrame) else str(o) for o in outputs]
+        )
         print(results)
 
 
