@@ -21,6 +21,10 @@ process:
     cmd_line: ProcessCommandLine
     pid: ProcessId
     uid: ProcessId
+    hash:
+        md5: MD5
+        sha1: SHA1
+        sha256: SHA256
 
 
 actor:
@@ -29,9 +33,19 @@ actor:
         cmd_line: InitiatingProcessCommandLine
         pid: InitiatingProcessId
         uid: InitiatingProcessId
+        parent_process:
+            endpoint: *endpoint
+            pid: InitiatingProcessParentId
+            uid: InitiatingProcessParentId
+            file:
+                name: InitiatingProcessParentFileName
         file:
             name: InitiatingProcessFileName
             path: InitiatingProcessFolderPath
+            hash:
+                md5: InitiatingProcessMD5
+                sha1: InitiatingProcessSHA1
+                sha256: InitiatingProcessSHA256
             parent_folder:
                 native_field: InitiatingProcessFolderPath
                 native_op: LIKE
@@ -39,8 +53,9 @@ actor:
                 ocsf_value: dirname
     user:
         endpoint: *endpoint
-        name: InitiatingProcessAccountUpn
         uid: InitiatingProcessAccountSid
+        name: InitiatingProcessAccountName
+        domain: InitiatingProcessAccountDomain
 
 
 # src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
