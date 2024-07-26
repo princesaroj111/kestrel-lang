@@ -66,6 +66,7 @@ dst_endpoint: &dst_ref
 
 # https://schema.ocsf.io/1.1.0/objects/user
 user: &user
+    endpoint: *endpoint
     domain: TargetDomainName
     name: TargetUserName
     uid: TargetUserSid
