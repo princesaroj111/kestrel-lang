@@ -1,5 +1,4 @@
 import typer
-
 from kestrel_tool import mkdb
 
 app = typer.Typer()

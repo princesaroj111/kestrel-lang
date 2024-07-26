@@ -4,7 +4,6 @@ from functools import reduce
 from typing import Callable, List, Optional, Union
 
 import sqlalchemy
-from sqlalchemy.sql.functions import coalesce
 from kestrel.exceptions import (
     InvalidAttributes,
     InvalidMappingWithMultipleIdentifierFields,
@@ -44,6 +43,7 @@ from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
 from sqlalchemy.engine import Compiled, Connection, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
 from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
+from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.sql.selectable import Select
 from typeguard import typechecked
 

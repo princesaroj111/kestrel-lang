@@ -7,7 +7,6 @@ import pandas as pd
 import sqlalchemy
 import typer
 
-
 RE_UUID = re.compile(
     "^%?{?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})}?$"
 )
