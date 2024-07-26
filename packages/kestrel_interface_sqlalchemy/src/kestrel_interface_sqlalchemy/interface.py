@@ -136,11 +136,13 @@ class SQLAlchemyInterface(DatasourceInterface):
         if not instructions_to_explain:
             instructions_to_explain = graph.get_sink_nodes()
         for instruction in instructions_to_explain:
+            # duplicate graph here before ref resolution
             dep_graph = graph_genuine_copy.duplicate_dependent_subgraph_of_node(instruction)
-            graph_dict = dep_graph.to_dict()
+            # render the graph in SQL
             translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             query = NativeQuery("SQL", str(translator.result_w_literal_binds()))
-            mapping[instruction.id] = GraphletExplanation(graph_dict, query)
+            # return the graph and SQL
+            mapping[instruction.id] = GraphletExplanation(dep_graph.to_dict(), query)
         return mapping
 
     def _evaluate_instruction_in_graph(

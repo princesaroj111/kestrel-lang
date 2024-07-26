@@ -206,7 +206,7 @@ browsers = proclist WHERE name = 'firefox.exe' OR name = 'chrome.exe'
 
     # v[new_entry] calls the right method
     assert isinstance(v, SqlCacheVirtual)
-    assert v[new_entry].equals(VIRTUAL_VAR_DATA)
+    assert v[new_entry].equals(VIRTUAL_CACHE_VAR_DATA)
 
     # the two cache_catalog are different
     assert new_entry not in c
