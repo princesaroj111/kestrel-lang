@@ -180,7 +180,7 @@ def test_eval_find_entity_to_event(process_creation_events, kestrel_config):
     # 2. In the 5, 4 are not parent process of others, only the first is parent process
     # 3. There are 4 lines of logs/events that uses the parent process
     assert df.shape[0] == 4
-    assert df.shape[1] == 41  # full event: the number of columns in the csv
+    assert df.shape[1] == 48  # full event: the number of columns in the csv
 
 
 def test_eval_find_entity_to_entity(process_creation_events, kestrel_config):

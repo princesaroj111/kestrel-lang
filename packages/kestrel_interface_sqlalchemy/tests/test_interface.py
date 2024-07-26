@@ -107,7 +107,7 @@ def test_get_simple_ecs_process(setup_sqlite_ecs_process_creation, where, ocsf_f
 @pytest.mark.parametrize(
     "where, ocsf_fields", [
         ("process.name = 'bash'", ["process.name", "actor.process.name"]),
-        ("process.parent.pid = 1022", ["process.parent_process.pid", "actor.process.parent_process.pid"]),
+        ("process.parent.pid = 1022", ["process.parent_process.pid", "actor.process.pid"]),
     ]
 )
 def test_get_simple_event(setup_sqlite_ecs_process_creation, where, ocsf_fields):
@@ -130,7 +130,7 @@ def test_get_simple_event(setup_sqlite_ecs_process_creation, where, ocsf_fields)
         stmt = "DISP evs"
         df = session.execute(stmt)[0]
         assert len(df) == 1
-        assert len(list(df)) == 74
+        assert len(list(df)) == 56
 
         # test value mapping: see previous test for more details
         assert list(df["process.file.name"]) == ["bash"]
@@ -196,7 +196,7 @@ def test_find_entity_to_event(setup_sqlite_ecs_process_creation):
 
         assert e2.shape[0] == 4
         assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
-        assert e2.shape[1] == 74  # full event: refer to test_get_simple_event() for number
+        assert e2.shape[1] == 56  # full event: refer to test_get_simple_event() for number
 
 
 def test_find_entity_to_event_2(setup_sqlite_ecs_process_creation):
@@ -209,7 +209,7 @@ def test_find_entity_to_event_2(setup_sqlite_ecs_process_creation):
         e2 = session.execute(huntflow)[0]
         assert e2.shape[0] == 4
         assert list(e2["process.name"]) == ["uname", "cat", "ping", "curl"]
-        assert e2.shape[1] == 74  # full event: refer to test_get_simple_event() for number
+        assert e2.shape[1] == 56  # full event: refer to test_get_simple_event() for number
 
 
 def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
@@ -254,5 +254,4 @@ def test_information(setup_sqlite_ecs_process_creation):
         """
         df = session.execute(huntflow)[0]
         attrs = df["attributes"].to_list()
-        assert attrs == ['actor.process.cmd_line, actor.process.endpoint.name, actor.process.endpoint.os, actor.process.endpoint.uid, actor.process.file.endpoint.name, actor.process.file.endpoint.os, actor.process.file.endpoint.uid, actor.process.file.name, actor.process.file.parent_folder, actor.process.file.path, actor.process.name, actor.process.parent_process.cmd_line, actor.process.parent_process.endpoint.name, actor.process.parent_process.endpoint.os, actor.process.parent_process.endpoint.uid, actor.process.parent_process.file.endpoint.name, actor.process.parent_process.file.endpoint.os, actor.process.parent_process.file.endpoint.uid, actor.process.parent_process.name, actor.process.parent_process.pid, actor.process.parent_process.uid, actor.process.parent_process.user.endpoint.name, actor.process.parent_process.user.endpoint.os, actor.process.parent_process.user.endpoint.uid, actor.process.pid, actor.process.uid, actor.process.user.endpoint.name, actor.process.user.endpoint.os, actor.process.user.endpoint.uid, actor.user.name, actor.user.uid', 'device.name, device.os, device.uid', 'file.endpoint.name, file.endpoint.os, file.endpoint.uid', 'process.cmd_line, process.endpoint.name, process.endpoint.os, process.endpoint.uid, process.file.endpoint.name, process.file.endpoint.os, process.file.endpoint.uid, process.file.name, process.file.parent_folder, process.file.path, process.name, process.parent_process.cmd_line, process.parent_process.endpoint.name, process.parent_process.endpoint.os, process.parent_process.endpoint.uid, process.parent_process.file.endpoint.name, process.parent_process.file.endpoint.os, process.parent_process.file.endpoint.uid, process.parent_process.name, process.parent_process.pid, process.parent_process.uid, process.parent_process.user.endpoint.name, process.parent_process.user.endpoint.os, process.parent_process.user.endpoint.uid, process.pid, process.uid, process.user.endpoint.name, process.user.endpoint.os, process.user.endpoint.uid', 'reg_key.endpoint.name, reg_key.endpoint.os, reg_key.endpoint.uid', 'reg_value.endpoint.name, reg_value.endpoint.os, reg_value.endpoint.uid', 'user.name, user.uid']
-
+        assert attrs == ['actor.process.cmd_line, actor.process.endpoint.name, actor.process.endpoint.os, actor.process.endpoint.uid, actor.process.file.endpoint.name, actor.process.file.endpoint.os, actor.process.file.endpoint.uid, actor.process.name, actor.process.pid, actor.process.uid, actor.user.endpoint.name, actor.user.endpoint.os, actor.user.endpoint.uid', 'device.name, device.os, device.uid', 'file.endpoint.name, file.endpoint.os, file.endpoint.uid', 'process.cmd_line, process.endpoint.name, process.endpoint.os, process.endpoint.uid, process.file.endpoint.name, process.file.endpoint.os, process.file.endpoint.uid, process.file.name, process.file.parent_folder, process.file.path, process.name, process.parent_process.cmd_line, process.parent_process.endpoint.name, process.parent_process.endpoint.os, process.parent_process.endpoint.uid, process.parent_process.file.endpoint.name, process.parent_process.file.endpoint.os, process.parent_process.file.endpoint.uid, process.parent_process.name, process.parent_process.pid, process.parent_process.uid, process.parent_process.user.endpoint.name, process.parent_process.user.endpoint.os, process.parent_process.user.endpoint.uid, process.pid, process.uid, process.user.endpoint.name, process.user.endpoint.os, process.user.endpoint.uid', 'reg_key.endpoint.name, reg_key.endpoint.os, reg_key.endpoint.uid', 'reg_value.endpoint.name, reg_value.endpoint.os, reg_value.endpoint.uid', 'user.name, user.uid']

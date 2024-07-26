@@ -1,6 +1,6 @@
 OutputType,Relation,OutputProjection
 endpoint,RESPONDED,device
-process,ORIGINATED,process.parent_process
+process,ORIGINATED,actor.process
 process,RESPONDED,process
 file,RESPONDED,file
 managed_entity,RESPONDED,entity
