@@ -1,0 +1,90 @@
+# SecurityDatasets GoldenSAML AADAuditEvents.json to OSCF mapping
+
+
+# endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+device: &endpoint
+    hostname: DeviceName
+    uid: DeviceId
+
+
+file: &file
+    endpoint: *endpoint
+    name: FileName
+
+
+# https://schema.ocsf.io/1.1.0/objects/process
+process:
+    endpoint: *endpoint
+    cmd_line: InitiatingProcessCommandLine
+    pid: InitiatingProcessId
+    uid: InitiatingProcessId
+    file:
+        name: InitiatingProcessFileName
+        path: InitiatingProcessFolderPath
+        parent_folder:
+            native_field: InitiatingProcessFolderPath
+            native_op: LIKE
+            native_value: winpath_startswith
+            ocsf_value: dirname
+    user:
+        name: InitiatingProcessAccountUpn
+        uid: InitiatingProcessAccountSid
+
+
+# src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+src_endpoint: &src_ref
+    ip: IPAddress
+    port: Port
+
+
+# dst_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+dst_endpoint: &dst_ref
+    hostname: DestinationDevice
+    ip: DestinationIPAddress
+    port: DestinationPort
+
+
+# https://schema.ocsf.io/1.1.0/objects/user
+user: &user
+    name:
+        - InitiatingUser
+        - InitiatingUserOrApp
+    uid:
+        - InitiatingUser
+        - InitiatingUserOrApp
+
+
+# https://schema.ocsf.io/1.1.0/objects/http_request
+http_request:
+    user_agent: UserAgent
+
+
+# https://schema.ocsf.io/1.1.0/objects/managed_entity
+entity:
+    uid:
+        - targetId
+        - ModifiedApplicationObjectId
+    type:
+        - targetType
+        - Type
+    name:
+        - targetDisplayName
+        - ModifiedApplication
+
+
+type_uid:
+    native_field: OperationName
+    native_value:
+        300403: # Entity Management: Update
+            - "Update application – Certificates and secrets management "
+            - "Update application"
+        300501: # User Access Management: Assign Privileges
+            - "Add delegated permission grant"
+
+status_id:
+  - native_field: Result
+    native_value:
+        1: # Success
+            - "Succeeded"
+        2: # Failure
+            - "Failed"
