@@ -8,7 +8,9 @@ import sqlalchemy
 import typer
 
 
-RE_UUID = re.compile("^%?{?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})}?$")
+RE_UUID = re.compile(
+    "^%?{?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})}?$"
+)
 
 
 def _normalize_event(event: dict) -> dict:
