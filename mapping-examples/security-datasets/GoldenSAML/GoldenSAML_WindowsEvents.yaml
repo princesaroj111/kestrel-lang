@@ -85,13 +85,6 @@ network_activity:
     dst_endpoint: *dst_ref
 
 
-# https://schema.ocsf.io/1.1.0/classes/file_activity?extensions=win
-# File System Activity [1001]
-file_activity:
-    device: *endpoint
-    file: *file
-
-
 # https://schema.ocsf.io/1.1.0/classes/authentication?extensions=win
 # Authentication [3002]
 authentication:
