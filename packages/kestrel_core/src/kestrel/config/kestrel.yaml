@@ -32,3 +32,5 @@ entity_identifier:
     - uid
   query_info:
     - uid
+  managed_entity:
+    - uid
