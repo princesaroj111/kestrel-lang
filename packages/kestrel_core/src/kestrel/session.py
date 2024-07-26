@@ -4,6 +4,7 @@ from os import environ
 from typing import Iterable
 from uuid import uuid4
 
+from kestrel.analytics import PythonAnalyticsInterface
 from kestrel.cache import SqlCache
 from kestrel.config import load_kestrel_config
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER, VIRTUAL_CACHE_VAR_DATA
@@ -15,8 +16,6 @@ from kestrel.interface import InterfaceManager
 from kestrel.ir.graph import IRGraph
 from kestrel.ir.instructions import DataSource, Explain, Instruction, Return
 from typeguard import typechecked
-
-from kestrel.analytics import PythonAnalyticsInterface
 
 _logger = logging.getLogger(__name__)
 
