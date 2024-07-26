@@ -1,4 +1,5 @@
 OutputType,Relation,OutputProjection
+endpoint,RESPONDED,device
 process,ORIGINATED,process.parent_process
 process,RESPONDED,process
 file,RESPONDED,file
@@ -9,4 +10,4 @@ reg_key,RESPONDED,reg_key
 reg_value,RESPONDED,reg_value
 user,ORIGINATED,actor.user
 user,RESPONDED,user
-endpoint,RESPONDED,device
+query_info,RESPONDED,query_info

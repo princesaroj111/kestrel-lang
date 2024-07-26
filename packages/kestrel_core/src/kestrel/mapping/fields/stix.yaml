@@ -40,13 +40,6 @@ file:
 #     uid:
 
 
-# https://schema.ocsf.io/1.2.0/objects/managed_entity
-entity:
-    "*": file.*
-    uid: file:name
-    name: file:name
-
-
 # https://schema.ocsf.io/1.1.0/objects/process
 process: &process
     "*": process.*
