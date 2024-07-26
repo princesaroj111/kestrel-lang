@@ -8,6 +8,7 @@ from uuid import UUID
 import sqlalchemy
 from dateutil.parser import parse as dt_parser
 from kestrel.cache.base import AbstractCache
+from kestrel.config.internal import VIRTUAL_CACHE_VAR_DATA
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
 from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
@@ -252,13 +253,20 @@ class SqlCache(AbstractCache):
 
 @typechecked
 class SqlCacheVirtual(SqlCache):
-    def __getitem__(self, instruction_id: UUID) -> Any:
-        return self.cache_catalog[instruction_id]
+    def __getitem__(self, instruction_id: UUID) -> DataFrame:
+        if instruction_id in self.cache_catalog:
+            try:
+                df = read_sql(self.cache_catalog[instruction_id], self.connection)
+            except:
+                df = VIRTUAL_CACHE_VAR_DATA
+        else:
+            raise KeyError(instruction_id)
+        return df
 
     def __delitem__(self, instruction_id: UUID):
         del self.cache_catalog[instruction_id]
 
-    def __setitem__(self, instruction_id: UUID, data: Any):
+    def __setitem__(self, instruction_id: UUID, data: DataFrame):
         self.cache_catalog[instruction_id] = instruction_id.hex + "v"
         self.cache_catalog_schemas[instruction_id] = ["*"]
 
