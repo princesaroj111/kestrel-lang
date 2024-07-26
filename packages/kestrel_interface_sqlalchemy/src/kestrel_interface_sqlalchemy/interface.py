@@ -170,10 +170,6 @@ class SQLAlchemyInterface(DatasourceInterface):
                 if self.config.connections[graph.store].table_creation_permission:
                     table_name = instruction.id.hex
 
-                    print("####")
-                    print(graph)
-                    print(instruction)
-                    print(cache[instruction.id])
                     # write to temp table
                     ingest_dataframe_to_temp_table(
                         self.conns[graph.store],

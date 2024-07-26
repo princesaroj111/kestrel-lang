@@ -8,7 +8,7 @@ from uuid import UUID
 import sqlalchemy
 from dateutil.parser import parse as dt_parser
 from kestrel.cache.base import AbstractCache
-from kestrel.config.internal import VIRTUAL_VAR_DATA
+from kestrel.config.internal import VIRTUAL_CACHE_VAR_DATA
 from kestrel.display import GraphletExplanation, NativeQuery
 from kestrel.interface.codegen.sql import SqlTranslator
 from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
@@ -258,7 +258,7 @@ class SqlCacheVirtual(SqlCache):
             try:
                 df = read_sql(self.cache_catalog[instruction_id], self.connection)
             except:
-                df = VIRTUAL_VAR_DATA
+                df = VIRTUAL_CACHE_VAR_DATA
         else:
             raise KeyError(instruction_id)
         return df

@@ -5,7 +5,7 @@ import pytest
 import sqlalchemy
 from pandas import DataFrame, read_csv
 
-from kestrel.config.internal import VIRTUAL_VAR_DATA
+from kestrel.config.internal import VIRTUAL_CACHE_VAR_DATA
 from kestrel.cache import SqlCache
 from kestrel.cache.sql import SqlCacheVirtual
 from kestrel.config import load_kestrel_config
