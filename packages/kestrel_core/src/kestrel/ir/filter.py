@@ -193,7 +193,9 @@ FBasicComparison = Union[
 @typechecked
 def get_references_from_exp(exp: FExpression) -> Iterable[ReferenceValue]:
     if isinstance(exp, RefComparison):
-        yield exp.value
+        if isinstance(exp.value, ReferenceValue):
+            # if not already resolved
+            yield exp.value
     elif isinstance(exp, BoolExp):
         yield from get_references_from_exp(exp.lhs)
         yield from get_references_from_exp(exp.rhs)
@@ -207,7 +209,9 @@ def resolve_reference_with_function(
     exp: FExpression, f: Callable[[ReferenceValue], Any]
 ):
     if isinstance(exp, RefComparison):
-        exp.value = f(exp.value)
+        if isinstance(exp.value, ReferenceValue):
+            # if not already resolved
+            exp.value = f(exp.value)
     elif isinstance(exp, BoolExp):
         resolve_reference_with_function(exp.lhs, f)
         resolve_reference_with_function(exp.rhs, f)

@@ -12,6 +12,7 @@ import logging
 
 from kestrel.exceptions import KestrelError
 from kestrel.session import Session
+from pandas import DataFrame
 
 
 def add_logging_handler(handler, if_debug):
@@ -47,7 +48,9 @@ def kestrel():
         with open(args.huntflow, "r") as fp:
             huntflow = fp.read()
         outputs = session.execute(huntflow)
-        results = "\n\n".join([o.to_string() for o in outputs])
+        results = "\n\n".join(
+            [o.to_string() if isinstance(o, DataFrame) else str(o) for o in outputs]
+        )
         print(results)
 
 

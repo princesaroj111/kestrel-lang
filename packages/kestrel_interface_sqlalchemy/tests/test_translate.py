@@ -103,7 +103,7 @@ def test_sqlalchemy_translator(iseq, sql):
             raise NotImplementedError("Type not used in tests")
     else:  # no projection; defautl to all
         cols = '*'
-    trans = SQLAlchemyTranslator(NativeTable(DIALECT, TABLE, None, TABLE_SCHEMA, data_model_map, timefmt, "timestamp"))
+    trans = SQLAlchemyTranslator(NativeTable(DIALECT, TABLE, TABLE_SCHEMA, data_model_map, timefmt, "timestamp"))
     for i in iseq:
         trans.add_instruction(i)
     #result = trans.result_w_literal_binds()

@@ -5,7 +5,7 @@ from uuid import UUID
 
 import sqlalchemy
 from kestrel.display import GraphletExplanation, NativeQuery
-from kestrel.exceptions import InvalidDataSource, SourceNotFound
+from kestrel.exceptions import InvalidDataSource
 from kestrel.interface import DatasourceInterface
 from kestrel.interface.codegen.sql import ingest_dataframe_to_temp_table
 from kestrel.interface.codegen.utils import variable_attributes_to_dataframe
@@ -28,7 +28,6 @@ from typeguard import typechecked
 
 from .config import load_config
 from .translator import NativeTable, SQLAlchemyTranslator, SubQuery
-from .utils import iter_argument_from_function_in_callstack
 
 _logger = logging.getLogger(__name__)
 
@@ -95,29 +94,35 @@ class SQLAlchemyInterface(DatasourceInterface):
             _logger.debug("SQL query generated: %s", sql)
 
             # Get the "from" table for this query
-            conn = self.conns[translator.datasource_config.connection]
+            conn = self.conns[graph.store]
             df = read_sql(sql, conn)
 
             # value translation
-            if translator.projection_base_field == "event":
-                dmm = translator.datasource_config.data_model_map
-            else:
-                try:
-                    dmm = reduce(
-                        dict.__getitem__,
-                        translator.projection_base_field.split("."),
-                        translator.datasource_config.data_model_map,
-                    )
-                except KeyError:
-                    # pass through
-                    _logger.debug("No result/value translation")
-                    dmm = None
+            if translator.data_mapping:
 
-            df = translate_dataframe(df, dmm) if dmm else df
+                if translator.projection_base_field == "event":
+                    dmm = translator.data_mapping
+                else:
+                    try:
+                        dmm = reduce(
+                            dict.__getitem__,
+                            translator.projection_base_field.split("."),
+                            translator.data_mapping,
+                        )
+                    except KeyError:
+                        # pass through
+                        _logger.debug("No result/value translation")
+                        dmm = None
+
+                df = translate_dataframe(df, dmm) if dmm else df
 
             # handle Information command
             if isinstance(instruction, Return):
-                trunk, _ = graph.get_trunk_n_branches(instruction)
+                trunk = (
+                    instruction.predecessor
+                    if hasattr(instruction, "predecessor")
+                    else graph.get_trunk_n_branches(instruction)[0]
+                )
                 if isinstance(trunk, Information):
                     df = variable_attributes_to_dataframe(df)
 
@@ -131,14 +136,19 @@ class SQLAlchemyInterface(DatasourceInterface):
         instructions_to_explain: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, GraphletExplanation]:
         mapping = {}
+        graph_genuine_copy = graph.deepcopy()
         if not instructions_to_explain:
             instructions_to_explain = graph.get_sink_nodes()
         for instruction in instructions_to_explain:
-            dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
-            graph_dict = dep_graph.to_dict()
+            # duplicate graph here before ref resolution
+            dep_graph = graph_genuine_copy.duplicate_dependent_subgraph_of_node(
+                instruction
+            )
+            # render the graph in SQL
             translator = self._evaluate_instruction_in_graph(graph, cache, instruction)
             query = NativeQuery("SQL", str(translator.result_w_literal_binds()))
-            mapping[instruction.id] = GraphletExplanation(graph_dict, query)
+            # return the graph and SQL
+            mapping[instruction.id] = GraphletExplanation(dep_graph.to_dict(), query)
         return mapping
 
     def _evaluate_instruction_in_graph(
@@ -165,34 +175,12 @@ class SQLAlchemyInterface(DatasourceInterface):
             if instruction.id in subquery_memory:
                 translator = subquery_memory[instruction.id]
             else:
-                # 1. get the datasource assocaited with the cached node
-                ds = None
-                for node in iter_argument_from_function_in_callstack(
-                    "_evaluate_instruction_in_graph", "instruction"
-                ):
-                    try:
-                        ds = graph.find_datasource_of_node(node)
-                    except SourceNotFound:
-                        continue
-                    else:
-                        break
-                if not ds:
-                    _logger.error(
-                        "backed tracked entire stack but still do not find source"
-                    )
-                    raise SourceNotFound(instruction)
-
-                # 2. check the datasource config to see if the datalake supports write
-                ds_config = self.config.datasources[ds.datasource]
-                conn_config = self.config.connections[ds_config.connection]
-
-                # 3. perform table creation or in-memory cache
-                if conn_config.table_creation_permission:
+                if self.config.connections[graph.store].table_creation_permission:
                     table_name = instruction.id.hex
 
                     # write to temp table
                     ingest_dataframe_to_temp_table(
-                        self.conns[ds_config.connection],
+                        self.conns[graph.store],
                         cache[instruction.id],
                         table_name,
                     )
@@ -200,9 +188,8 @@ class SQLAlchemyInterface(DatasourceInterface):
                     # SELECT * from the new table
                     translator = SQLAlchemyTranslator(
                         NativeTable(
-                            self.engines[ds_config.connection].dialect,
+                            self.engines[graph.store].dialect,
                             table_name,
-                            ds_config,
                             list(cache[instruction.id]),
                             None,
                             None,
@@ -229,7 +216,6 @@ class SQLAlchemyInterface(DatasourceInterface):
                     NativeTable(
                         self.engines[ds_config.connection].dialect,
                         ds_config.table,
-                        ds_config,
                         columns,
                         ds_config.data_model_map,
                         lambda dt: dt.strftime(ds_config.timestamp_format),
@@ -243,7 +229,14 @@ class SQLAlchemyInterface(DatasourceInterface):
             if instruction.id in subquery_memory:
                 translator = subquery_memory[instruction.id]
             else:
-                trunk, r2n = graph.get_trunk_n_branches(instruction)
+                # record the predecessor so we do not resolve reference for Filter again
+                # which is not possible (ReferenceValue already gone---replaced with subquery)
+                if hasattr(instruction, "predecessor"):
+                    trunk, r2n = instruction.predecessor, {}
+                else:
+                    trunk, r2n = graph.get_trunk_n_branches(instruction)
+                    instruction.predecessor = trunk
+
                 translator = self._evaluate_instruction_in_graph(
                     graph, cache, trunk, graph_genuine_copy, subquery_memory
                 )
@@ -260,11 +253,16 @@ class SQLAlchemyInterface(DatasourceInterface):
                         translator.add_instruction(instruction)
 
                 elif isinstance(instruction, Filter):
-                    instruction.resolve_references(
-                        lambda x: self._evaluate_instruction_in_graph(
-                            graph, cache, r2n[x], graph_genuine_copy, subquery_memory
-                        ).query
-                    )
+                    if r2n:
+                        instruction.resolve_references(
+                            lambda x: self._evaluate_instruction_in_graph(
+                                graph,
+                                cache,
+                                r2n[x],
+                                graph_genuine_copy,
+                                subquery_memory,
+                            ).query
+                        )
                     translator.add_instruction(instruction)
 
                 else:
