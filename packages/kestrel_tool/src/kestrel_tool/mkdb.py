@@ -42,22 +42,14 @@ def _normalize_event(event: dict) -> dict:
         event["SourceAddress"] = event["IpAddress"]
         del event["IpAddress"]
 
-    # SecurityDatasets.com GoldenSAML Microsoft365DefenderEvents
-    # Some fields ending with "_string" are JSON strings?  Why?
-    # Deserialize them so they're flattened later
-    new_event = {}
-    for name, value in event.items():
-        if name.endswith("_string"):
-            # Maybe this is a JSON string?
-            new_name, _, _ = name.rpartition("_")
+    for k, v in event.items():
+        if isinstance(v, str):
             try:
-                new_event[new_name] = json.loads(value)
+                event[k] = json.loads(v)
             except json.JSONDecodeError:
                 pass  # maybe it's NOT JSON
-        else:
-            new_event[name] = value
-    return new_event
 
+    return event
 
 def _read_events(filename: str) -> pd.DataFrame:
     """Read JSON lines from `filename` and return a DataFrame"""

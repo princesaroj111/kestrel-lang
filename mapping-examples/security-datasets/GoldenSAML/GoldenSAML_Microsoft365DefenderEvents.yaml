@@ -86,14 +86,18 @@ http_request:
 # https://schema.ocsf.io/1.1.0/objects/query_info
 query_info:
     uid: ReportId_long
-    attr_list: AdditionalFields.AttributeList
-    search_filter: AdditionalFields.SearchFilter
+    attr_list: AdditionalFields_string.AttributeList
+    search_filter: AdditionalFields_string.SearchFilter
 
 
 # https://schema.ocsf.io/1.1.0/objects/managed_entity
 entity:
+    uid: ReportId_long
     data: ActivityObjects
-    uid: ReportId
+
+
+# https://schema.ocsf.io/1.2.0/classes/user_access
+privileges: Permissions
 
 
 # https://schema.ocsf.io/1.1.0/classes/base_event
