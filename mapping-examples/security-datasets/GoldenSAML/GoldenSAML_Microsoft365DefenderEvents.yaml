@@ -59,14 +59,14 @@ actor:
 
 
 # src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
-src_endpoint: &src_ref
+src_endpoint:
     ip: IPAddress
     port: Port
 
 
 # dst_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
-dst_endpoint: &dst_ref
-    hostname: DestinationDevice
+dst_endpoint:
+    hostname: DestinationDeviceName
     ip: DestinationIPAddress
     port: DestinationPort
 
@@ -93,7 +93,7 @@ query_info:
 # https://schema.ocsf.io/1.1.0/objects/managed_entity
 entity:
     data: ActivityObjects
-    uid: RawEventData.MailboxGuid
+    uid: ReportId
 
 
 # https://schema.ocsf.io/1.1.0/classes/base_event
