@@ -4,6 +4,7 @@ from typing import Iterable, Mapping
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import numpy
 import sqlparse
 from kestrel.display import Display, GraphExplanation
 from kestrel.ir.graph import IRGraph
@@ -32,8 +33,8 @@ def gen_label_mapping(g: IRGraph) -> Mapping[Instruction, str]:
 
 def to_html_blocks(d: Display) -> Iterable[str]:
     if isinstance(d, DataFrame):
+        d = d.replace("", numpy.nan).dropna(axis="columns", how="all")
         escaped_df = d.map(lambda x: x.replace("$", "\\$") if isinstance(x, str) else x)
-        # escaped_df = d.replace("\$", "\\\$", inplace=False, regex=True)
         yield escaped_df.to_html(index=False, na_rep="")
     elif isinstance(d, GraphExplanation):
         for graphlet in d.graphlets:
