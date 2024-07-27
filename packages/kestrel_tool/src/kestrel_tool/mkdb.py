@@ -51,6 +51,7 @@ def _normalize_event(event: dict) -> dict:
 
     return event
 
+
 def _read_events(filename: str) -> pd.DataFrame:
     """Read JSON lines from `filename` and return a DataFrame"""
     events = []
