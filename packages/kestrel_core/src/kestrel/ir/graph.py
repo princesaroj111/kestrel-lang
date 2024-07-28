@@ -863,6 +863,12 @@ class IRGraphEvaluable(IRGraph):
                 self.store = node.store
         return super()._add_node(node, deref)
 
+    def to_dict(self) -> Mapping[str, Iterable[Mapping]]:
+        d = super().to_dict()
+        d["interface"] = self.interface
+        d["store"] = self.store
+        return d
+
 
 @typechecked
 class IRGraphSimpleQuery(IRGraphEvaluable):

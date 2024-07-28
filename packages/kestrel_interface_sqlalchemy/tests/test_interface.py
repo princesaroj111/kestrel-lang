@@ -165,7 +165,7 @@ def test_find_event_to_entity(setup_sqlite_ecs_process_creation):
         evs, explain, procs = session.execute(huntflow)
         assert evs.shape[0] == 9  # all events
 
-        stmt = explain.graphlets[0].query.statement
+        stmt = explain.graphlets[0].action.statement
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_event_to_entity.txt")
         with open(result_file) as h:
@@ -187,7 +187,7 @@ def test_find_entity_to_event(setup_sqlite_ecs_process_creation):
         """
         explain, e2 = session.execute(huntflow)
 
-        stmt = explain.graphlets[0].query.statement
+        stmt = explain.graphlets[0].action.statement
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_entity_to_event.txt")
         with open(result_file) as h:
@@ -223,7 +223,7 @@ def test_find_entity_to_entity(setup_sqlite_ecs_process_creation):
         """
         explain, parents = session.execute(huntflow)
 
-        stmt = explain.graphlets[0].query.statement
+        stmt = explain.graphlets[0].action.statement
         test_dir = os.path.dirname(os.path.abspath(__file__))
         result_file = os.path.join(test_dir, "result_interface_find_entity_to_entity.txt")
         with open(result_file) as h:
