@@ -80,9 +80,9 @@ class InMemoryCache(AbstractCache):
         instructions_to_explain: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, GraphletExplanation]:
         mapping = {}
-        if not instructions_to_evaluate:
-            instructions_to_evaluate = graph.get_sink_nodes()
-        for instruction in instructions_to_evaluate:
+        if not instructions_to_explain:
+            instructions_to_explain = graph.get_sink_nodes()
+        for instruction in instructions_to_explain:
             dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
             graph_dict = dep_graph.to_dict()
             query = NativeQuery("DataFrame", "")

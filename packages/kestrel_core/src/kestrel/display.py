@@ -14,11 +14,19 @@ class NativeQuery(DataClassJSONMixin):
 
 
 @dataclass
+class AnalyticOperation(DataClassJSONMixin):
+    # which interface
+    interface: str
+    # operation description
+    operation: str
+
+
+@dataclass
 class GraphletExplanation(DataClassJSONMixin):
     # serialized IRGraph
     graph: Mapping
     # data source query
-    query: NativeQuery
+    action: Union[NativeQuery, AnalyticOperation]
 
 
 @dataclass

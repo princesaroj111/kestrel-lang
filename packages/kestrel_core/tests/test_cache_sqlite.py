@@ -291,7 +291,7 @@ def test_explain_find_event_to_entity(process_creation_events):
     assert len(rets) == 1
     explanation = mapping[rets[0].id]
     construct = graph.get_nodes_by_type(Construct)[0]
-    stmt = explanation.query.statement.replace('"', '')
+    stmt = explanation.action.statement.replace('"', '')
     assert stmt == f"""WITH es AS 
 (SELECT DISTINCT * 
 FROM {construct.id.hex}), 

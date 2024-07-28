@@ -202,8 +202,8 @@ EXPLAIN chrome
         ge = res.graphlets[0]
         assert ge.graph == session.irgraph.to_dict()
         construct = session.irgraph.get_nodes_by_type(Construct)[0]
-        assert ge.query.language == "SQL"
-        stmt = ge.query.statement.replace('"', '')
+        assert ge.action.language == "SQL"
+        stmt = ge.action.statement.replace('"', '')
         assert stmt == f"WITH proclist AS \n(SELECT DISTINCT * \nFROM {construct.id.hex}v), \nbrowsers AS \n(SELECT DISTINCT * \nFROM proclist \nWHERE name != 'cmd.exe'), \nchrome AS \n(SELECT DISTINCT * \nFROM browsers \nWHERE pid = 205)\n SELECT DISTINCT * \nFROM chrome"
         with pytest.raises(StopIteration):
             next(ress)
@@ -275,28 +275,28 @@ DISP d2
 
         # DISP procs
         assert len(disp.graphlets[0].graph["nodes"]) == 5
-        query = disp.graphlets[0].query.statement.replace('"', '')
+        query = disp.graphlets[0].action.statement.replace('"', '')
         procs = session.irgraph.get_variable("procs")
         c1 = next(session.irgraph.predecessors(procs))
         assert query == f"WITH procs AS \n(SELECT DISTINCT * \nFROM {c1.id.hex}), \np2 AS \n(SELECT DISTINCT * \nFROM procs \nWHERE name IN ('firefox.exe', 'chrome.exe'))\n SELECT DISTINCT pid \nFROM p2"
 
         # DISP nt
         assert len(disp.graphlets[1].graph["nodes"]) == 2
-        query = disp.graphlets[1].query.statement.replace('"', '')
+        query = disp.graphlets[1].action.statement.replace('"', '')
         nt = session.irgraph.get_variable("nt")
         c2 = next(session.irgraph.predecessors(nt))
         assert query == f"WITH nt AS \n(SELECT DISTINCT * \nFROM {c2.id.hex})\n SELECT DISTINCT * \nFROM nt"
 
         # DISP domain
         assert len(disp.graphlets[2].graph["nodes"]) == 2
-        query = disp.graphlets[2].query.statement.replace('"', '')
+        query = disp.graphlets[2].action.statement.replace('"', '')
         domain = session.irgraph.get_variable("domain")
         c3 = next(session.irgraph.predecessors(domain))
         assert query == f"WITH domain AS \n(SELECT DISTINCT * \nFROM {c3.id.hex})\n SELECT DISTINCT * \nFROM domain"
 
         # EXPLAIN d2
         assert len(disp.graphlets[3].graph["nodes"]) == 11
-        query = disp.graphlets[3].query.statement.replace('"', '')
+        query = disp.graphlets[3].action.statement.replace('"', '')
         p2 = session.irgraph.get_variable("p2")
         p2pa = next(session.irgraph.successors(p2))
         assert query == f"WITH ntx AS \n(SELECT DISTINCT * \nFROM {nt.id.hex}v \nWHERE abc IN (SELECT DISTINCT * \nFROM {p2pa.id.hex}v)), \nd2 AS \n(SELECT DISTINCT * \nFROM {domain.id.hex}v \nWHERE ip IN (SELECT DISTINCT destination \nFROM ntx))\n SELECT DISTINCT * \nFROM d2"
@@ -368,7 +368,7 @@ def test_explain_find_event_to_entity(process_creation_events):
         session.irgraph = process_creation_events
         res = session.execute("procs = FIND process RESPONDED es WHERE device.os = 'Linux' EXPLAIN procs")[0]
         construct = session.irgraph.get_nodes_by_type(Construct)[0]
-        stmt = res.graphlets[0].query.statement.replace('"', '')
+        stmt = res.graphlets[0].action.statement.replace('"', '')
         # cache.sql will use "*" as columns for __setitem__ in virtual cache
         # so the result is different from test_cache_sqlite::test_explain_find_event_to_entity
         assert stmt == f"WITH es AS \n(SELECT DISTINCT * \nFROM {construct.id.hex}v), \nprocs AS \n(SELECT DISTINCT * \nFROM es \nWHERE device.os = \'Linux\')\n SELECT DISTINCT * \nFROM procs"

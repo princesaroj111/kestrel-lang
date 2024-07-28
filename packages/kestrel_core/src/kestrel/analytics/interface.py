@@ -111,7 +111,7 @@ from typing import Any, Iterable, List, Mapping, MutableMapping, Optional
 from uuid import UUID
 
 from kestrel.analytics.config import get_profile, load_profiles
-from kestrel.display import GraphletExplanation
+from kestrel.display import AnalyticOperation, GraphletExplanation
 from kestrel.exceptions import (
     AnalyticsError,
     InvalidAnalytics,
@@ -156,6 +156,10 @@ class PythonAnalyticsJob:
         _logger.debug("python analytics job result:\n%s", df)
         return df
 
+    def get_module_and_func_name(self, config: dict) -> str:
+        module_name, func_name = get_profile(self.analytic, config)
+        return module_name, func_name
+
 
 class PythonAnalyticsInterface(AnalyticsInterface):
     def __init__(
@@ -187,9 +191,20 @@ class PythonAnalyticsInterface(AnalyticsInterface):
     def explain_graph(
         self,
         graph: IRGraphEvaluable,
+        cache: MutableMapping[UUID, Any],
         instructions_to_explain: Optional[Iterable[Instruction]] = None,
     ) -> Mapping[UUID, GraphletExplanation]:
-        raise NotImplementedError("PythonAnalyticsInterface.explain_graph")  # TEMP
+        mapping = {}
+        if not instructions_to_explain:
+            instructions_to_explain = graph.get_sink_nodes()
+        for instruction in instructions_to_explain:
+            dep_graph = graph.duplicate_dependent_subgraph_of_node(instruction)
+            graph_dict = dep_graph.to_dict()
+            job = self._evaluate_instruction_in_graph(graph, cache, instruction)
+            module_name, func_name = job.get_module_and_func_name(self.config)
+            action = AnalyticOperation("Python", module_name + "::" + func_name)
+            mapping[instruction.id] = GraphletExplanation(graph_dict, action)
+        return mapping
 
     def evaluate_graph(
         self,
