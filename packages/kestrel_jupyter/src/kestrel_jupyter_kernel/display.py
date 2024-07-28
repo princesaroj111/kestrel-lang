@@ -54,9 +54,9 @@ def to_html_blocks(d: Display) -> Iterable[str]:
             )
             fig_buffer = BytesIO()
             plt.savefig(fig_buffer, format="png")
-            img = data_uri = base64.b64encode(fig_buffer.getvalue()).decode("utf-8")
-            imgx = f'<img src="data:image/png;base64,{img}">'
-            yield imgx
+            img_base64 = base64.b64encode(fig_buffer.getvalue()).decode("utf-8")
+            img_tag = f'<img src="data:image/png;base64,{img_base64}">'
+            yield img_tag
 
             if isinstance(graphlet.action, NativeQuery):
                 native_query = graphlet.action
