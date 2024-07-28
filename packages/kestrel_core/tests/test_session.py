@@ -10,7 +10,7 @@ from kestrel.cache import SqlCache
 from kestrel.config.internal import CACHE_INTERFACE_IDENTIFIER
 from kestrel.display import GraphExplanation
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
-from kestrel.ir.graph import IRGraph
+from kestrel.ir.graph import IRGraph, IRGraphEvaluable
 from kestrel.ir.instructions import Construct, SerializableDataFrame
 
 
@@ -200,7 +200,7 @@ EXPLAIN chrome
         assert isinstance(res, GraphExplanation)
         assert len(res.graphlets) == 1
         ge = res.graphlets[0]
-        assert ge.graph == session.irgraph.to_dict()
+        assert ge.graph == IRGraphEvaluable(session.irgraph).to_dict()
         construct = session.irgraph.get_nodes_by_type(Construct)[0]
         assert ge.action.language == "SQL"
         stmt = ge.action.statement.replace('"', '')
