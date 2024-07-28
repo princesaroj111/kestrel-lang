@@ -1,5 +1,4 @@
 import base64
-import tempfile
 from io import BytesIO
 from math import ceil, sqrt
 from typing import Iterable, Mapping
