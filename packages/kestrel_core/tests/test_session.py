@@ -12,6 +12,7 @@ from kestrel.display import GraphExplanation
 from kestrel.frontend.parser import parse_kestrel_and_update_irgraph
 from kestrel.ir.graph import IRGraph, IRGraphEvaluable
 from kestrel.ir.instructions import Construct, SerializableDataFrame
+from kestrel.exceptions import EntityNotFound
 
 
 @pytest.fixture
@@ -372,3 +373,10 @@ def test_explain_find_event_to_entity(process_creation_events):
         # cache.sql will use "*" as columns for __setitem__ in virtual cache
         # so the result is different from test_cache_sqlite::test_explain_find_event_to_entity
         assert stmt == f"WITH es AS \n(SELECT DISTINCT * \nFROM {construct.id.hex}v), \nprocs AS \n(SELECT DISTINCT * \nFROM es \nWHERE device.os = \'Linux\')\n SELECT DISTINCT * \nFROM procs"
+
+
+def test_get_nonexist_entity(process_creation_events):
+    with Session() as session:
+        session.irgraph = process_creation_events
+        with pytest.raises(EntityNotFound):
+            session.execute("reg = FIND reg_key RESPONDED es WHERE device.os = 'Linux' DISP reg")
