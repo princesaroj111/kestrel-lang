@@ -319,7 +319,7 @@ class SqlTranslator:
                 # self.source_schema == ["*"] is used in virtual cache (EXPLAIN)
                 entity_type = get_type_from_projection(proj.ocsf_field)
                 raise EntityNotFound(
-                    f"No '{entity_type}' found at {proj.ocsf_field}.* against the data source."
+                    f"No '{entity_type}' found at '{proj.ocsf_field}.*' against the data source."
                 )
 
         if pairs:
