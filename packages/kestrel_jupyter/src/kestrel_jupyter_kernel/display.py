@@ -36,7 +36,10 @@ def to_html_blocks(d: Display) -> Iterable[str]:
     if isinstance(d, DataFrame):
         d = d.replace("", numpy.nan).dropna(axis="columns", how="all")
         escaped_df = d.map(lambda x: x.replace("$", "\\$") if isinstance(x, str) else x)
-        yield escaped_df.to_html(index=False, na_rep="")
+        if escaped_df.empty:
+            yield "<div><i>Nothing Found :-(</i></div>"
+        else:
+            yield escaped_df.to_html(index=False, na_rep="")
     elif isinstance(d, GraphExplanation):
         for graphlet in d.graphlets:
             graph = IRGraph(graphlet.graph)
