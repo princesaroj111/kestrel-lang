@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from functools import reduce
 from typing import Callable, List, Optional, Union
 
@@ -44,6 +45,7 @@ from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
 from sqlalchemy.engine import Compiled, Connection, default
 from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
 from sqlalchemy.sql.expression import CTE, ColumnElement, ColumnOperators
+from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.sql.selectable import Select
 from typeguard import typechecked
 
@@ -99,6 +101,30 @@ def ingest_dataframe_to_temp_table(conn: Connection, df: DataFrame, table_name: 
         table = _TemporaryTable(table_name, pandas_engine, frame=df, index=False)
         table.create()
         df.to_sql(table_name, con=conn, if_exists="append", index=False)
+
+
+def get_proj_cols(pairs):
+    # Check for alias "collisions"
+    alias_map = defaultdict(list)
+    for i, j in pairs:
+        alias_map[j].append(i)
+    result = []
+    coalesced = set()
+    for i, j in pairs:
+        if j in coalesced:
+            continue  # Already handled
+        native_fields = alias_map[j]
+        if len(native_fields) > 1:
+            # Multiple native fields are mapped to same alias - coalesce
+            result.append(
+                coalesce(*(sqlalchemy.column(field) for field in native_fields)).label(
+                    j
+                )
+            )
+            coalesced.add(j)
+        else:
+            result.append(sqlalchemy.column(i).label(j))
+    return result
 
 
 @typechecked
@@ -325,7 +351,7 @@ class SqlTranslator:
         if pairs:
             self.projected_schema = [ocsf_field for _, ocsf_field in pairs]
             _logger.debug(f"column projection pairs: {pairs}")
-            cols = [sqlalchemy.column(i).label(j) for i, j in pairs]
+            cols = get_proj_cols(pairs)
             self.query = self.query.with_only_columns(*cols)
 
     def add_Limit(self, lim: Limit) -> None:

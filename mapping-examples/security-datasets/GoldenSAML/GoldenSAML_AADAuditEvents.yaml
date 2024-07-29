@@ -1,0 +1,59 @@
+# SecurityDatasets GoldenSAML AADAuditEvents.json to OSCF mapping
+
+
+time: TimeGenerated
+
+
+# endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+device: &endpoint
+    uid: TenantId
+
+
+# https://schema.ocsf.io/1.1.0/objects/http_request
+http_request:
+    user_agent: UserAgent
+
+
+# https://schema.ocsf.io/1.1.0/objects/managed_entity
+entity:
+    uid:
+        - targetId
+        - ModifiedApplicationObjectId
+    type:
+        - targetType
+        - Type
+    name:
+        - targetDisplayName
+        - ModifiedApplication
+    data: TargetResources
+
+
+actor:
+    user:
+        endpoint: *endpoint
+        uid: InitiatedBy.user.id
+        name: InitiatedBy.user.userPrincipalName
+
+
+# https://schema.ocsf.io/1.2.0/classes/user_access
+privileges: Permissions
+
+
+type_uid:
+    native_field: OperationName
+    native_value:
+        300403: # Entity Management: Update
+            - "Update application – Certificates and secrets management "
+            - "Update application"
+        300501: # User Access Management: Assign Privileges
+            - "Add delegated permission grant"
+
+type_name: OperationName
+
+status_id:
+  - native_field: Result
+    native_value:
+        1: # Success
+            - "success"
+        2: # Failure
+            - "failure"

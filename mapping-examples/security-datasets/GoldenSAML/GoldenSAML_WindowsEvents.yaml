@@ -1,0 +1,144 @@
+# SecurityDatasets GoldenSAML WindowsEvents.json to OSCF mapping
+
+time: TimeGenerated
+
+# endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+device: &endpoint
+    hostname:
+        native_field: Computer
+        ocsf_value: lowercase
+    uid: _ResourceId
+
+
+file: &file
+    endpoint: *endpoint
+    name: PipeName
+    type_id:
+        native_field: EventID
+        native_value:
+            6: 18
+
+
+# https://schema.ocsf.io/1.1.0/objects/process
+process: &process
+    endpoint: *endpoint
+    name:
+        native_field: Image
+        native_op: LIKE
+        native_value: winpath_endswith
+        ocsf_value: basename
+    pid:
+        native_field: ProcessId_dynamic
+        ocsf_value: to_int
+    uid: ProcessGuid
+    file:
+        name:
+            native_field: Image
+            native_op: LIKE
+            native_value: winpath_endswith
+            ocsf_value: basename
+        path: Image
+        parent_folder:
+            native_field: Image
+            native_op: LIKE
+            native_value: winpath_startswith
+            ocsf_value: dirname
+
+
+# src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+src_endpoint: &src_ref
+    ip: SourceAddress
+    port:
+        - native_field: SourcePort
+          ocsf_value: to_int
+        # normalized by ingestion
+        #- native_field: IpPort
+        #  ocsf_value: to_int
+
+
+# dst_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+dst_endpoint: &dst_ref
+    ip: DestAddress
+    port:
+        - native_field: DestPort
+          ocsf_value: to_int
+
+
+# https://schema.ocsf.io/1.1.0/objects/user
+user: &user
+    endpoint: *endpoint
+    domain: TargetDomainName
+    name: TargetUserName
+    uid: TargetUserSid
+
+
+# https://schema.ocsf.io/1.2.0/objects/managed_entity?extensions=
+entity:
+    uid: ObjectName
+    type: ObjectType
+    data: Properties
+
+
+# https://schema.ocsf.io/1.1.0/classes/authentication?extensions=win
+# Authentication [3002]
+auth_protocol: AuthenticationPackageName
+logon_type_id:
+    - native_field: LogonType
+      ocsf_value: to_int
+
+
+# https://schema.ocsf.io/1.1.0/classes/base_event
+# Base Event
+type_uid:
+    native_field: EventID
+    native_value:
+        100101: # File System Activity: Create
+            - 11   # Sysmon: FileCreate
+        100701: # Process Activity: Launch
+            - 1    # Sysmon: Process creation
+            - 4688 # Security: Process Create
+        100702: # Process Activity: Terminate
+            - 5    # Sysmon: Process termindated
+            - 4689
+        100703: # Process Activity: Open
+            - 10   # Sysmon: ProcessAccess
+        100704: # Process Activity: Inject
+            - 8    # Sysmon: CreateRemoteThread
+        300201: # auth: logon (success and failure)
+            - 4624 # Security: An account was successfully logged on.
+            - 4625 # Security: An account failed to log on.
+        300400: # Entity Management: Unknown
+            - 4662 # Security: An operation was performed on an object.
+        400101: # Network Activity: Open
+            - 3    # Sysmon: Network connection
+            - 5156 # Security: The Windows Filtering Platform has permitted a connection.
+        100114: # File System Activity: Open
+            - 18   # Sysmon: Pipe connected
+        100799: # Process Activity: Other
+            - 501  # Desktop Window Manager is experiencing heavy resource contention
+
+type_name:
+    native_field: EventID
+    native_value:
+        Pipe connected: 18
+        An account was successfully logged on: 4624
+        An account failed to log on: 4625
+        An operation was performed on an object: 4662
+        Desktop Window Manager is experiencing heavy resource contention: 501
+        The Windows Filtering Platform has permitted a connection: 5156
+
+status_id:
+  - native_field: event.code
+    native_value:
+        1: # Success
+            - 4624 # Security: An account was successfully logged on.
+        2: # Failure
+            - 4625 # Security: An account failed to log on.
+
+
+actor:
+    process: *process
+    user:
+        domain: SubjectDomainName
+        name: SubjectUserName
+        uid: SubjectUserSid

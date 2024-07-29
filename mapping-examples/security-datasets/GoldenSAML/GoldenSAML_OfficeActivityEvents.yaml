@@ -1,0 +1,46 @@
+# SecurityDatasets GoldenSAML AADAuditEvents.json to OSCF mapping
+
+
+time: TimeGenerated
+
+
+# endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+device: &endpoint
+    uid: TenantId
+
+
+# src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
+src_endpoint:
+    ip: Client_IPAddress
+    port: Client_Port
+
+
+# https://schema.ocsf.io/1.1.0/objects/managed_entity
+entity:
+    uid: MailboxGuid
+    type: Type
+    data: Folders
+
+
+actor:
+    user:
+        endpoint: *endpoint
+        uid: LogonUserSid
+        name: UserId
+
+
+type_uid:
+    native_field: Operation
+    native_value:
+        300403: # Entity Management: Update
+            - "MailItemsAccessed"
+
+type_name: Operation
+
+status_id:
+  - native_field: ResultStatus
+    native_value:
+        1: # Success
+            - "Succeeded"
+        2: # Failure
+            - "Failed"
