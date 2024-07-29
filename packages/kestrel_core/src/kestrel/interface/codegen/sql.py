@@ -4,6 +4,7 @@ from typing import Callable, List, Optional, Union
 
 import sqlalchemy
 from kestrel.exceptions import (
+    EntityNotFound,
     InvalidAttributes,
     InvalidMappingWithMultipleIdentifierFields,
     InvalidProjectEntityFromEntity,
@@ -36,6 +37,7 @@ from kestrel.mapping.data_model import (
     translate_comparison_to_native,
     translate_projection_to_native,
 )
+from kestrel.mapping.utils import get_type_from_projection
 from pandas import DataFrame
 from pandas.io.sql import SQLTable, pandasSQL_builder
 from sqlalchemy import and_, asc, column, desc, or_, select, tuple_
@@ -313,6 +315,11 @@ class SqlTranslator:
                     for col in self.source_schema
                     if col.startswith(prefix)
                 ]
+            if not pairs:
+                entity_type = get_type_from_projection(proj.ocsf_field)
+                raise EntityNotFound(
+                    f"No '{entity_type}' found at {proj.ocsf_field}.* against the data source."
+                )
 
         if pairs:
             self.projected_schema = [ocsf_field for _, ocsf_field in pairs]

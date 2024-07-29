@@ -192,6 +192,10 @@ class InvalidProjectEntityFromEntity(KestrelError):
     pass
 
 
+class EntityNotFound(KestrelError):
+    pass
+
+
 class InvalidMappingWithMultipleIdentifierFields(KestrelError):
     pass
 
