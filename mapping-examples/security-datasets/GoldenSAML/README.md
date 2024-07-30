@@ -8,7 +8,9 @@ Tha dataset is in turn based on Microsoft's SimuLand Golden SAML Lab Guide (http
 
 ### Data Ingestion
 
-TODO
+```
+kestrel-tool mkdb --db sqlite:///golden_saml.db --table WindowsEvents WindowsEvents.json
+```
 
 ### Data Source Configuration
 
