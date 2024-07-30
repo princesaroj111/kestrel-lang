@@ -83,10 +83,15 @@ class SQLAlchemyInterface(DatasourceInterface):
         if not instructions_to_evaluate:
             instructions_to_evaluate = graph.get_sink_nodes()
         for instruction in instructions_to_evaluate:
+            # connection is renewed for each instruction to evaluate
             conn = self.engines[graph.store].connect()
+            # we also need a clean copy of the graph for reference resolution
+            # otherwise, we will refer to the subquery in previous for iteration
+            # which will give empty results
+            _graph = graph.deepcopy()
 
             translator = self._evaluate_instruction_in_graph(
-                conn, graph, cache, instruction
+                conn, _graph, cache, instruction
             )
             # TODO: may catch error in case evaluation starts from incomplete SQL
             sql = translator.result()
@@ -120,7 +125,7 @@ class SQLAlchemyInterface(DatasourceInterface):
                 trunk = (
                     instruction.predecessor
                     if hasattr(instruction, "predecessor")
-                    else graph.get_trunk_n_branches(instruction)[0]
+                    else _graph.get_trunk_n_branches(instruction)[0]
                 )
                 if isinstance(trunk, Information):
                     df = variable_attributes_to_dataframe(df)
