@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kestrel_jupyter"
-version = "2.0.0b"
+version = "2.0.0b2"
 description = "Kestrel Jupyter Kernel"
 readme = "README.rst"
 requires-python = ">=3.8"
@@ -27,6 +27,9 @@ classifiers = [
 
 dependencies = [
     "kestrel_core==2.0.0b",
+    "kestrel_interface_opensearch==2.0.0b",
+    "kestrel_interface_sqlalchemy==2.0.0b",
+    "kestrel_tool==2.0.0b",
     "jupyterlab-server",
     "jupyterlab",
     "jupyter_client",
