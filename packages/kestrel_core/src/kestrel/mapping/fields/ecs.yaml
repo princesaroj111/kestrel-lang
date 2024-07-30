@@ -1,6 +1,10 @@
 # "*" is for entity/event projection mapping besides a single field
 # if the submap is referred, there will be multiple reversed mappings, the first will be used
 
+
+time: "@timestamp"
+
+
 # endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
 device: &endpoint
     "*": host.*

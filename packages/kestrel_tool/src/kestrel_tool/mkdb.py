@@ -49,6 +49,18 @@ def _normalize_event(event: dict) -> dict:
             except json.JSONDecodeError:
                 pass  # maybe it's NOT JSON
 
+    for k in list(event):
+        if k.endswith("_string"):
+            base_key = k[:-7]
+            if base_key not in event or not event[base_key]:
+                event[base_key] = event[k]
+                del event[k]
+        if k.endswith("_long"):
+            base_key = k[:-5]
+            if base_key not in event or not event[base_key]:
+                event[base_key] = int(event[k])
+                del event[k]
+
     return event
 
 
