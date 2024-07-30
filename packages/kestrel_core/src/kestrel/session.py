@@ -138,15 +138,6 @@ class Session(AbstractContextManager):
                     else:
                         display = _display
                         _cache[iid] = display
-
-                        """
-                        print()
-                        print("####", iid, self.irgraph.get_node_by_id(iid))
-                        for x in _cache:
-                            print("CACHE for:", x)
-                            print(_cache[x])
-                        """
-
                     if iid == ins.id:
                         return display
 
