@@ -1,5 +1,9 @@
 # "*" is for entity/event projection mapping besides a single field
 
+
+time: timestamp
+
+
 # https://schema.ocsf.io/1.1.0/objects/file
 file:
     "*": file.*
