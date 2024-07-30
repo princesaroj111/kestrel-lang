@@ -1,0 +1,41 @@
+name: Publish to PyPI
+
+on:
+  # Disable automatic publishing until Kestrel v2 finishes beta and replaces Kestrel v1
+  #release:
+  #  types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    strategy:
+      matrix:
+        package:
+          - kestrel_core
+          - kestrel_interface_opensearch
+          - kestrel_interface_sqlalchemy
+          - kestrel_jupyter
+          - kestrel_tool
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./packages/${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install building environment
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install --upgrade build twine
+      - name: Build and publish
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          # `build` is installed as a Python module, not a standalone commandline
+          python -m build --sdist --wheel --outdir dist/ .
+          twine check dist/*
+          twine upload --verbose --skip-existing dist/*
