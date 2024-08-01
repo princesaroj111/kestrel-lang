@@ -14,8 +14,8 @@ Hunt with Kestrel (left side) or Native Query/Scripting (right side)?
 .. image:: https://raw.githubusercontent.com/opencybersecurityalliance/data-bucket-kestrel/main/images/kestrel2_example.png
    :alt: Kestrel2 Example
 
-What is Ketrel
-==============
+What is Kestrel?
+================
 
 Kestrel is a threat hunting language aiming to make cyber threat hunting *fast*
 by providing a layer of abstraction to build reusable, composable, and
