@@ -2,19 +2,28 @@
    :width: 460
    :alt: Kestrel Threat Hunting Language
 
-|
-
 |readthedocs| |pypi| |downloads| |codecoverage| |black|
 
 |
+
+Hunt with Kestrel (left side) or Native Query/Scripting (right side)?
+=====================================================================
+
+\*An end-to-end cyber threat hunt usually requires execution across multiple datasources/environments plus enrichment/ML/visualization steps anywhere in the huntflow.
+
+.. image:: https://raw.githubusercontent.com/opencybersecurityalliance/data-bucket-kestrel/main/images/kestrel2_example.png
+   :alt: Kestrel2 Example
+
+What is Kestrel?
+================
 
 Kestrel is a threat hunting language aiming to make cyber threat hunting *fast*
 by providing a layer of abstraction to build reusable, composable, and
 shareable hunt-flow. Starting with:
 
-#. `Black Hat USA 2022 session recording`_
+#. `Black Hat USA 2024 Kestrel hunting lab`_
 #. `Black Hat USA 2022 Kestrel hunting lab`_
-#. `Kestrel live tutorial in a cloud sandbox`_
+#. `Black Hat USA 2022 session recording`_
 
 News
 ====
@@ -40,13 +49,6 @@ What does it mean by *hunt fast*?
 - Do construct your hunt-flow from smaller reuseable hunt-flow.
 - Do share your huntbook with your future self and your colleagues.
 - Do get interactive feedback and revise hunt-flow on the fly.
-
-|
-
-.. image:: https://github.com/opencybersecurityalliance/data-bucket-kestrel/raw/main/images/github_homepage_animation.gif
-   :width: 90%
-   :target: https://www.youtube.com/watch?v=tASFWZfD7l8
-   :alt: Kestrel Hunting Demo
 
 Kestrel in a Nutshell
 =====================
@@ -197,6 +199,7 @@ Connecting With The Community
 .. _Black Hat USA 2022 session recording: https://www.youtube.com/watch?v=tf1VLIpFefs
 .. _BH'22 hunting lab: https://mybinder.org/v2/gh/opencybersecurityalliance/black-hat-us-2022/HEAD?filepath=demo
 .. _Black Hat USA 2022 Kestrel hunting lab: https://mybinder.org/v2/gh/opencybersecurityalliance/black-hat-us-2022/HEAD?filepath=demo
+.. _Black Hat USA 2024 Kestrel hunting lab: https://github.com/opencybersecurityalliance/black-hat-us-2024
 .. _Red Hat Research Quarterly: https://research.redhat.com/blog/article/team-threat-hunting-on-a-container-platform-kestrel-as-a-service/
 .. _CNCF Secure AI Summit 2024: https://secureaisummit2024.sched.com/event/1dBWF/elevate-cloud-threat-hunting-with-ai-kenneth-peeples-maya-costantini-red-hat
 
