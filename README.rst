@@ -6,8 +6,8 @@
 
 |
 
-Hunt with Kestrel (left side) or Native Query/Scripting (right side)?
-=====================================================================
+Hunt with Native Query/Script (left) or Kestrel (right)?
+========================================================
 
 \*An end-to-end cyber threat hunt usually requires execution across multiple datasources/environments plus enrichment/ML/visualization steps anywhere in the huntflow.
 
@@ -32,26 +32,14 @@ News
 - Kestrel and AI talk at `CNCF Secure AI Summit 2024`_
 - Learn scalable Kestrel deployment at `Red Hat Research Quarterly`_ (RHRQ)
 
-The Goal
-========
+Kestrel in a Nutshell
+=====================
 
 Software developers write Python or Swift than machine code to quickly turn
 business logic into applications. Threat hunters write Kestrel to quickly turn
 threat hypotheses into hunt-flow. We see threat hunting as an interactive
 procedure to create customized intrusion detection systems on the fly, and
 hunt-flow is to hunts as control-flow is to ordinary programs.
-
-What does it mean by *hunt fast*?
-
-- Do NOT write the same IoB pattern in different data source queries.
-- Do NOT write one-time-use adapaters to connect hunt steps.
-- Do NOT waste your existing analytic scripts/programs in future hunts.
-- Do construct your hunt-flow from smaller reuseable hunt-flow.
-- Do share your huntbook with your future self and your colleagues.
-- Do get interactive feedback and revise hunt-flow on the fly.
-
-Kestrel in a Nutshell
-=====================
 
 .. image:: https://github.com/opencybersecurityalliance/kestrel-lang/raw/develop/docs/images/overview.png
    :width: 100%
@@ -118,6 +106,7 @@ Talks And Demos
 
 Talk summary (visit `Kestrel documentation on talks`_ to learn details):
 
+- 2024/08 `Black Hat USA 2024`_
 - 2024/06 `CNCF Secure AI Summit 2024`_
 - 2023/08 `Black Hat USA 2023`_
 - 2022/12 `Infosec Jupyterthon 2022`_ [`IJ'22 live hunt recording`_]
