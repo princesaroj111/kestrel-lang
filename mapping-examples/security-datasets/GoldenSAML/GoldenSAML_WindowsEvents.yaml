@@ -117,6 +117,10 @@ type_uid:
         100799: # Process Activity: Other
             - 501  # Desktop Window Manager is experiencing heavy resource contention
 
+# customized field for Windows Event
+event_id: EventID
+
+# use the OCSF field for event name
 type_name:
     native_field: EventID
     native_value:
