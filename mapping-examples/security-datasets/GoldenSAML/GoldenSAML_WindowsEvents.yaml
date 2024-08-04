@@ -116,6 +116,8 @@ type_uid:
             - 18   # Sysmon: Pipe connected
         100799: # Process Activity: Other
             - 501  # Desktop Window Manager is experiencing heavy resource contention
+        600500:    # Datastore Activity: Unknown
+            - 33205  # SQL Server Audit events
 
 # customized field for Windows Event
 event_id: EventID
@@ -130,6 +132,7 @@ type_name:
         An operation was performed on an object: 4662
         Desktop Window Manager is experiencing heavy resource contention: 501
         The Windows Filtering Platform has permitted a connection: 5156
+        SQL audit event: 33205
 
 status_id:
   - native_field: event.code

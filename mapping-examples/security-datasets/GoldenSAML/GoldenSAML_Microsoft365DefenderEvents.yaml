@@ -53,9 +53,15 @@ actor:
                 ocsf_value: dirname
     user:
         endpoint: *endpoint
-        uid: InitiatingProcessAccountSid
-        name: InitiatingProcessAccountName
-        domain: InitiatingProcessAccountDomain
+        uid:
+            - InitiatingProcessAccountSid
+            - AccountSid
+        name:
+            - InitiatingProcessAccountName
+            - AccountName
+        domain:
+            - InitiatingProcessAccountDomain
+            - AccountDomain
 
 
 # src_endpoint: see https://schema.ocsf.io/1.1.0/objects/endpoint
@@ -73,9 +79,10 @@ dst_endpoint:
 
 # https://schema.ocsf.io/1.1.0/objects/user
 user:
-    domain: AccountDomain
+    endpoint: *endpoint
+    uid: AccountObjectId
     name: AccountName
-    uid: AccountSid
+    domain: AccountDomain
 
 
 # https://schema.ocsf.io/1.1.0/objects/http_request
