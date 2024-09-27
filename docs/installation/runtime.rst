@@ -125,26 +125,62 @@ Choose Where to Install
 Kestrel Runtime Installation
 ============================
 
-Execute the command in the terminal you opened in the last step. If you use
-`Python virtual environment`_, the virtual environment should be activated for
-any newly opened terminal.
+Kestrel runtime has two major versions:
 
-.. tab-set::
+* Kestrel 1: the classic interpreter runtime that uses STIX patterns and
+  `firepit`_ (flattened STIX data) as its internal pattern and data
+  representation.
 
-    .. tab-item:: Stable Version
+  To install Kestrel 1, execute the commands in the terminal you opened in the
+  last step. If you use `Python virtual environment`_, the virtual environment
+  should be activated.
 
-        .. code-block:: console
+  .. code-block:: console
 
-            $ pip install kestrel-jupyter
-            $ kestrel_jupyter_setup
+      $ pip install kestrel-jupyter
+      $ kestrel_jupyter_setup
 
-    .. tab-item:: Nightly Built
+* Kestrel 2: the new just-in-time (JIT) compiler runtime that implements
+  Kestrel intermediate representation (IR). Kestrel 2 debuts at `Black Hat USA
+  2024`_.
 
-        .. code-block:: console
+  * Execution: per output commands such as `DISP`,
+    Kestrel 2 identifies its minimal dependent IR graph, further segments the
+    subgraph regarding different datasources/interfaces, then compiles and
+    executes each subgraph on each corresponding Kestrel interface.
 
-            $ git clone git://github.com/opencybersecurityalliance/kestrel-lang
-            $ cd kestrel-lang
-            $ make install
+  * Lazy evaluation: execution is only triggered by output commands such as
+    `DISP`. This makes it possible to take into account all dependent commands
+    or dependent IR graph to optimize the evaluation. Instead of result
+    retrieval for each Kestrel command by the Kestrel 1 interpreter, Kestrel 2
+    compiles IR subgraphs (multiple Kestrel commands that can be executed on
+    the same interface/datasource) into deeply nested query on each interface.
+
+  * Generic syntax support: besides STIX, users can now use entities and
+    attributes in `OCSF`_ and `OpenTelemetry`_ in the Kestrel language. The
+    syntax is normalized to OCSF in Kestrel IR, and data between different
+    Kestrel interfaces are normalized into OCSF.
+
+  Kestrel 2 is currently in beta (for experimental use). To install Kestrel 2,
+  execute the commands. If you use `Python virtual environment`_, the virtual
+  environment should be activated.
+
+  .. tab-set::
+
+      .. tab-item:: From PyPI
+
+          .. code-block:: console
+
+              $ pip install kestrel-jupyter==2.0.0b2
+              $ kestrel_jupyter_setup
+
+      .. tab-item:: From Source
+
+          .. code-block:: console
+
+              $ git clone git://github.com/opencybersecurityalliance/kestrel-lang
+              $ cd kestrel-lang
+              $ make install
 
 Kestrel Front-Ends
 ==================
@@ -204,3 +240,6 @@ What's to Do Next
 .. _magic command: https://ipython.readthedocs.io/en/stable/interactive/magics.html
 .. _STIX-shifter: https://github.com/opencybersecurityalliance/stix-shifter
 .. _Kestrel Language Tutorial: https://mybinder.org/v2/gh/opencybersecurityalliance/kestrel-huntbook/HEAD?filepath=tutorial
+.. _OCSF: https://schema.ocsf.io/
+.. _OpenTelemetry: https://opentelemetry.io/
+.. _Black Hat USA 2024: https://www.blackhat.com/us-24/arsenal/schedule/index.html#kestrel--hunt-for-threats-across-security-data-lakes-39321

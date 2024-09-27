@@ -17,8 +17,9 @@ configuration of STIX-shifter data sources.
 Default Kestrel Configuration
 =============================
 
-.. literalinclude:: ../packages/kestrel_core/src/kestrel/config.yaml
-   :language: yaml
+* `Default Kestrel 1 Config`_
+
+* `Default Kestrel 2 Config`_
 
 Example of User-Defined Configurations
 ======================================
@@ -40,3 +41,6 @@ followup ``FIND`` commands/steps.
 Kestrel config supports expansion of environment variables, e.g., if a value in
 the YAML file is ``$ENVX``, then the value is fetched from environment variable
 ``$ENVX`` Kestrel loads the config file.
+
+.. _Default Kestrel 1 Config: https://github.com/opencybersecurityalliance/kestrel-lang/blob/develop_v1/packages/kestrel_core/src/kestrel/config.yaml
+.. _Default Kestrel 2 Config: https://github.com/opencybersecurityalliance/kestrel-lang/blob/develop/packages/kestrel_core/src/kestrel/config/kestrel.yaml
