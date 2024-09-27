@@ -11,7 +11,9 @@ build:
   tools:
     python: "3.11"
   jobs:
-    pre_build:
+    build_kestrel_v1_to_ref_kestrel_1_source:
+      - git remote set-branches origin develop_v1
+      - git fetch --depth 1 origin develop_v1
       - git checkout develop_v1
       - make install
       - git checkout develop
