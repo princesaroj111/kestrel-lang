@@ -12,7 +12,9 @@ build:
     python: "3.11"
   jobs:
     pre_build:
+      - git checkout develop_v1
       - make install
+      - git checkout develop
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
