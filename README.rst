@@ -84,6 +84,26 @@ Visit `Kestrel documentation`_ to learn Kestrel:
   - `How to use Kestrel via API`_
   - `How to launch Kestrel as a Docker container`_
 
+Kestrel 2
+=========
+
+Kestrel 2 debuts at `Black Hat USA 2024`_. While maintaining the language
+syntax from Kestrel 1, we entirely redesign Kestrel 2 runtime to achieve better
+performance and more flexible syntax regarding entity and attribute
+representation.
+
+Key features of Kestrel 2:
+
+- Just-in-time compilation instead of interpretation
+
+- Lazy evaluation and the new ``EXPLAIN`` command
+
+- Data Lakehouse optimization with deeply nested query
+
+- OCSF and OpenTelemetry entity/attribute support besides STIX
+
+Kestrel 2 is currently in beta, learn more at `Kestrel runtime installation`_.
+
 Kestrel Huntbooks And Analytics
 ===============================
 
