@@ -89,8 +89,8 @@ Kestrel 2
 
 Kestrel 2 debuts at `Black Hat USA 2024`_. While maintaining the language
 syntax from Kestrel 1, we entirely redesign Kestrel 2 runtime to achieve better
-performance and more flexible syntax regarding entity and attribute
-representation.
+performance and more flexible syntax regarding entity, attribute, and relation
+representations.
 
 Key features of Kestrel 2:
 
@@ -168,16 +168,16 @@ Connecting With The Community
 .. _Kestrel live tutorial in a cloud sandbox: https://mybinder.org/v2/gh/opencybersecurityalliance/kestrel-huntbook/HEAD?filepath=tutorial
 .. _Kestrel documentation: https://kestrel.readthedocs.io/
 
-.. _A comprehensive introduction to Kestrel: https://kestrel.readthedocs.io/en/stable/overview/
-.. _The two key concepts of Kestrel: https://kestrel.readthedocs.io/en/stable/language/tac.html#key-concepts
+.. _A comprehensive introduction to Kestrel: https://kestrel.readthedocs.io/en/latest/overview/
+.. _The two key concepts of Kestrel: https://kestrel.readthedocs.io/en/latest/language/tac.html#key-concepts
 .. _Interactive tutorial with quiz: https://mybinder.org/v2/gh/opencybersecurityalliance/kestrel-huntbook/HEAD?filepath=tutorial
-.. _Kestrel runtime installation: https://kestrel.readthedocs.io/en/stable/installation/runtime.html
-.. _How to connect to your data sources: https://kestrel.readthedocs.io/en/stable/installation/datasource.html
-.. _How to execute an analytic hunt step in Python/Docker: https://kestrel.readthedocs.io/en/stable/installation/analytics.html
-.. _Language reference book: https://kestrel.readthedocs.io/en/stable/language/commands.html
-.. _How to use Kestrel via API: https://kestrel.readthedocs.io/en/stable/source/kestrel.session.html
-.. _How to launch Kestrel as a Docker container: https://kestrel.readthedocs.io/en/stable/deployment/
-.. _Kestrel documentation on talks: https://kestrel.readthedocs.io/en/stable/talks.html
+.. _Kestrel runtime installation: https://kestrel.readthedocs.io/en/latest/installation/runtime.html
+.. _How to connect to your data sources: https://kestrel.readthedocs.io/en/latest/installation/datasource.html
+.. _How to execute an analytic hunt step in Python/Docker: https://kestrel.readthedocs.io/en/latest/installation/analytics.html
+.. _Language reference book: https://kestrel.readthedocs.io/en/latest/language/commands.html
+.. _How to use Kestrel via API: https://kestrel.readthedocs.io/en/latest/source/kestrel.session.html
+.. _How to launch Kestrel as a Docker container: https://kestrel.readthedocs.io/en/latest/deployment/
+.. _Kestrel documentation on talks: https://kestrel.readthedocs.io/en/latest/talks.html
 
 .. _Kestrel huntbook: https://github.com/opencybersecurityalliance/kestrel-huntbook
 .. _Kestrel analytics: https://github.com/opencybersecurityalliance/kestrel-analytics
