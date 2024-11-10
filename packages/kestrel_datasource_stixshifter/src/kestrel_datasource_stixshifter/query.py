@@ -11,6 +11,8 @@ from kestrel.utils import mkdtemp
 from kestrel.exceptions import DataSourceError, DataSourceManagerInternalError
 from kestrel_datasource_stixshifter.connector import setup_connector_module
 from kestrel_datasource_stixshifter import multiproc
+from kestrel_datasource_stixshifter.worker import STOP_SIGN
+from kestrel_datasource_stixshifter.async_transmitter import AsyncTransmitter
 from kestrel_datasource_stixshifter.subquery import split_subquery_by_time_window
 from kestrel_datasource_stixshifter.config import (
     get_datasource_from_profiles,
@@ -148,6 +150,128 @@ def query_datasource(uri, pattern, session_id, config, store, limit=None):
                         ingest(result, observation_metadata, query_id, store)
 
     return ReturnFromStore(query_id)
+
+
+@typechecked
+async def query_datasource_async(uri, pattern, session_id, config, store, limit=None):
+    config["profiles"] = load_profiles()
+    config["options"] = load_options()
+
+    _logger.debug(
+        "fast_translate enabled for: " f"{config['options']['fast_translate']}"
+    )
+
+    scheme, _, profile = uri.rpartition("://")
+    profiles = profile.split(",")
+    if scheme != "stixshifter":
+        raise DataSourceManagerInternalError(
+            f"interface {__package__} should not process scheme {scheme}"
+        )
+
+    set_stixshifter_logging_level()
+
+    cache_dir = mkdtemp()
+    query_id = cache_dir.name
+
+    _logger.debug(f"prepare query with ID: {query_id}")
+
+    num_records = 0
+    limit_per_profile = limit
+
+    for profile in profiles:
+        if limit:
+            if num_records >= limit:
+                break
+            if num_records > 0:
+                limit_per_profile = limit - num_records
+        _logger.debug(f"entering stix-shifter data source: {profile}")
+        _logger.debug(f"profile = {profile}, limit_per_profile = {limit_per_profile}")
+
+        (
+            connector_name,
+            connection_dict,
+            configuration_dict,
+            retrieval_batch_size,
+            cool_down_after_transmission,
+            allow_dev_connector,
+            verify_cert,
+            subquery_time_window,
+        ) = map(
+            copy.deepcopy, get_datasource_from_profiles(profile, config["profiles"])
+        )
+
+        setup_connector_module(connector_name, allow_dev_connector)
+
+        if _logger.isEnabledFor(logging.DEBUG):
+            data_path_striped = "".join(filter(str.isalnum, profile))
+            cache_data_path_prefix = str(cache_dir / data_path_striped)
+        else:
+            cache_data_path_prefix = None
+
+        observation_metadata = gen_observation_metadata(connector_name, query_id)
+
+        for sub_pattern in split_subquery_by_time_window(pattern, subquery_time_window):
+
+            if limit_per_profile:
+                if num_records >= limit_per_profile:
+                    _logger.debug("do not execute subquery due to limit return reached")
+                    break
+                if num_records > 0:
+                    limit_per_profile = limit_per_profile - num_records
+
+            dsl = translate_query(
+                connector_name, observation_metadata, sub_pattern, connection_dict
+            )
+
+            raw_records_queue = Queue()
+            translated_data_queue = Queue()
+
+            with multiproc.translate(
+                connector_name,
+                observation_metadata,
+                connection_dict.get("options", {}),
+                cache_data_path_prefix,
+                connector_name in config["options"]["fast_translate"],
+                raw_records_queue,
+                translated_data_queue,
+                config["options"]["translation_workers_count"],
+            ):
+                # Start transmitters asynchronously
+                transmitters = [
+                    AsyncTransmitter(
+                        connector_name,
+                        connection_dict,
+                        configuration_dict,
+                        retrieval_batch_size,
+                        query,
+                        raw_records_queue,
+                        limit_per_profile,
+                        cool_down_after_transmission,
+                        verify_cert,
+                    )
+                    for query in dsl["queries"]
+                ]
+                transmitter_tasks = [transmitter.run() for transmitter in transmitters]
+                await asyncio.gather(*transmitter_tasks)
+
+                # Signal translators to stop
+                for _ in range(config["options"]["translation_workers_count"]):
+                    await put_in_queue(raw_records_queue, STOP_SIGN)
+
+                # Read translated results
+                for result in multiproc.read_translated_results(
+                    translated_data_queue,
+                    config["options"]["translation_workers_count"],
+                ):
+                    num_records += get_num_objects(result)
+                    ingest(result, observation_metadata, query_id, store)
+
+    return ReturnFromStore(query_id)
+
+
+async def put_in_queue(queue: Queue, packet):
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, queue.put, packet)
 
 
 @typechecked

@@ -133,6 +133,121 @@ def do_prefetch(
     return return_var_entity_table
 
 
+async def do_prefetch_async(
+    local_stage_varname,
+    local_stage_varstruct,
+    session,
+    stmt,
+    extra_prefetch_enabled_flag=True,
+):
+    """prefetch identical entities and associated entities.
+
+    Put the input entities in the center of an observation and query the remote
+    data source of associated with input variable, so we get back:
+
+    1. all records about the input entities.
+
+    2. associated entities such as parent/child processes of processes, processes of network-traffic, etc.
+
+    Args:
+        local_stage_varname (str): local variable name before prefetch
+        local_stage_varstruct (str): local variable (VarStruct) before prefetch
+    Returns:
+        str: the entity table for the statement output variable
+    """
+
+    # STIX pattern for prefetch
+    stix_pattern = None
+
+    prefetch_ret_entity_table = stmt["output"] + "_prefetch"
+    prefetch_fil_entity_table = prefetch_ret_entity_table + "_filtered"
+    return_var_entity_table = stmt["output"]
+
+    if (
+        _is_prefetch_allowed_in_config(
+            session.config["prefetch"], stmt["command"], stmt["type"]
+        )
+        and len(local_stage_varstruct)
+        and local_stage_varstruct.data_source
+        and extra_prefetch_enabled_flag
+    ):
+        _logger.info(f"generate pattern for prefetch {local_stage_varname}.")
+
+        pattern_raw = compile_identical_entity_search_pattern(
+            local_stage_varname,
+            local_stage_varstruct,
+            session.config["stixquery"]["support_id"],
+        )
+
+        if pattern_raw:
+            _symtable = SymbolTable({local_stage_varname: local_stage_varstruct})
+            pattern_ast = parse_ecgpattern(pattern_raw)
+            deref_func = make_deref_func(session.store, _symtable)
+            get_timerange_func = make_var_timerange_func(session.store, _symtable)
+            pattern_ast.deref(deref_func, get_timerange_func)
+            pattern_ast.add_center_entity(local_stage_varstruct.type)
+            time_adj = tuple(
+                map(
+                    timedelta_seconds,
+                    (
+                        session.config["stixquery"]["timerange_start_offset"],
+                        session.config["stixquery"]["timerange_stop_offset"],
+                    ),
+                )
+            )
+            ext_graph_pattern = deepcopy(stmt.get("where"))
+            # TODO: check prune() logic, remove the "if" and just run content
+            if ext_graph_pattern and stmt["command"].lower() == "get":
+                ext_graph_pattern.prune_away_centered_graph(stmt["type"])
+            _logger.debug(f"ext pattern in prefetch: {ext_graph_pattern}")
+            _logger.debug(f"prefetch pattern before extend: {pattern_ast}")
+            pattern_ast.extend("AND", ext_graph_pattern)
+            _logger.debug(f"prefetch pattern after extend: {pattern_ast}")
+            stix_pattern = pattern_ast.to_stix(stmt["timerange"], time_adj)
+            _logger.info(f"STIX pattern generated in prefetch: {stix_pattern}")
+
+    if stix_pattern:
+        resp = await session.data_source_manager.query_async(
+            local_stage_varstruct.data_source,
+            stix_pattern,
+            session.session_id,
+            session.store,
+            stmt.get("limit"),
+        )
+        query_id = resp.load_to_store(session.store)
+
+        # build the view in store
+        session.store.extract(
+            prefetch_ret_entity_table, stmt["type"], query_id, stix_pattern
+        )
+
+        prefetch_final_entity_table = _filter_prefetched_process(
+            prefetch_fil_entity_table,
+            session,
+            local_stage_varstruct,
+            prefetch_ret_entity_table,
+            stmt["type"],
+        )
+
+        session.store.rename_view(prefetch_final_entity_table, return_var_entity_table)
+
+        for v in [
+            local_stage_varstruct.entity_table,
+            prefetch_ret_entity_table,
+            prefetch_fil_entity_table,
+        ]:
+            if not session.debug_mode:
+                session.store.remove_view(v)
+
+    else:
+        _logger.info(f"prefetch does not happen without STIX pattern generated.")
+        session.store.rename_view(
+            local_stage_varstruct.entity_table, return_var_entity_table
+        )
+
+    return return_var_entity_table
+
+
 def _filter_prefetched_process(
     prefetch_filtered_var_name,
     session,

@@ -133,6 +133,7 @@ import multiprocessing
 from kestrel.datasource import AbstractDataSourceInterface
 from kestrel_datasource_stixshifter.config import load_profiles
 from kestrel_datasource_stixshifter.query import query_datasource
+from kestrel_datasource_stixshifter.query import query_datasource_async
 
 
 multiprocessing.set_start_method("spawn", force=True)
@@ -161,3 +162,11 @@ class StixShifterInterface(AbstractDataSourceInterface):
         """Query a stixshifter data source."""
 
         return query_datasource(uri, pattern, session_id, config, store, limit)
+
+    @staticmethod
+    async def query_async(uri, pattern, session_id, config, store, limit=None):
+        """Query a stixshifter data source asynchronously."""
+
+        return await query_datasource_async(
+            uri, pattern, session_id, config, store, limit
+        )

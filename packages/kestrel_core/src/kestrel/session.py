@@ -45,6 +45,7 @@ Examples:
 
 """
 
+import inspect
 import tempfile
 import os
 import getpass
@@ -67,6 +68,7 @@ from kestrel.syntax.parser import parse_kestrel
 from kestrel.semantics.processor import semantics_processing
 from kestrel.semantics.completor import do_complete
 from kestrel.codegen import commands
+from kestrel.codegen import async_commands
 from kestrel.codegen.display import DisplayBlockSummary
 from kestrel.codegen.summary import gen_variable_summary
 from kestrel.symboltable.symtable import SymbolTable
@@ -273,6 +275,31 @@ class Session(AbstractContextManager):
         ast = self.parse(codeblock)
         return self._execute_ast(ast)
 
+    async def execute_async(self, codeblock):
+        """Execute a Kestrel code block.
+
+        A Kestrel statement or multiple consecutive statements constitute a code
+        block, which can be executed by this method. New Kestrel variables can be
+        created in a code block such as ``newvar = GET ...``. Two types of Kestrel
+        variables can be legally referred in a Kestrel statement in the code block:
+
+        * A Kestrel variable created in the same code block prior to the reference.
+
+        * A Kestrel variable created in code blocks previously executed by the
+          session. The session maintains the :attr:`symtable` to keep the state
+          of all previously executed Kestrel statements and their established Kestrel
+          variables.
+
+        Args:
+            codeblock (str): the code block to be executed.
+
+        Returns:
+            A list of outputs that each of them is the output for each
+            statement in the inputted code block.
+        """
+        ast = self.parse(codeblock)
+        return await self._execute_ast_async(ast)
+
     def parse(self, codeblock):
         """Parse a Kestrel code block.
 
@@ -425,6 +452,73 @@ class Session(AbstractContextManager):
                 # the context manager switch back cwd when the command execution completes
                 with set_current_working_directory(self.runtime_directory):
                     output_var_struct, display = execute_cmd(stmt, self)
+
+            # exception completion
+            except StixPatternError as e:
+                raise InvalidStixPattern(e.stix) from e
+
+            # post-processing: symbol table update
+            if output_var_struct is not None:
+                output_var_name = stmt["output"]
+                self._update_symbol_table(output_var_name, output_var_struct)
+
+                if output_var_name != self.config["language"]["default_variable"]:
+                    if output_var_name in new_vars:
+                        new_vars.remove(output_var_name)
+                    new_vars.append(output_var_name)
+
+            if display is not None:
+                displays.append(display)
+
+        end_exec_ts = time.time()
+        execution_time_sec = math.ceil(end_exec_ts - start_exec_ts)
+
+        if self.config["session"]["show_execution_summary"] and new_vars:
+            vars_summary = [
+                gen_variable_summary(vname, self.symtable[vname]) for vname in new_vars
+            ]
+            displays.append(DisplayBlockSummary(vars_summary, execution_time_sec))
+
+        return displays
+
+    async def _execute_ast_async(self, ast):
+        displays = []
+        new_vars = []
+
+        start_exec_ts = time.time()
+        for stmt in ast:
+            try:
+                # semantic checking and unfolding
+                semantics_processing(
+                    stmt,
+                    self.symtable,
+                    self.store,
+                    self.data_source_manager,
+                    self.config,
+                )
+
+                # code generation and execution
+                execute_cmd = getattr(async_commands, stmt["command"])
+
+                # set current working directory for each command execution
+                # use this to implicitly pass runtime_dir as an argument to each command
+                # the context manager switch back cwd when the command execution completes
+                with set_current_working_directory(self.runtime_directory):
+                    try:
+                        result = await execute_cmd(stmt, self)
+                        output_var_struct, display = result
+                    except Exception as async_error:
+                        try:
+                            output_var_struct, display = execute_cmd(stmt, self)
+                        except Exception as sync_error:
+                            # For debugging, you can print or log both errors
+                            print(f"Async error: {async_error}")
+                            print(f"Sync error: {sync_error}")
+
+                            # You can raise with both error details
+                            raise Exception(
+                                f"Async error: {async_error}, Sync error: {sync_error}"
+                            ) from sync_error
 
             # exception completion
             except StixPatternError as e:
