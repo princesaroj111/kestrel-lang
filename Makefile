@@ -2,30 +2,31 @@ default: help
 
 ## Install core Kestrel package
 kestrel_core:
-	cd packages/kestrel_core; pip install -e .
+	cd packages/kestrel_core; pip install .
 
 ## Install STIX bundle data source package
 kestrel_datasource_stixbundle: kestrel_core
-	cd packages/kestrel_datasource_stixbundle; pip install -e .
+	cd packages/kestrel_datasource_stixbundle; pip install .
 
 ## Install STIX-Shifter data source package
 kestrel_datasource_stixshifter: kestrel_core
-	cd packages/kestrel_datasource_stixshifter; pip install -e.
+	cd packages/kestrel_datasource_stixshifter; pip install .
 
 ## Install docker analytics
 kestrel_analytics_docker: kestrel_core
-	cd packages/kestrel_analytics_docker; pip install -e .
+	cd packages/kestrel_analytics_docker; pip install .
 
 ## Install python analytics
 kestrel_analytics_python: kestrel_core
-	cd packages/kestrel_analytics_python; pip install -e .
+	cd packages/kestrel_analytics_python; pip install .
 
 ## Install Kestrel kernel for Jupyter
 kestrel_jupyter: kestrel_datasource_stixbundle kestrel_datasource_stixshifter kestrel_analytics_docker kestrel_analytics_python
-	cd packages/kestrel_jupyter; pip install -e .; kestrel_jupyter_setup
+	cd packages/kestrel_jupyter; pip install .; kestrel_jupyter_setup
 
 ## Install Kestrel kernel for Jupyter
 install: kestrel_jupyter
+
 
 ## This help screen
 help:
