@@ -27,6 +27,7 @@ kestrel_jupyter: kestrel_datasource_stixbundle kestrel_datasource_stixshifter ke
 ## Install Kestrel kernel for Jupyter
 install: kestrel_jupyter
 
+
 ## This help screen
 help:
 	@printf "Available targets:\n\n"

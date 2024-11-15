@@ -182,6 +182,13 @@ class StixBundleInterface(AbstractDataSourceInterface):
 
         return ReturnFromFile(query_id, bundles)
 
+    @staticmethod
+    async def query_async(
+        uri, pattern, session_id=None, config=None, store=None, limit=None
+    ):
+        """Query a STIX bundle locally or remotely."""
+        return StixBundleInterface.query(uri, pattern, session_id, config, store, limit)
+
 
 def _get_bundle(rawfile):
     try:

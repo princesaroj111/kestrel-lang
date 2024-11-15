@@ -1,3 +1,4 @@
+from asyncio.log import logger
 import json
 import logging
 from typing import Optional
@@ -37,6 +38,7 @@ class Translator(Process):
         self.output_queue = output_queue
 
     def run(self):
+        logger.info(f"Translator worker {current_process().name} started")
         worker_name = current_process().name
         translation = stix_translation.StixTranslation()
 
@@ -160,6 +162,7 @@ class Translator(Process):
 
             self.output_queue.put(packet)
 
+        logger.info(f"Translator worker {current_process().name} stopped")
         self.output_queue.put(STOP_SIGN)
 
     def get_cache_data_path(self, offset, suffix):

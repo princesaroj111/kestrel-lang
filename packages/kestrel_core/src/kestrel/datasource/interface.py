@@ -117,3 +117,7 @@ class AbstractDataSourceInterface(ABC):
 
         """
         return None
+
+    @staticmethod
+    async def query_async(uri, pattern, session_id, config, store=None, limit=None):
+        return None
