@@ -153,7 +153,7 @@ def query_datasource(uri, pattern, session_id, config, store, limit=None):
 
 
 @typechecked
-async def query_datasource_async(uri, pattern, session_id, config, store, limit=None):
+async def query_datasource_async(uri, pattern, session_id, config, store, limit=None, custom_mappings=None):
     config["profiles"] = load_profiles()
     config["options"] = load_options()
 
@@ -220,7 +220,7 @@ async def query_datasource_async(uri, pattern, session_id, config, store, limit=
                     limit_per_profile = limit_per_profile - num_records
 
             dsl = translate_query(
-                connector_name, observation_metadata, sub_pattern, connection_dict
+                connector_name, observation_metadata, sub_pattern, connection_dict, custom_mappings
             )
 
             raw_records_queue = Queue()
@@ -289,6 +289,7 @@ def translate_query(
     observation_metadata: dict,
     pattern: str,
     connection_dict: dict,
+    custom_mappings: dict = None,
 ):
     translation = stix_translation.StixTranslation()
     translation_options = copy.deepcopy(connection_dict.get("options", {}))
@@ -296,7 +297,7 @@ def translate_query(
     _logger.debug(f"STIX pattern to query: {pattern}")
 
     dsl = translation.translate(
-        connector_name, "query", observation_metadata, pattern, translation_options
+        connector_name, "query", observation_metadata, pattern, translation_options, custom_mapping=custom_mappings
     )
 
     _logger.debug(f"translate results: {dsl}")

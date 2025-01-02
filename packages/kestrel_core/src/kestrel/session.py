@@ -275,7 +275,7 @@ class Session(AbstractContextManager):
         ast = self.parse(codeblock)
         return self._execute_ast(ast)
 
-    async def execute_async(self, codeblock):
+    async def execute_async(self, codeblock, custom_mappings=None):
         """Execute a Kestrel code block.
 
         A Kestrel statement or multiple consecutive statements constitute a code
@@ -298,7 +298,7 @@ class Session(AbstractContextManager):
             statement in the inputted code block.
         """
         ast = self.parse(codeblock)
-        return await self._execute_ast_async(ast)
+        return await self._execute_ast_async(ast, custom_mappings)
 
     def parse(self, codeblock):
         """Parse a Kestrel code block.
@@ -481,7 +481,7 @@ class Session(AbstractContextManager):
 
         return displays
 
-    async def _execute_ast_async(self, ast):
+    async def _execute_ast_async(self, ast, custom_mappings=None):
         displays = []
         new_vars = []
 
@@ -499,6 +499,8 @@ class Session(AbstractContextManager):
 
                 # code generation and execution
                 execute_cmd = getattr(async_commands, stmt["command"])
+                if custom_mappings:
+                    self.data_source_manager.custom_mappings = custom_mappings
 
                 # set current working directory for each command execution
                 # use this to implicitly pass runtime_dir as an argument to each command

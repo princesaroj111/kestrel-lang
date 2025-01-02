@@ -164,9 +164,9 @@ class StixShifterInterface(AbstractDataSourceInterface):
         return query_datasource(uri, pattern, session_id, config, store, limit)
 
     @staticmethod
-    async def query_async(uri, pattern, session_id, config, store, limit=None):
+    async def query_async(uri, pattern, session_id, config, store, limit=None, custom_mappings=None):
         """Query a stixshifter data source asynchronously."""
 
         return await query_datasource_async(
-            uri, pattern, session_id, config, store, limit
+            uri, pattern, session_id, config, store, limit, custom_mappings
         )

@@ -37,6 +37,6 @@ class DataSourceManager(InterfaceManager):
     async def query_async(self, uri, pattern, session_id, store, limit=None):
         scheme, uri = self._parse_and_complete_uri(uri)
         i, c = self._get_interface_with_config(scheme)
-        rs = await i.query_async(uri, pattern, session_id, c, store, limit)
+        rs = await i.query_async(uri, pattern, session_id, c, store, limit, self.custom_mappings)
         self.queried_data_sources.append(uri)
         return rs
