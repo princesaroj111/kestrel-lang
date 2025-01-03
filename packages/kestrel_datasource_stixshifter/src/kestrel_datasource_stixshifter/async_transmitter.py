@@ -19,6 +19,7 @@ class AsyncTransmitter:
         limit: Optional[int],
         cool_down_after_transmission: int,
         verify_cert: bool,
+        custom_mappings: dict = None,
     ):
         self.connector_name = connector_name
         self.connection_dict = connection_dict
@@ -29,7 +30,7 @@ class AsyncTransmitter:
         self.limit = limit
         self.cool_down_after_transmission = cool_down_after_transmission
         self.verify_cert = verify_cert
-
+        self.custom_mappings = custom_mappings
     async def run(self):
         logger.info(f"Transmitter worker started")
         self.worker_name = "Transmitter"
@@ -37,6 +38,7 @@ class AsyncTransmitter:
             self.connector_name,
             self.connection_dict,
             self.configuration_dict,
+            self.custom_mappings
         )
         search_meta_result = await self.transmission.query_async(self.query)
 
@@ -94,6 +96,7 @@ class AsyncTransmitter:
 
         while has_remaining_results:
             packet = None
+            print("search_id :", self.search_id)
             result_batch = await self.transmission.results_async(
                 self.search_id,
                 result_retrieval_offset,

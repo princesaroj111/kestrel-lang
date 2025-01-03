@@ -248,6 +248,7 @@ async def query_datasource_async(uri, pattern, session_id, config, store, limit=
                         limit_per_profile,
                         cool_down_after_transmission,
                         verify_cert,
+                        custom_mappings
                     )
                     for query in dsl["queries"]
                 ]
@@ -264,6 +265,10 @@ async def query_datasource_async(uri, pattern, session_id, config, store, limit=
                     config["options"]["translation_workers_count"],
                 ):
                     num_records += get_num_objects(result)
+                    showResult = True
+                    if showResult:
+                        print("Kestrel result :", result)
+                        showResult = False
                     ingest(result, observation_metadata, query_id, store)
 
     return ReturnFromStore(query_id)
