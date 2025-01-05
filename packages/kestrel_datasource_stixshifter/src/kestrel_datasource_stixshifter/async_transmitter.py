@@ -96,7 +96,6 @@ class AsyncTransmitter:
 
         while has_remaining_results:
             packet = None
-            print("search_id :", self.search_id)
             result_batch = await self.transmission.results_async(
                 self.search_id,
                 result_retrieval_offset,
