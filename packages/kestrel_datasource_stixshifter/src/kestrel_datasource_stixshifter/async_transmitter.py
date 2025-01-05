@@ -19,7 +19,7 @@ class AsyncTransmitter:
         limit: Optional[int],
         cool_down_after_transmission: int,
         verify_cert: bool,
-        custom_mappings: dict = None,
+        custom_mappings = None,
     ):
         self.connector_name = connector_name
         self.connection_dict = connection_dict

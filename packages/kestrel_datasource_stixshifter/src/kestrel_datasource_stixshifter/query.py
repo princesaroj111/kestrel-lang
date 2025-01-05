@@ -235,6 +235,7 @@ async def query_datasource_async(uri, pattern, session_id, config, store, limit=
                 raw_records_queue,
                 translated_data_queue,
                 config["options"]["translation_workers_count"],
+                custom_mappings,
             ):
                 # Start transmitters asynchronously
                 transmitters = [
@@ -265,10 +266,6 @@ async def query_datasource_async(uri, pattern, session_id, config, store, limit=
                     config["options"]["translation_workers_count"],
                 ):
                     num_records += get_num_objects(result)
-                    showResult = True
-                    if showResult:
-                        print("Kestrel result :", result)
-                        showResult = False
                     ingest(result, observation_metadata, query_id, store)
 
     return ReturnFromStore(query_id)
@@ -294,7 +291,7 @@ def translate_query(
     observation_metadata: dict,
     pattern: str,
     connection_dict: dict,
-    custom_mappings: dict = None,
+    custom_mappings = None,
 ):
     translation = stix_translation.StixTranslation()
     translation_options = copy.deepcopy(connection_dict.get("options", {}))

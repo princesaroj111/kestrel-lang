@@ -26,6 +26,7 @@ class Translator(Process):
         is_fast_translation: bool,
         input_queue: Queue,
         output_queue: Queue,
+        custom_mappings = None,
     ):
         super().__init__()
 
@@ -36,7 +37,7 @@ class Translator(Process):
         self.is_fast_translation = is_fast_translation
         self.input_queue = input_queue
         self.output_queue = output_queue
-
+        self.custom_mappings = custom_mappings
     def run(self):
         logger.info(f"Translator worker {current_process().name} started")
         worker_name = current_process().name
@@ -53,6 +54,7 @@ class Translator(Process):
                         None,
                         None,
                         self.translation_options,
+                        custom_mapping=self.custom_mappings,
                     )
 
                     if "error" in mapping:
@@ -117,6 +119,7 @@ class Translator(Process):
                         self.observation_metadata,
                         input_batch.data,
                         self.translation_options,
+                        custom_mapping=self.custom_mappings,
                     )
 
                     if "error" in stixbundle:
