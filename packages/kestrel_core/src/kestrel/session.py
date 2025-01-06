@@ -501,6 +501,8 @@ class Session(AbstractContextManager):
                 execute_cmd = getattr(async_commands, stmt["command"])
                 if custom_mappings:
                     self.data_source_manager.custom_mappings = custom_mappings
+                else:
+                    self.data_source_manager.custom_mappings = None
 
                 # set current working directory for each command execution
                 # use this to implicitly pass runtime_dir as an argument to each command

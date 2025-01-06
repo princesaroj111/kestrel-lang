@@ -63,6 +63,7 @@ def translate(
     raw_records_queue: Queue,
     translated_data_queue: Queue,
     translators_count: int,
+    custom_mappings = None,
 ):
     _logger.debug(f"fast translation enabled: {is_fast_translation}")
     translators = [
@@ -74,6 +75,7 @@ def translate(
             is_fast_translation,
             raw_records_queue,
             translated_data_queue,
+            custom_mappings,
         )
         for _ in range(translators_count)
     ]

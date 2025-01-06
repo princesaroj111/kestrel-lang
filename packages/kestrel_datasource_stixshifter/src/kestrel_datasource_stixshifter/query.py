@@ -235,6 +235,7 @@ async def query_datasource_async(uri, pattern, session_id, config, store, limit=
                 raw_records_queue,
                 translated_data_queue,
                 config["options"]["translation_workers_count"],
+                custom_mappings,
             ):
                 # Start transmitters asynchronously
                 transmitters = [
@@ -248,6 +249,7 @@ async def query_datasource_async(uri, pattern, session_id, config, store, limit=
                         limit_per_profile,
                         cool_down_after_transmission,
                         verify_cert,
+                        custom_mappings
                     )
                     for query in dsl["queries"]
                 ]
@@ -289,7 +291,7 @@ def translate_query(
     observation_metadata: dict,
     pattern: str,
     connection_dict: dict,
-    custom_mappings: dict = None,
+    custom_mappings = None,
 ):
     translation = stix_translation.StixTranslation()
     translation_options = copy.deepcopy(connection_dict.get("options", {}))
