@@ -184,7 +184,7 @@ class StixBundleInterface(AbstractDataSourceInterface):
 
     @staticmethod
     async def query_async(
-        uri, pattern, session_id=None, config=None, store=None, limit=None
+        uri, pattern, session_id=None, config=None, store=None, limit=None, custom_mappings=None
     ):
         """Query a STIX bundle locally or remotely."""
         return StixBundleInterface.query(uri, pattern, session_id, config, store, limit)
