@@ -114,7 +114,13 @@ class AsyncTransmitter:
                     )
 
                     # Prepare for next retrieval
+                    result_len = len(result_batch["data"])
                     result_retrieval_offset += len(result_batch["data"])
+
+
+                    if result_len < batch_size:
+                        has_remaining_results = False
+
                     if "metadata" in result_batch:
                         metadata = result_batch["metadata"]
 
